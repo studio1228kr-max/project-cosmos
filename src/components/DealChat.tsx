@@ -1,6 +1,19 @@
 import React, { useState, useRef, useEffect } from "react";
 import API from "../api";
 
+
+const stripMarkdown = (text: string) =>
+  text
+    .replace(/#{1,6}\s+/g, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/_{1,2}(.+?)_{1,2}/g, "$1")
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`(.+?)`/g, "$1")
+    .replace(/^[-*]\s+/gm, "")
+    .replace(/^---+$/gm, "")
+    .trim();
+
 const C = {
   bg: "#080C14",
   surface: "#0D1420",
@@ -34,7 +47,7 @@ export default function DealChat({ dealId, dealName }: { dealId: string; dealNam
     setLoading(true);
     try {
       const res = await API.post(`/deals/${dealId}/chat`, { message: input, history: msgs });
-      setMsgs(prev => [...prev, { role: "assistant", content: res.data.reply }]);
+      setMsgs(prev => [...prev, { role: "assistant", content: stripMarkdown(res.data.reply) }]);
     } catch {
       setMsgs(prev => [...prev, { role: "assistant", content: "API 오류. 재시도하십시오." }]);
     }
