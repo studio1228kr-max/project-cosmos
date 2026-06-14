@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import API from "../api";
+import DealChat from "../components/DealChat";
 import { Deal } from "../types";
 
 const C = {
@@ -80,6 +81,7 @@ export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string)
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<{id: string; name: string} | null>(null);
+  const [selectedDeal, setSelectedDeal] = useState<{id: string; name: string} | null>(null);
 
   const fetchDeals = async () => {
     setLoading(true);
@@ -143,7 +145,7 @@ export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string)
               const cfg = STATUS_CFG[d.status] ?? STATUS_CFG.INTAKE;
               return (
                 <div key={d.id}
-                  onClick={() => onSelectDeal?.(d.id)}
+                  onClick={() => { onSelectDeal?.(d.id); setSelectedDeal({ id: d.id, name }); }}
                   style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}`, cursor: "pointer" }}
                   onMouseEnter={e => (e.currentTarget.style.background = C.surface)}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
@@ -168,9 +170,15 @@ export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string)
             })}
           </div>
         </div>
-        {/* RIGHT: Detail placeholder */}
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: C.textDim, fontSize: 13 }}>
-          딜을 선택하세요
+        {/* RIGHT: Deal Chat */}
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          {selectedDeal ? (
+            <DealChat dealId={selectedDeal.id} dealName={selectedDeal.name} />
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.textDim, fontSize: 13 }}>
+              딜을 선택하면 LUSKA AI와 대화할 수 있습니다
+            </div>
+          )}
         </div>
       </div>
     </>
