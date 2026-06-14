@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import API from "../api";
-import DealChat from "../components/DealChat";
 import { Deal } from "../types";
+import DealChat from "../components/DealChat";
 
 const C = {
   bg: "#080C14", surface: "#0D1420", surface2: "#131D2E", border: "#1A2638",
@@ -65,11 +65,8 @@ function DeleteModal({ dealName, onConfirm, onCancel }: { dealName: string; onCo
         />
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button onClick={onCancel} style={{ padding: "7px 16px", background: "transparent", border: "1px solid #333", borderRadius: 6, color: "#8a8a8a", fontSize: 13, cursor: "pointer" }}>취소</button>
-          <button
-            onClick={onConfirm}
-            disabled={input !== "삭제하겠습니다"}
-            style={{ padding: "7px 16px", background: input === "삭제하겠습니다" ? "#e5534b" : "#333", border: "none", borderRadius: 6, color: "#fff", fontSize: 13, cursor: input === "삭제하겠습니다" ? "pointer" : "not-allowed" }}
-          >삭제</button>
+          <button onClick={onConfirm} disabled={input !== "삭제하겠습니다"}
+            style={{ padding: "7px 16px", background: input === "삭제하겠습니다" ? "#e5534b" : "#333", border: "none", borderRadius: 6, color: "#fff", fontSize: 13, cursor: input === "삭제하겠습니다" ? "pointer" : "not-allowed" }}>삭제</button>
         </div>
       </div>
     </div>
@@ -98,87 +95,118 @@ export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string)
     try {
       await API.delete(`/deals/${id}`);
       setDeleteTarget(null);
+      if (selectedDeal?.id === id) setSelectedDeal(null);
       fetchDeals();
-    } catch (e) {
-      alert("삭제 실패");
-    }
+    } catch { alert("삭제 실패"); }
   };
 
   const filtered = filter === "ALL" ? deals : deals.filter(d => d.status === filter);
   const total = deals.length;
-
   const statusCounts: any = {};
   STATUSES.forEach(s => { statusCounts[s] = deals.filter(d => d.status === s).length; });
 
-  return (
-    <>
-      {deleteTarget && (
-        <DeleteModal
-          dealName={deleteTarget.name}
-          onConfirm={() => handleDelete(deleteTarget.id)}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
-      <div style={{ display: "flex", height: "100%", background: C.bg, color: C.text, fontFamily: "Inter, sans-serif" }}>
-        {/* LEFT: Filter + List */}
-        <div style={{ width: 280, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column" }}>
-          {/* Filter tabs */}
-          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {["ALL", ...STATUSES].map(s => (
-              <button key={s} onClick={() => setFilter(s)}
-                style={{ padding: "3px 8px", borderRadius: 3, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 600,
-                  background: filter === s ? (STATUS_CFG[s]?.bg || "rgba(201,168,76,0.15)") : "transparent",
-                  color: filter === s ? (STATUS_CFG[s]?.color || C.gold) : C.textDim }}>
-                {s === "ALL" ? `ALL ${total}` : `${STATUS_CFG[s]?.label} ${statusCounts[s]}`}
+  // 딜 선택된 상태: 리스트 숨기고 상세+채팅 표시
+  if (selectedDeal) {
+    return (
+      <>
+        {deleteTarget && <DeleteModal dealName={deleteTarget.name} onConfirm={() => handleDelete(deleteTarget.id)} onCancel={() => setDeleteTarget(null)} />}
+        <div style={{ display: "flex", height: "100%", background: C.bg }}>
+          {/* 딜 상세 60% */}
+          <div style={{ flex: "0 0 60%", borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* 상단 헤더 */}
+            <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={() => setSelectedDeal(null)}
+                style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.textDim, fontSize: 11, padding: "3px 10px", cursor: "pointer" }}>
+                ← 목록
               </button>
-            ))}
+              <span style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{selectedDeal.name}</span>
+              <StatusBadge status={deals.find(d => d.id === selectedDeal.id)?.status || "INTAKE"} />
+            </div>
+            {/* 딜 상세 내용 */}
+            <div style={{ flex: 1, overflow: "auto", padding: 24 }}>
+              {(() => {
+                const deal = deals.find(d => d.id === selectedDeal.id);
+                if (!deal) return null;
+                const rec = deal.deal_record ? (typeof deal.deal_record === "string" ? JSON.parse(deal.deal_record) : deal.deal_record) : {};
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    {[
+                      ["채권자", rec.creditor],
+                      ["차주", rec.borrower],
+                      ["자산주소", rec.asset_address],
+                      ["채권금액", rec.loan_amount],
+                      ["감정가", rec.asset_valuation],
+                      ["LTV", rec.ltv],
+                      ["만기", rec.maturity_date],
+                      ["연체상태", rec.delinquency_status],
+                    ].map(([label, value]) => (
+                      <div key={label as string} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 16px" }}>
+                        <div style={{ fontSize: 10, color: C.textDim, marginBottom: 4, letterSpacing: "0.06em" }}>{label}</div>
+                        <div style={{ fontSize: 13, color: value ? C.text : C.textDim }}>{value || "미입력"}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
-          {/* Deal list */}
-          <div style={{ flex: 1, overflow: "auto" }}>
-            {loading ? (
-              <div style={{ padding: 24, color: C.textDim, fontSize: 12 }}>로딩 중...</div>
-            ) : filtered.length === 0 ? (
-              <div style={{ padding: 24, color: C.textDim, fontSize: 12 }}>딜 없음</div>
-            ) : filtered.map(d => {
-              const rec = d.deal_record ? (typeof d.deal_record === "string" ? JSON.parse(d.deal_record) : d.deal_record) : {};
-              const name = rec.asset_name || d.deal_name || "Unknown";
-              const cfg = STATUS_CFG[d.status] ?? STATUS_CFG.INTAKE;
-              return (
-                <div key={d.id}
-                  onClick={() => { onSelectDeal?.(d.id); setSelectedDeal({ id: d.id, name }); }}
-                  style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}`, cursor: "pointer" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = C.surface)}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, color: C.text, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>{name}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <StatusBadge status={d.status} />
-                      <button
-                        onClick={e => { e.stopPropagation(); setDeleteTarget({ id: d.id, name }); }}
-                        style={{ background: "transparent", border: "none", color: C.textDim, cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1 }}
-                        onMouseEnter={e => (e.currentTarget.style.color = C.red)}
-                        onMouseLeave={e => (e.currentTarget.style.color = C.textDim)}
-                      >✕</button>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 10, color: C.textDim }}>{rec.creditor || "—"}</span>
-                    <EvidenceBar count={d.evidence_count ?? 0} />
-                  </div>
-                </div>
-              );
-            })}
+          {/* LUSKA AI 채팅 40% */}
+          <div style={{ flex: "0 0 40%", overflow: "hidden" }}>
+            <DealChat dealId={selectedDeal.id} dealName={selectedDeal.name} />
           </div>
         </div>
-        {/* RIGHT: Deal Chat */}
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          {selectedDeal ? (
-            <DealChat dealId={selectedDeal.id} dealName={selectedDeal.name} />
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.textDim, fontSize: 13 }}>
-              딜을 선택하면 LUSKA AI와 대화할 수 있습니다
-            </div>
-          )}
+      </>
+    );
+  }
+
+  // 기본 리스트 뷰
+  return (
+    <>
+      {deleteTarget && <DeleteModal dealName={deleteTarget.name} onConfirm={() => handleDelete(deleteTarget.id)} onCancel={() => setDeleteTarget(null)} />}
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", background: C.bg, color: C.text, fontFamily: "Inter, sans-serif" }}>
+        {/* 필터 탭 */}
+        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {["ALL", ...STATUSES].map(s => (
+            <button key={s} onClick={() => setFilter(s)}
+              style={{ padding: "3px 10px", borderRadius: 3, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 600,
+                background: filter === s ? (STATUS_CFG[s]?.bg || "rgba(201,168,76,0.15)") : "transparent",
+                color: filter === s ? (STATUS_CFG[s]?.color || C.gold) : C.textDim }}>
+              {s === "ALL" ? `ALL ${total}` : `${STATUS_CFG[s]?.label} ${statusCounts[s]}`}
+            </button>
+          ))}
+        </div>
+        {/* 딜 리스트 */}
+        <div style={{ flex: 1, overflow: "auto" }}>
+          {loading ? (
+            <div style={{ padding: 24, color: C.textDim, fontSize: 12 }}>로딩 중...</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ padding: 24, color: C.textDim, fontSize: 12 }}>딜 없음</div>
+          ) : filtered.map(d => {
+            const rec = d.deal_record ? (typeof d.deal_record === "string" ? JSON.parse(d.deal_record) : d.deal_record) : {};
+            const name = rec.asset_name || "Unknown";
+            return (
+              <div key={d.id}
+                onClick={() => { onSelectDeal?.(d.id); setSelectedDeal({ id: d.id, name }); }}
+                style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, cursor: "pointer" }}
+                onMouseEnter={e => (e.currentTarget.style.background = C.surface)}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{name}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <StatusBadge status={d.status} />
+                    <button onClick={e => { e.stopPropagation(); setDeleteTarget({ id: d.id, name }); }}
+                      style={{ background: "transparent", border: "none", color: C.textDim, cursor: "pointer", fontSize: 14, padding: "0 2px" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = C.red)}
+                      onMouseLeave={e => (e.currentTarget.style.color = C.textDim)}>✕</button>
+                  </div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 11, color: C.textDim }}>{rec.creditor || "채권자 미입력"}</span>
+                  <EvidenceBar count={d.evidence_count ?? 0} />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </>
