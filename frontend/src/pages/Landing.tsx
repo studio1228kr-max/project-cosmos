@@ -175,7 +175,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
 
       {/* DISCLAIMER + FOOTER */}
-      <div style={{ borderTop: `1px solid ${C.border}`, padding: "48px 80px 32px", background: C.surface }}>
+      <div style={{ borderTop: `1px solid ${C.border}`, padding: "32px 80px 24px", background: C.surface }}>
         <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 20, fontWeight: 700 }}>DISCLAIMER</div>
         <div style={{ fontSize: 11, color: C.textSS, lineHeight: 1.9, maxWidth: 1200 }}>
           <p style={{ marginBottom: 16 }}>
@@ -194,12 +194,9 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             Cosmos reserves the right to modify or discontinue any features or services described in this material at any time without prior notice. This material is intended for distribution only within the Republic of Korea and is not intended for use or distribution in any other jurisdiction.
           </p>
         </div>
-        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20 }}>
           <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.08em" }}>
             © 2025 Cosmos by LuskaCapitalManagement. All Rights Reserved.
-          </div>
-          <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.08em" }}>
-            PARNAS TOWER 29F · GANGNAM · SEOUL
           </div>
         </div>
       </div>
