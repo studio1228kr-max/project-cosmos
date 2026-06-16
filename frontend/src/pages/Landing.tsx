@@ -74,7 +74,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.2em", color: C.gold }}>COSMOS</span>
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.2em", color: C.gold }}>Cosmos</span>
           <span style={{ fontSize: 10, color: C.textS, letterSpacing: "0.1em" }}>by LuskaCapitalManagement</span>
         </div>
         <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
