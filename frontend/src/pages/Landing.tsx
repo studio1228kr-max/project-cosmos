@@ -134,8 +134,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             fontFamily: "'ZenSerif', Georgia, serif",
           }}>
             The Operating System<br />
-            for Korean{isMobile ? <br /> : " "}
-            <span style={{ color: C.gold }}>Private Credit.</span>
+            for Korean <span style={{ color: C.gold }}>Private Credit.</span>
           </h1>
           <p style={{ fontSize: 13, color: C.textS, lineHeight: 1.9, maxWidth: 480, marginBottom: 16 }}>
             In alternative investments such as real estate, private credit, and private lending,
