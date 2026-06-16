@@ -212,11 +212,11 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           position: "fixed", inset: 0, zIndex: 500,
           background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
           display: "flex", alignItems: "flex-start", justifyContent: "center",
-          overflowY: "auto", padding: "40px 24px",
+          overflowY: "auto", padding: isMobile ? "16px 8px" : "40px 24px",
         }} onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
           <div style={{
             background: "#0f1012", border: "1px solid #1c1e21",
-            width: "100%", maxWidth: "100%", padding: "48px 80px",
+            width: "100%", maxWidth: "100%", padding: isMobile ? "24px 20px" : "48px 80px",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 }}>
               <div>
@@ -231,7 +231,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
               }}>✕</button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 16 : 24, marginBottom: 24 }}>
               {[
                 { label: "First Name *", key: "name", placeholder: "" },
                 { label: "Company Name *", key: "company", placeholder: "" },
@@ -253,7 +253,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
               ))}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, marginBottom: 32 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 16 : 24, marginBottom: 32 }}>
               <div>
                 <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>Phone Number *</div>
                 <input style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "transparent", border: "none", borderBottom: "1px solid #1c1e21", color: "#e8e6e0", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
@@ -288,7 +288,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
             <div style={{ marginBottom: 32 }}>
               <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 16 }}>Areas of Interest (Select all that apply)</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
                 {INTERESTS.map(item => (
                   <label key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}
                     onClick={() => toggleInterest(item)}>
