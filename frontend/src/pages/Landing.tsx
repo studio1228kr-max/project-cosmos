@@ -11,35 +11,9 @@ const C = {
   textSS:  "#3a3a3a",
 };
 
-const STATS = [
-  { value: "5", label: "FAILURE DIMENSIONS" },
-  { value: "12", label: "STRESS SCENARIOS" },
-  { value: "∞", label: "ASSET CLASSES" },
-  { value: "100%", label: "AUDIT TRAIL" },
-];
 
-const CAPABILITIES = [
-  {
-    num: "01",
-    title: "Deal Failure Diagnostic Engine",
-    desc: "딜을 넣으면 어디서 실패하는지 계산합니다. Evidence, Financial, Structural, Legal, Market — 5개 차원에서 독립적으로 진단하고 Gate를 도출합니다.",
-  },
-  {
-    num: "02",
-    title: "Stress Scenario Engine",
-    desc: "Base부터 Historical Tail까지 12개 시나리오를 동시에 돌립니다. NOI 하락, 금리 상승, 담보가치 훼손, Combined — 어느 조건에서 딜이 깨지는지 정확히 보여줍니다.",
-  },
-  {
-    num: "03",
-    title: "Calculation Provenance",
-    desc: "모든 숫자는 정책 버전, 증거 출처, 계산 일시와 함께 저장됩니다. LUSKA_GATE_V0_1 기준으로 산출된 결과는 변경 불가하며 감사 추적이 가능합니다.",
-  },
-  {
-    num: "04",
-    title: "Counterparty Refusal Cost",
-    desc: "기존 대주가 거절하면, 신규 대주가 지연하면 — 각 카운터파티 입장에서 액션/비액션의 비용을 계산합니다. 협상 레버리지를 수치화합니다.",
-  },
-];
+
+
 
 export default function Landing({ onLogin }: { onLogin: () => void }) {
   const [scrolled, setScrolled] = useState(false);
@@ -195,40 +169,10 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
 
-        {/* Bottom stats bar */}
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
-          borderTop: `1px solid ${C.border}`,
-          background: `${C.bg}e0`, backdropFilter: "blur(8px)",
-        }}>
-          {STATS.map((s, i) => (
-            <div key={i} style={{
-              padding: "20px 48px",
-              borderRight: i < 3 ? `1px solid ${C.border}` : "none",
-            }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: C.gold, letterSpacing: "-0.02em", marginBottom: 4 }}>{s.value}</div>
-              <div style={{ fontSize: 9, color: C.textS, letterSpacing: "0.15em" }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
+
       </div>
 
-      {/* CAPABILITIES */}
-      <div style={{ padding: "80px 48px", borderTop: `1px solid ${C.border}` }}>
-        <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.3em", marginBottom: 48, fontWeight: 700 }}>CORE CAPABILITIES</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1, background: C.border }}>
-          {CAPABILITIES.map((cap, i) => (
-            <div key={i} style={{ background: C.bg, padding: "40px 48px" }}>
-              <div style={{ fontSize: 11, color: C.goldDim, letterSpacing: "0.2em", marginBottom: 16, fontWeight: 700 }}>{cap.num}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 16, letterSpacing: "0.02em" }}>{cap.title}</div>
-              <div style={{ fontSize: 12, color: C.textS, lineHeight: 1.8 }}>{cap.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* POLICY BADGE */}
+      
       <div style={{ padding: "80px 48px", borderTop: `1px solid ${C.border}`, textAlign: "center" }}>
         <div style={{ fontSize: 9, color: C.textSS, letterSpacing: "0.2em", marginBottom: 24 }}>CALCULATION STANDARD</div>
         <div style={{ fontSize: 48, fontWeight: 700, color: C.border, letterSpacing: "0.05em", marginBottom: 24 }}>
