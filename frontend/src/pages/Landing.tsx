@@ -172,26 +172,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
       </div>
 
-      
-      <div style={{ padding: "80px 48px", borderTop: `1px solid ${C.border}`, textAlign: "center" }}>
-        <div style={{ fontSize: 9, color: C.textSS, letterSpacing: "0.2em", marginBottom: 24 }}>CALCULATION STANDARD</div>
-        <div style={{ fontSize: 48, fontWeight: 700, color: C.border, letterSpacing: "0.05em", marginBottom: 24 }}>
-          LUSKA_GATE_V0_1
-        </div>
-        <p style={{ fontSize: 12, color: C.textS, maxWidth: 560, margin: "0 auto 40px", lineHeight: 1.8 }}>
-          모든 Gate 판정은 정책 버전과 함께 저장됩니다.
-          숫자를 보는 것으로는 부족합니다 — 그 숫자가 어떤 정책으로 언제 계산됐는지가 중요합니다.
-        </p>
-        <button onClick={onLogin} style={{
-          padding: "14px 40px", fontSize: 11, letterSpacing: "0.2em",
-          background: "transparent", color: C.gold,
-          border: `1px solid ${C.gold}`, cursor: "pointer", fontFamily: "inherit",
-        }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = C.gold; (e.currentTarget as HTMLButtonElement).style.color = "#000"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = C.gold; }}>
-          REQUEST ACCESS →
-        </button>
-      </div>
+
 
       {/* DISCLAIMER + FOOTER */}
       <div style={{ borderTop: `1px solid ${C.border}`, padding: "48px 80px 32px", background: C.surface }}>
