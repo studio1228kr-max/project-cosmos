@@ -44,6 +44,34 @@ const CAPABILITIES = [
 export default function Landing({ onLogin }: { onLogin: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", company: "", email: "", role: "", message: "", interests: [] as string[] });
+
+  const INTERESTS = [
+    "Overall Private Credit Portfolio Management",
+    "Integrated Management of Real Estate, Private Credit & Private Lending",
+    "Portfolio Risk Management & Attribution Analysis",
+    "Credit Risk Analysis & Current Expected Credit Loss (CECL)",
+    "Illiquid Asset Valuation & Performance Measurement",
+    "Deal Execution & Asset Acquisition Management",
+    "Compliance & Regulatory Reporting",
+    "Operations Efficiency (Capital Call, Distribution, Commitment Tracking)",
+    "Data Integration & Cloud Management",
+    "Investment Accounting (ABOR) & Official Performance Management (PBOR)",
+    "Private Markets Dedicated Analytics",
+    "Climate & ESG Risk Analysis",
+    "Asset Management Tools & Workflow",
+    "Other (Please specify)",
+  ];
+
+  const toggleInterest = (item: string) => {
+    setForm(f => ({
+      ...f,
+      interests: f.interests.includes(item)
+        ? f.interests.filter(i => i !== item)
+        : [...f.interests, item]
+    }));
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -232,5 +260,128 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       </div>
 
     </div>
+
+      {modalOpen && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 500,
+          background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "flex-start", justifyContent: "center",
+          overflowY: "auto", padding: "40px 24px",
+        }} onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
+          <div style={{
+            background: "#0f1012", border: "1px solid #1c1e21",
+            width: "100%", maxWidth: 800, padding: "48px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 }}>
+              <div>
+                <div style={{ fontSize: 10, color: "#b8912a", letterSpacing: "0.2em", marginBottom: 12 }}>COSMOS BY LUSKA CAPITAL</div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#e8e6e0", margin: 0 }}>
+                  Get in touch to learn more about COSMOS
+                </h2>
+              </div>
+              <button onClick={() => setModalOpen(false)} style={{
+                background: "none", border: "none", color: "#6b6b6b",
+                fontSize: 20, cursor: "pointer", padding: 4,
+              }}>✕</button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, marginBottom: 24 }}>
+              {[
+                { label: "First Name *", key: "name", placeholder: "" },
+                { label: "Company Name *", key: "company", placeholder: "" },
+                { label: "Business Email *", key: "email", placeholder: "" },
+              ].map(field => (
+                <div key={field.key}>
+                  <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>{field.label}</div>
+                  <input
+                    value={(form as any)[field.key]}
+                    onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                    style={{
+                      width: "100%", padding: "8px 0", fontSize: 13,
+                      background: "transparent", border: "none",
+                      borderBottom: "1px solid #1c1e21", color: "#e8e6e0",
+                      fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, marginBottom: 32 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>Phone Number *</div>
+                <input style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "transparent", border: "none", borderBottom: "1px solid #1c1e21", color: "#e8e6e0", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>Organization Type *</div>
+                <select style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "#0f1012", border: "none", borderBottom: "1px solid #1c1e21", color: "#e8e6e0", fontFamily: "inherit", outline: "none" }}>
+                  <option value="">Select</option>
+                  <option>Pension Fund</option>
+                  <option>Insurance Company</option>
+                  <option>Asset Manager</option>
+                  <option>Securities Firm</option>
+                  <option>Bank</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>Primary Role *</div>
+                <select
+                  value={form.role}
+                  onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                  style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "#0f1012", border: "none", borderBottom: "1px solid #1c1e21", color: "#e8e6e0", fontFamily: "inherit", outline: "none" }}>
+                  <option value="">Select</option>
+                  <option>CIO / CRO</option>
+                  <option>Portfolio Manager</option>
+                  <option>Credit Analyst</option>
+                  <option>IR / BD</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 16 }}>Areas of Interest (Select all that apply)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {INTERESTS.map(item => (
+                  <label key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}
+                    onClick={() => toggleInterest(item)}>
+                    <div style={{
+                      width: 14, height: 14, flexShrink: 0, marginTop: 2,
+                      border: `1px solid ${form.interests.includes(item) ? "#b8912a" : "#1c1e21"}`,
+                      background: form.interests.includes(item) ? "#b8912a" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {form.interests.includes(item) && <span style={{ fontSize: 9, color: "#000", fontWeight: 700 }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: 11, color: "#6b6b6b", lineHeight: 1.5 }}>{item}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>How can we help you?</div>
+              <textarea
+                value={form.message}
+                onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                rows={4}
+                style={{
+                  width: "100%", padding: 12, fontSize: 13,
+                  background: "#090a0b", border: "1px solid #1c1e21",
+                  color: "#e8e6e0", fontFamily: "inherit", outline: "none",
+                  resize: "vertical", boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <button style={{
+              padding: "14px 40px", fontSize: 11, letterSpacing: "0.15em",
+              background: "#b8912a", color: "#000", border: "none",
+              cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
+            }}>SUBMIT →</button>
+          </div>
+        </div>
+      )}
   );
 }
