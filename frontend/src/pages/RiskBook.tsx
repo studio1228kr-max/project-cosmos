@@ -1,222 +1,276 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 
-const BASE = "https://project-cosmos-production.up.railway.app";
+const API = "https://project-cosmos-production.up.railway.app";
+const token = localStorage.getItem("cosmos_token") || "";
+
+const C = {
+  bg:       "#090a0b",
+  surface:  "#0f1012",
+  surface2: "#141618",
+  border:   "#1c1e21",
+  gold:     "#b8912a",
+  goldDim:  "#7a6020",
+  text:     "#e8e6e0",
+  textS:    "#6b6b6b",
+  textSS:   "#3a3a3a",
+  critical: "#c0392b",
+  moderate: "#d4851a",
+  clear:    "#27ae60",
+  deferred: "#3a3a3a",
+};
+
+const TAG = ({ label, color, bg }: { label: string; color: string; bg: string }) => (
+  <span style={{
+    display: "inline-block", padding: "2px 8px", fontSize: 10,
+    fontFamily: "monospace", letterSpacing: "0.12em", fontWeight: 700,
+    color, background: bg, border: `1px solid ${color}30`,
+  }}>{label}</span>
+);
 
 const GATE_COLOR: Record<string, string> = {
-  ADVANCE: "#22c55e", HOLD: "#f59e0b",
-  RESTRUCTURE: "#f97316", REJECT: "#ef4444",
-  PARTIAL: "#eab308", INSUFFICIENT: "#ef4444", COMPLETE: "#22c55e",
-};
-const CONF_COLOR: Record<string, string> = {
-  HIGH: "#22c55e", MEDIUM: "#eab308", LOW: "#ef4444", UNVERIFIED: "#6a6a6a",
+  HOLD: C.critical, RESTRUCTURE: C.moderate, ADVANCE: C.clear, REJECT: C.critical,
 };
 
-function GateBadge({ label, value }: { label: string; value: string }) {
-  const col = GATE_COLOR[value] || "#6a6a6a";
-  return (
-    <div style={{ background: "#1a1a1a", border: `1px solid ${col}33`, borderRadius: 8, padding: "12px 18px", minWidth: 130 }}>
-      <div style={{ fontSize: 10, color: "#6a6a6a", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: col }}>{value}</div>
-    </div>
-  );
-}
-
-function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div style={{ background: "#1a1a1a", border: "1px solid #222", borderRadius: 8, padding: "12px 16px", minWidth: 110 }}>
-      <div style={{ fontSize: 10, color: "#6a6a6a", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: "#e2e2e2" }}>{value}</div>
-      {sub && <div style={{ fontSize: 10, color: "#6a6a6a", marginTop: 3 }}>{sub}</div>}
-    </div>
-  );
-}
-
-function pct(v: number | null) { return v != null ? `${(v * 100).toFixed(1)}%` : "—"; }
-function x2(v: number | null) { return v != null ? `${v.toFixed(2)}x` : "—"; }
+const SEV_COLOR: Record<string, string> = {
+  CRITICAL: C.critical, MODERATE: C.moderate, DEFERRED: C.deferred, CLEAR: C.clear,
+};
 
 export default function RiskBook() {
+  const [deals, setDeals] = useState<any[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch(`${BASE}/api/risk-book/deals/LSK-2026-7003EE/summary`)
-      .then(r => r.json())
-      .then(d => { setData(d); setLoading(false); })
-      .catch(e => { setError(String(e)); setLoading(false); });
+    axios.get(`${API}/api/risk-book/deals`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => { setDeals(r.data); if (r.data.length > 0) setSelected(r.data[0].deal_code); })
+      .catch(() => {});
   }, []);
 
-  if (loading) return <div style={{ padding: 40, color: "#6a6a6a" }}>Loading Risk Book...</div>;
-  if (error || !data?.deal) return <div style={{ padding: 40, color: "#ef4444" }}>Error: {error || "No data"}</div>;
+  useEffect(() => {
+    if (!selected) return;
+    setLoading(true);
+    axios.get(`${API}/api/risk-book/deals/${selected}/summary`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => { setData(r.data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [selected]);
 
-  const { deal, financials: fin, gate, scenarios, evidence } = data;
-  const mandatory = (scenarios || []).filter((s: any) => s.gate_weight === "MANDATORY");
-  const tail = (scenarios || []).filter((s: any) => s.gate_weight === "INFORMATIONAL");
+  const deal = data?.deal;
+  const gate = data?.gate;
+  const scenarios = data?.scenarios || [];
+  const fin = data?.financials;
 
   return (
-    <div style={{ padding: "28px 32px", fontFamily: "'ZenSerif','Inter',sans-serif", color: "#e2e2e2", maxWidth: 1100 }}>
+    <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: "'IBM Plex Mono', 'Courier New', monospace" }}>
 
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: "#6a6a6a", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
-          Risk Book · {deal.deal_code} · {deal.stage}
+      {/* TOP BAR */}
+      <div style={{ borderBottom: `1px solid ${C.border}`, padding: "12px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.surface }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <span style={{ fontSize: 10, letterSpacing: "0.2em", color: C.gold, fontWeight: 700 }}>COSMOS</span>
+          <span style={{ color: C.border }}>|</span>
+          <span style={{ fontSize: 10, letterSpacing: "0.15em", color: C.textS }}>DIAGNOSTIC ENGINE</span>
         </div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "#e2e2e2" }}>{deal.deal_name}</div>
-        <div style={{ fontSize: 12, color: "#6a6a6a", marginTop: 4 }}>
-          {deal.asset_address} · {deal.borrower} · {deal.current_lender} → {deal.proposed_lender}
-        </div>
-      </div>
-
-      {/* Gate Strip */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-        <GateBadge label="Final Gate" value={gate?.final_gate || "—"} />
-        <GateBadge label="Provisional" value={gate?.provisional_gate || "—"} />
-        <GateBadge label="Data Gate" value={gate?.data_gate || "—"} />
-        <GateBadge label="Structural" value={gate?.structural_gate || "—"} />
-        <div style={{ background: "#1a1a1a", border: "1px solid #222", borderRadius: 8, padding: "12px 18px" }}>
-          <div style={{ fontSize: 10, color: "#6a6a6a", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>IC Ready</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: gate?.ic_ready ? "#22c55e" : "#6a6a6a" }}>
-            {gate?.ic_ready ? "YES" : "NO"}
-          </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {deals.map(d => (
+            <button key={d.deal_code} onClick={() => setSelected(d.deal_code)}
+              style={{
+                padding: "4px 12px", fontSize: 10, letterSpacing: "0.1em",
+                background: selected === d.deal_code ? C.gold : "transparent",
+                color: selected === d.deal_code ? "#000" : C.textS,
+                border: `1px solid ${selected === d.deal_code ? C.gold : C.border}`,
+                cursor: "pointer", fontFamily: "inherit",
+              }}>
+              {d.deal_code}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-        <MetricCard label="LTV Gross" value={pct(fin?.ltv_gross)} sub="담보가치 기준" />
-        <MetricCard label="LTV Net" value={pct(fin?.ltv_net)} sub="NTS 압류 차감" />
-        <MetricCard label="DSCR" value={x2(fin?.dscr)} sub="Base Case" />
-        <MetricCard label="Debt Yield" value={pct(fin?.debt_yield)} sub="NOI / Loan" />
-        <MetricCard label="Evidence" value={`${fin?.evidence_completeness ?? 0}%`} sub={gate?.data_gate} />
-      </div>
-
-      {/* Hold Reasons + Required Actions */}
-      {gate?.hold_reasons?.length > 0 && (
-        <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 280, background: "#1a1a1a", border: "1px solid #f59e0b33", borderRadius: 8, padding: "16px 18px" }}>
-            <div style={{ fontSize: 11, color: "#f59e0b", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Hold Reasons</div>
-            {gate.hold_reasons.map((r: string, i: number) => (
-              <div key={i} style={{ fontSize: 12, color: "#ccc", marginBottom: 6, display: "flex", gap: 8 }}>
-                <span style={{ color: "#f59e0b" }}>·</span>{r}
-              </div>
-            ))}
-          </div>
-          <div style={{ flex: 1, minWidth: 280, background: "#1a1a1a", border: "1px solid #22222255", borderRadius: 8, padding: "16px 18px" }}>
-            <div style={{ fontSize: 11, color: "#6a6a6a", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>Required Actions</div>
-            {(gate.required_actions || []).map((a: string, i: number) => (
-              <div key={i} style={{ fontSize: 12, color: "#ccc", marginBottom: 6, display: "flex", gap: 8 }}>
-                <span style={{ color: "#22c55e" }}>→</span>{a}
-              </div>
-            ))}
-          </div>
+      {loading && (
+        <div style={{ padding: 64, textAlign: "center", color: C.textS, fontSize: 11, letterSpacing: "0.15em" }}>
+          LOADING DIAGNOSTIC DATA...
         </div>
       )}
 
-      {/* Scenario Table - Mandatory */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 11, color: "#6a6a6a", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-          Stress Scenarios — Mandatory Gate
-        </div>
-        <div style={{ background: "#1a1a1a", border: "1px solid #222", borderRadius: 8, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #222" }}>
-                {["Scenario","LTV","DSCR","Debt Yield","Gate","Breach"].map(h => (
-                  <th key={h} style={{ padding: "10px 14px", textAlign: "left", color: "#6a6a6a", fontWeight: 500, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {mandatory.map((s: any, i: number) => {
-                const gc = GATE_COLOR[s.scenario_gate] || "#6a6a6a";
-                return (
-                  <tr key={i} style={{ borderBottom: "1px solid #1e1e1e" }}>
-                    <td style={{ padding: "9px 14px", color: "#ccc" }}>{s.scenario_id}</td>
-                    <td style={{ padding: "9px 14px", color: "#ccc" }}>{pct(s.stressed_ltv_gross)}</td>
-                    <td style={{ padding: "9px 14px", color: s.stressed_dscr < 1.0 ? "#ef4444" : "#ccc" }}>{x2(s.stressed_dscr)}</td>
-                    <td style={{ padding: "9px 14px", color: "#ccc" }}>{pct(s.stressed_debt_yield)}</td>
-                    <td style={{ padding: "9px 14px" }}><span style={{ color: gc, fontWeight: 600 }}>{s.scenario_gate}</span></td>
-                    <td style={{ padding: "9px 14px", color: "#6a6a6a", fontSize: 11 }}>
-                      {(s.breach_vector || []).join(", ") || "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {!loading && deal && (
+        <div style={{ padding: "0 32px 48px" }}>
 
-      {/* Evidence Panel */}
-      {evidence?.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: "#6a6a6a", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-            Evidence & Provenance
+          {/* DEAL HEADER */}
+          <div style={{ padding: "24px 0 20px", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 10, color: C.textS, letterSpacing: "0.15em", marginBottom: 6 }}>
+              {deal.deal_code} · {deal.asset_type} · {deal.stage}
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "0.05em", color: C.text, marginBottom: 4 }}>
+              {deal.deal_name}
+            </div>
+            <div style={{ fontSize: 11, color: C.textS }}>
+              {deal.asset_address} · {deal.borrower} · {deal.current_lender} → {deal.proposed_lender}
+            </div>
           </div>
-          <div style={{ background: "#1a1a1a", border: "1px solid #222", borderRadius: 8, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid #222" }}>
-                  {["Type","Source","Status","Confidence","Distribution"].map(h => (
-                    <th key={h} style={{ padding: "10px 14px", textAlign: "left", color: "#6a6a6a", fontWeight: 500, fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase" }}>{h}</th>
+
+          {/* DECISION STRIP */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 1, margin: "1px 0", background: C.border }}>
+            {[
+              { label: "DECISION", value: gate?.final_gate, color: GATE_COLOR[gate?.final_gate] || C.gold },
+              { label: "REC. PATH", value: gate?.provisional_gate || "—", color: GATE_COLOR[gate?.provisional_gate] || C.textS },
+              { label: "EVIDENCE", value: gate?.data_gate, color: gate?.data_gate === "COMPLETE" ? C.clear : gate?.data_gate === "PARTIAL" ? C.moderate : C.critical },
+              { label: "STRUCTURE", value: gate?.structural_gate, color: GATE_COLOR[gate?.structural_gate] || C.textS },
+              { label: "IC READY", value: gate?.ic_ready ? "YES" : "NO", color: gate?.ic_ready ? C.clear : C.critical },
+              { label: "EVIDENCE %", value: `${deal.evidence_completeness?.toFixed(0)}%`, color: C.text },
+            ].map((item, i) => (
+              <div key={i} style={{ background: C.surface, padding: "16px 20px" }}>
+                <div style={{ fontSize: 9, color: C.textS, letterSpacing: "0.15em", marginBottom: 8 }}>{item.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: item.color, letterSpacing: "0.08em" }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* CORE METRICS */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, marginBottom: 1, background: C.border }}>
+            {[
+              { label: "LTV GROSS", value: `${((deal.ltv_gross || 0) * 100).toFixed(1)}%`, sub: "담보가치 기준" },
+              { label: "LTV NET", value: fin ? `${((fin.loan_amount / (fin.collateral_value_base - (fin.nts_seizure_amount || 0))) * 100).toFixed(1)}%` : "—", sub: "NTS 압류 차감" },
+              { label: "BASE DSCR", value: `${(deal.dscr || 0).toFixed(2)}x`, sub: "NOI / Annual Interest" },
+              { label: "DEBT YIELD", value: `${((deal.debt_yield || 0) * 100).toFixed(1)}%`, sub: "NOI / Loan Amount" },
+            ].map((m, i) => (
+              <div key={i} style={{ background: C.surface2, padding: "14px 20px" }}>
+                <div style={{ fontSize: 9, color: C.textS, letterSpacing: "0.15em", marginBottom: 6 }}>{m.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: C.gold, letterSpacing: "0.03em" }}>{m.value}</div>
+                <div style={{ fontSize: 9, color: C.textSS, marginTop: 4 }}>{m.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* FAILURE MAP + SCENARIOS */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 24 }}>
+
+            {/* FAILURE MAP */}
+            <div>
+              <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 12, fontWeight: 700 }}>
+                FAILURE MAP
+              </div>
+              <div style={{ border: `1px solid ${C.border}` }}>
+                {/* Header */}
+                <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 80px", background: C.surface, padding: "8px 16px", borderBottom: `1px solid ${C.border}` }}>
+                  {["DOMAIN", "ISSUE", "SEVERITY"].map(h => (
+                    <div key={h} style={{ fontSize: 9, color: C.textSS, letterSpacing: "0.15em" }}>{h}</div>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {evidence.map((ev: any, i: number) => (
-                  <tr key={i} style={{ borderBottom: "1px solid #1e1e1e" }}>
-                    <td style={{ padding: "9px 14px", color: "#ccc" }}>{ev.evidence_type}</td>
-                    <td style={{ padding: "9px 14px", color: "#6a6a6a" }}>{ev.source_system}</td>
-                    <td style={{ padding: "9px 14px" }}>
-                      <span style={{ color: ev.verification_status === "VERIFIED" ? "#22c55e" : ev.verification_status === "ESTIMATED" ? "#eab308" : "#6a6a6a" }}>
-                        {ev.verification_status}
-                      </span>
-                    </td>
-                    <td style={{ padding: "9px 14px" }}>
-                      <span style={{ color: CONF_COLOR[ev.confidence_level] || "#6a6a6a" }}>{ev.confidence_level}</span>
-                    </td>
-                    <td style={{ padding: "9px 14px", color: "#6a6a6a", fontSize: 11 }}>{ev.distribution_level}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                </div>
 
-      {/* Tail Warnings - Separated */}
-      {tail.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: "#6a6a6a", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
-            Tail Stress Warnings
-            <span style={{ marginLeft: 8, color: "#4a4a4a", fontSize: 10, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
-              — 정보성. Final Gate 미반영.
+                {gate?.hold_reasons?.length > 0 ? gate.hold_reasons.map((reason: string, i: number) => {
+                  const isEv = reason.includes("담보") || reason.includes("감정");
+                  const isStr = reason.includes("1순위") || reason.includes("등기") || reason.includes("NTS");
+                  const isFin = reason.includes("DSCR") || reason.includes("LTV");
+                  const domain = isEv ? "EVIDENCE" : isStr ? "STRUCTURAL" : isFin ? "FINANCIAL" : "LEGAL";
+                  const sev = i < 2 ? "CRITICAL" : "MODERATE";
+                  return (
+                    <div key={i} style={{
+                      display: "grid", gridTemplateColumns: "80px 1fr 80px",
+                      padding: "12px 16px", borderBottom: `1px solid ${C.border}`,
+                      background: i % 2 === 0 ? C.bg : C.surface,
+                    }}>
+                      <div style={{ fontSize: 9, color: SEV_COLOR[sev], letterSpacing: "0.1em", fontWeight: 700 }}>{domain}</div>
+                      <div style={{ fontSize: 11, color: C.text, paddingRight: 16 }}>{reason}</div>
+                      <div>
+                        <TAG label={sev} color={SEV_COLOR[sev]} bg={`${SEV_COLOR[sev]}15`} />
+                      </div>
+                    </div>
+                  );
+                }) : (
+                  <div style={{ padding: "20px 16px", fontSize: 11, color: C.textS }}>No failures detected.</div>
+                )}
+
+                {gate?.required_actions?.length > 0 && (
+                  <>
+                    <div style={{ padding: "8px 16px", background: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+                      <span style={{ fontSize: 9, color: C.textSS, letterSpacing: "0.15em" }}>CURE ACTIONS</span>
+                    </div>
+                    {gate.required_actions.map((action: string, i: number) => (
+                      <div key={i} style={{
+                        padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
+                        background: i % 2 === 0 ? C.bg : C.surface,
+                        display: "flex", gap: 8, alignItems: "flex-start",
+                      }}>
+                        <span style={{ color: C.gold, fontSize: 10, flexShrink: 0 }}>→</span>
+                        <span style={{ fontSize: 11, color: C.textS }}>{action}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* SCENARIO STRESS TABLE */}
+            <div>
+              <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 12, fontWeight: 700 }}>
+                SCENARIO STRESS — FAIL MAP
+              </div>
+              <div style={{ border: `1px solid ${C.border}` }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 60px 60px 80px", background: C.surface, padding: "8px 16px", borderBottom: `1px solid ${C.border}` }}>
+                  {["SCENARIO", "LTV", "DSCR", "DY", "RESULT"].map(h => (
+                    <div key={h} style={{ fontSize: 9, color: C.textSS, letterSpacing: "0.12em" }}>{h}</div>
+                  ))}
+                </div>
+                {scenarios.filter((s: any) => s.gate_weight !== "INFORMATIONAL").map((s: any, i: number) => (
+                  <div key={i} style={{
+                    display: "grid", gridTemplateColumns: "1fr 60px 60px 60px 80px",
+                    padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
+                    background: i % 2 === 0 ? C.bg : C.surface,
+                  }}>
+                    <div style={{ fontSize: 10, color: C.textS, letterSpacing: "0.08em" }}>{s.scenario_id}</div>
+                    <div style={{ fontSize: 11, color: C.text }}>{s.stressed_ltv_gross ? `${(s.stressed_ltv_gross * 100).toFixed(1)}%` : "—"}</div>
+                    <div style={{ fontSize: 11, color: s.stressed_dscr < 1.0 ? C.critical : C.text }}>
+                      {s.stressed_dscr ? `${s.stressed_dscr.toFixed(2)}x` : "—"}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.text }}>{s.stressed_debt_yield ? `${(s.stressed_debt_yield * 100).toFixed(1)}%` : "—"}</div>
+                    <div>
+                      <TAG
+                        label={s.scenario_gate}
+                        color={GATE_COLOR[s.scenario_gate] || C.textS}
+                        bg={`${GATE_COLOR[s.scenario_gate] || C.textS}15`}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {/* Tail scenarios */}
+                {scenarios.filter((s: any) => s.gate_weight === "INFORMATIONAL").length > 0 && (
+                  <>
+                    <div style={{ padding: "8px 16px", background: C.surface, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+                      <span style={{ fontSize: 9, color: C.textSS, letterSpacing: "0.12em" }}>HISTORICAL TAIL — INFORMATIONAL ONLY · NOT GATE-DETERMINATIVE</span>
+                    </div>
+                    {scenarios.filter((s: any) => s.gate_weight === "INFORMATIONAL").map((s: any, i: number) => (
+                      <div key={i} style={{
+                        display: "grid", gridTemplateColumns: "1fr 60px 60px 60px 80px",
+                        padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
+                        background: C.bg, opacity: 0.6,
+                      }}>
+                        <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.08em" }}>{s.scenario_id}</div>
+                        <div style={{ fontSize: 11, color: C.textSS }}>—</div>
+                        <div style={{ fontSize: 11, color: C.textSS }}>—</div>
+                        <div style={{ fontSize: 11, color: C.textSS }}>—</div>
+                        <div style={{ fontSize: 10, color: C.textSS }}>{s.scenario_gate}</div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* FOOTER */}
+          <div style={{ marginTop: 32, paddingTop: 16, borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 9, color: C.textSS, letterSpacing: "0.12em" }}>
+              COSMOS DIAGNOSTIC ENGINE · {deal.deal_code} · POLICY: {gate?.policy_id} v{gate?.gate_version}
+            </span>
+            <span style={{ fontSize: 9, color: C.textSS, letterSpacing: "0.12em" }}>
+              {gate?.created_at ? new Date(gate.created_at).toLocaleDateString("ko-KR") : "—"} · LUSKA CAPITAL MANAGEMENT
             </span>
           </div>
-          <div style={{ background: "#111", border: "1px solid #2a2a2a", borderRadius: 8, padding: "14px 18px", display: "flex", gap: 16, flexWrap: "wrap" }}>
-            {tail.map((s: any, i: number) => {
-              const gc = GATE_COLOR[s.scenario_gate] || "#6a6a6a";
-              return (
-                <div key={i} style={{ background: "#1a1a1a", border: `1px solid ${gc}22`, borderRadius: 6, padding: "10px 14px", minWidth: 180 }}>
-                  <div style={{ fontSize: 11, color: "#6a6a6a", marginBottom: 4 }}>{s.scenario_id}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: gc }}>{s.scenario_gate}</div>
-                  <div style={{ fontSize: 10, color: "#4a4a4a", marginTop: 4 }}>
-                    DSCR {x2(s.stressed_dscr)} · LTV {pct(s.stressed_ltv_gross)}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ fontSize: 10, color: "#4a4a4a", marginTop: 6 }}>
-            LUSKA_GATE_V0_1 정책상 Historical Tail Stress는 Gate 판정에 미반영. 자본 버퍼 참고용.
-          </div>
+
         </div>
       )}
-
-      {/* Footer */}
-      <div style={{ fontSize: 10, color: "#333", marginTop: 8, borderTop: "1px solid #1a1a1a", paddingTop: 12 }}>
-        COSMOS Risk Book · {deal.deal_code} · Policy: {gate?.policy_id} v{gate?.gate_version} · {new Date(gate?.created_at).toLocaleDateString("ko-KR")}
-      </div>
     </div>
   );
 }
