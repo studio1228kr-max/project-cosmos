@@ -259,8 +259,6 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         </div>
       </div>
 
-    </div>
-
       {modalOpen && (
         <div style={{
           position: "fixed", inset: 0, zIndex: 500,
@@ -383,5 +381,6 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
       )}
+    </div>
   );
 }
