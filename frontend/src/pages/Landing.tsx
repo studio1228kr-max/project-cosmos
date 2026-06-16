@@ -18,6 +18,7 @@ const C = {
 export default function Landing({ onLogin }: { onLogin: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [scamAlert, setScamAlert] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -206,6 +207,44 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
       </div>
+
+      {scamAlert && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: "rgba(0,0,0,0.92)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: isMobile ? "16px" : "40px",
+        }}>
+          <div style={{
+            background: "#0f1012", border: "1px solid #b8912a",
+            maxWidth: 560, width: "100%", padding: isMobile ? "28px 24px" : "40px 48px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <span style={{ fontSize: 16 }}>⚠️</span>
+              <span style={{ fontSize: 11, color: "#b8912a", letterSpacing: "0.2em", fontWeight: 700 }}>
+                INVESTMENT SCAM WARNING
+              </span>
+            </div>
+            <p style={{ fontSize: 13, color: "#e8e6e0", lineHeight: 1.9, marginBottom: 16 }}>
+              Luska Capital Management and COSMOS never solicit investments, offer consultations,
+              or request money transfers from individual or retail investors.
+            </p>
+            <p style={{ fontSize: 13, color: "#6b6b6b", lineHeight: 1.9, marginBottom: 28 }}>
+              Scams impersonating financial companies are on the rise. If you receive any suspicious
+              contact pretending to be from COSMOS or our team, please ignore it and report immediately
+              to the police (112) or Financial Supervisory Service (1332).
+              We are not liable for any damages caused by such impersonation scams.
+            </p>
+            <button onClick={() => setScamAlert(false)} style={{
+              width: "100%", padding: "14px", fontSize: 11, letterSpacing: "0.15em",
+              background: "#b8912a", color: "#000", border: "none",
+              cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
+            }}>
+              I UNDERSTAND →
+            </button>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div style={{
