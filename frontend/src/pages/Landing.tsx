@@ -85,7 +85,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
               {item}
             </span>
           ))}
-          <div style={{ position: "relative" }}>
+          {!isMobile && <div style={{ position: "relative" }}>
             <button onClick={() => setConnectOpen(!connectOpen)} style={{
               padding: "8px 20px", fontSize: 10, letterSpacing: "0.15em",
               background: "transparent", color: C.gold,
@@ -115,7 +115,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
                 </button>
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </nav>
 
