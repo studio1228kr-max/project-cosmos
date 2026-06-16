@@ -6,6 +6,7 @@ import Layout from "./Layout";
 import DashboardCharts from "./components/DashboardCharts";
 import Pipeline from "./pages/Pipeline";
 import MarketScan from "./pages/MarketScan";
+import RiskBook from "./pages/RiskBook";
 
 const STATUS_COLOR: any = { INTAKE: "#888", SCREENED: "#185FA5", WATCHLIST: "#854F0B", ADVANCE: "#3B6D11", REJECT: "#A32D2D" };
 const STATUS_BG: any = { INTAKE: "#F1EFE8", SCREENED: "#E6F1FB", WATCHLIST: "#FAEEDA", ADVANCE: "#EAF3DE", REJECT: "#FCEBEB" };
@@ -635,11 +636,13 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
     { id: "ic", icon: ICONS.ic, label: "IC Memo" },
   ];
 
-  const activePage = nav === "intake" ? "intake" : nav === "market" ? "market" : currentView;
+  const activePage = nav === "intake" ? "intake" : nav === "market" ? "market" : nav === "riskbook" ? "riskbook" : currentView;
   return (
-    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("market");}else{setNav("pipeline");setCurrentView(p as any);} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr">
+    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("market");}else if (p==="riskbook"){setNav("riskbook");}else{setNav("pipeline");setCurrentView(p as any);} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr">
       <div style={{ display:"flex", height:"100%", overflow:"hidden" }}>
-        {nav === "market" ? (
+        {nav === "riskbook" ? (
+            <RiskBook />
+          ) : nav === "market" ? (
           <div style={{ flex: 1, overflow: "auto" }}>
             <MarketScan />
           </div>
