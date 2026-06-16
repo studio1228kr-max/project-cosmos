@@ -43,6 +43,7 @@ const CAPABILITIES = [
 
 export default function Landing({ onLogin }: { onLogin: () => void }) {
   const [scrolled, setScrolled] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -75,17 +76,37 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
               {item}
             </span>
           ))}
-          <button onClick={onLogin} style={{
-            padding: "8px 20px", fontSize: 10, letterSpacing: "0.15em",
-            background: "transparent", color: C.gold,
-            border: `1px solid ${C.gold}`, cursor: "pointer",
-            fontFamily: "inherit",
-            transition: "all 0.2s",
-          }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = C.gold; (e.currentTarget as HTMLButtonElement).style.color = "#000"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = C.gold; }}>
-            SIGN IN →
-          </button>
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setConnectOpen(!connectOpen)} style={{
+              padding: "8px 20px", fontSize: 10, letterSpacing: "0.15em",
+              background: "transparent", color: C.gold,
+              border: `1px solid ${C.gold}`, cursor: "pointer",
+              fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8,
+            }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = C.gold; (e.currentTarget as HTMLButtonElement).style.color = "#000"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = C.gold; }}>
+              Connect {connectOpen ? "∧" : "∨"}
+            </button>
+            {connectOpen && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 4px)", right: 0,
+                background: C.surface, border: `1px solid ${C.border}`,
+                minWidth: 200, zIndex: 200,
+              }}>
+                <button onClick={onLogin} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  width: "100%", padding: "14px 20px", fontSize: 11,
+                  letterSpacing: "0.1em", background: "transparent",
+                  color: C.text, border: "none", cursor: "pointer",
+                  fontFamily: "inherit", textAlign: "left",
+                }}
+                  onMouseEnter={e => (e.currentTarget.style.background = C.border)}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  COSMOS Client Log In <span style={{ color: C.gold }}>›</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </nav>
 
