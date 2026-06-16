@@ -268,7 +268,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         }} onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
           <div style={{
             background: "#0f1012", border: "1px solid #1c1e21",
-            width: "100%", maxWidth: 800, padding: "48px",
+            width: "100%", maxWidth: "100%", padding: "48px 80px",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 }}>
               <div>
