@@ -18,6 +18,12 @@ const C = {
 export default function Landing({ onLogin }: { onLogin: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ name: "", company: "", email: "", role: "", message: "", interests: [] as string[] });
 
@@ -63,7 +69,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         borderBottom: scrolled ? `1px solid ${C.border}` : "none",
         backdropFilter: scrolled ? "blur(12px)" : "none",
         transition: "all 0.3s",
-        padding: "16px 48px",
+        padding: isMobile ? "12px 20px" : "16px 48px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -113,15 +119,15 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       </nav>
 
       {/* HERO */}
-      <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "1fr 1fr", position: "relative", paddingTop: 72 }}>
+      <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", position: "relative", paddingTop: 72 }}>
 
         {/* LEFT */}
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "80px 64px 120px" }}>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: isMobile ? "40px 24px 80px" : "80px 64px 120px" }}>
           <div style={{ fontSize: 10, color: C.gold, letterSpacing: "0.3em", marginBottom: 32, fontWeight: 700, borderLeft: `2px solid ${C.gold}`, paddingLeft: 12 }}>
             PRIVATE CREDIT PORTFOLIO MANAGEMENT
           </div>
           <h1 style={{
-            fontSize: "clamp(28px, 3.5vw, 52px)", fontWeight: 700,
+            fontSize: isMobile ? "clamp(28px, 8vw, 40px)" : "clamp(28px, 3.5vw, 52px)", fontWeight: 700,
             lineHeight: 1.15, letterSpacing: "-0.01em",
             margin: "0 0 28px", color: C.text,
             fontFamily: "'ZenSerif', Georgia, serif",
@@ -152,7 +158,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         </div>
 
         {/* RIGHT — image placeholder */}
-        <div style={{
+        {!isMobile && <div style={{
           background: C.surface,
           borderLeft: `1px solid ${C.border}`,
           display: "flex", alignItems: "center", justifyContent: "center",
@@ -167,7 +173,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           <div style={{ position: "relative", textAlign: "center" }}>
             <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.2em" }}>IMAGE PENDING</div>
           </div>
-        </div>
+        </div>}
 
 
       </div>
@@ -175,7 +181,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
 
       {/* DISCLAIMER + FOOTER */}
-      <div style={{ borderTop: `1px solid ${C.border}`, padding: "32px 80px 24px", background: C.surface }}>
+      <div style={{ borderTop: `1px solid ${C.border}`, padding: isMobile ? "24px 20px 16px" : "32px 80px 24px", background: C.surface }}>
         <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 20, fontWeight: 700 }}>DISCLAIMER</div>
         <div style={{ fontSize: 11, color: C.textSS, lineHeight: 1.9, maxWidth: 1200 }}>
           <p style={{ marginBottom: 16 }}>
