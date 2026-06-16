@@ -77,7 +77,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           <span style={{ fontSize: 10, color: C.textS, letterSpacing: "0.1em" }}>by Luska Capital Management</span>
         </div>
         <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
-          {["Platform", "Capabilities", "About"].map(item => (
+          {!isMobile && ["Platform", "Capabilities", "About"].map(item => (
             <span key={item} style={{ fontSize: 11, color: C.textS, letterSpacing: "0.1em", cursor: "pointer" }}
               onMouseEnter={e => (e.currentTarget.style.color = C.text)}
               onMouseLeave={e => (e.currentTarget.style.color = C.textS)}>
@@ -133,7 +133,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             fontFamily: "'ZenSerif', Georgia, serif",
           }}>
             The Operating System<br />
-            for Korean<br />
+            for Korean{isMobile ? <br /> : " "}
             <span style={{ color: C.gold }}>Private Credit.</span>
           </h1>
           <p style={{ fontSize: 13, color: C.textS, lineHeight: 1.9, maxWidth: 480, marginBottom: 16 }}>
