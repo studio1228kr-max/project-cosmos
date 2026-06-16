@@ -2,11 +2,13 @@ import React from "react";
 import AmbientBar from "./components/AmbientBar";
 
 const NAV = [
-  { key: "pipeline", label: "Deal Pipeline" },
-  { key: "today",    label: "Today" },
-  { key: "market",   label: "Market Scan" },
-  { key: "intake",   label: "New Intake" },
-  { key: "riskbook", label: "Risk Book" },
+  { key: "pipeline",   label: "Pipeline" },
+  { key: "sourcing",   label: "Sourcing" },
+  { key: "intake",     label: "Intake" },
+  { key: "diagnostic", label: "Diagnostic" },
+  { key: "icprep",     label: "IC Prep" },
+  { key: "execution",  label: "Execution" },
+  { key: "portfolio",  label: "Portfolio" },
 ];
 
 type Props = {
