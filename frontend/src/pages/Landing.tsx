@@ -137,21 +137,14 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             and systematically managing their overall Private Credit portfolios.
           </p>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <button onClick={onLogin} style={{
+            <button onClick={() => setModalOpen(true)} style={{
               padding: "14px 32px", fontSize: 11, letterSpacing: "0.15em",
               background: C.gold, color: "#000", border: "none",
               cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
             }}
               onMouseEnter={e => (e.currentTarget.style.opacity = "0.8")}
               onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
-              REQUEST ACCESS →
-            </button>
-            <button style={{
-              padding: "14px 32px", fontSize: 11, letterSpacing: "0.15em",
-              background: "transparent", color: C.textS,
-              border: `1px solid ${C.border}`, cursor: "pointer", fontFamily: "inherit",
-            }}>
-              LEARN MORE
+              LEARN MORE →
             </button>
           </div>
         </div>
