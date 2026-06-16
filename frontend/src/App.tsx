@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Login from "./pages/Login";
+import Landing from "./pages/Landing";
 import Intake from "./pages/Intake";
 import API from "./api";
 import Layout from "./Layout";
@@ -726,7 +727,12 @@ function App() {
     setToken("");
   };
 
-  if (!token) return <Login onLogin={(t) => { localStorage.setItem("token", t); setToken(t); }} />;
+  if (!token) {
+    if (window.location.pathname === "/login") {
+      return <Login onLogin={(t) => { localStorage.setItem("token", t); setToken(t); }} />;
+    }
+    return <Landing onLogin={() => { window.location.href = "/login"; }} />;
+  }
   return <MainApp onLogout={handleLogout} />;
 }
 
