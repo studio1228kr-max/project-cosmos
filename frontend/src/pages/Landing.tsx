@@ -90,41 +90,40 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       </nav>
 
       {/* HERO */}
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 48px", position: "relative", overflow: "hidden" }}>
-        {/* Grid overlay */}
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: `linear-gradient(${C.border} 1px, transparent 1px), linear-gradient(90deg, ${C.border} 1px, transparent 1px)`,
-          backgroundSize: "60px 60px", opacity: 0.3,
-        }} />
-        <div style={{ position: "relative", maxWidth: 800 }}>
-          <div style={{ fontSize: 10, color: C.gold, letterSpacing: "0.3em", marginBottom: 24, fontWeight: 700 }}>
-            PRIVATE CREDIT DIAGNOSTIC ENGINE
+      <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "1fr 1fr", position: "relative", paddingTop: 72 }}>
+
+        {/* LEFT */}
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "80px 64px 120px" }}>
+          <div style={{ fontSize: 10, color: C.gold, letterSpacing: "0.3em", marginBottom: 32, fontWeight: 700, borderLeft: `2px solid ${C.gold}`, paddingLeft: 12 }}>
+            PRIVATE CREDIT PORTFOLIO MANAGEMENT
           </div>
           <h1 style={{
-            fontSize: "clamp(32px, 5vw, 64px)", fontWeight: 700,
-            lineHeight: 1.1, letterSpacing: "-0.02em",
-            margin: "0 0 24px", color: C.text,
+            fontSize: "clamp(28px, 3.5vw, 52px)", fontWeight: 700,
+            lineHeight: 1.15, letterSpacing: "-0.01em",
+            margin: "0 0 28px", color: C.text,
+            fontFamily: "'ZenSerif', Georgia, serif",
           }}>
-            딜을 넣으면<br />
-            <span style={{ color: C.gold }}>어디서 실패하는지</span><br />
-            계산합니다.
+            The Operating System<br />
+            for Korean<br />
+            <span style={{ color: C.gold }}>Private Credit.</span>
           </h1>
-          <p style={{ fontSize: 14, color: C.textS, lineHeight: 1.8, maxWidth: 560, marginBottom: 40 }}>
-            COSMOS는 루스카 캐피탈 매니지먼트의 범용 프라이빗 크레딧 OS입니다.
-            CRE, Corporate, Special Situations — 에셋클래스에 무관하게
-            딜의 실패 차원을 진단하고 Gate를 도출합니다.
+          <p style={{ fontSize: 13, color: C.textS, lineHeight: 1.9, maxWidth: 480, marginBottom: 16 }}>
+            In alternative investments such as real estate, private credit, and private lending,
+            risk management and stable return generation are among the most important priorities.
           </p>
-          <div style={{ display: "flex", gap: 12 }}>
+          <p style={{ fontSize: 13, color: C.textS, lineHeight: 1.9, maxWidth: 480, marginBottom: 48 }}>
+            The LCM by COSMOS platform supports domestic institutional investors in transparently
+            and systematically managing their overall Private Credit portfolios.
+          </p>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <button onClick={onLogin} style={{
               padding: "14px 32px", fontSize: 11, letterSpacing: "0.15em",
               background: C.gold, color: "#000", border: "none",
               cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
-              transition: "opacity 0.2s",
             }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
+              onMouseEnter={e => (e.currentTarget.style.opacity = "0.8")}
               onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
-              ACCESS COSMOS →
+              REQUEST ACCESS →
             </button>
             <button style={{
               padding: "14px 32px", fontSize: 11, letterSpacing: "0.15em",
@@ -136,18 +135,37 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
 
-        {/* Bottom stats */}
+        {/* RIGHT — image placeholder */}
+        <div style={{
+          background: C.surface,
+          borderLeft: `1px solid ${C.border}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          position: "relative", overflow: "hidden", minHeight: "100vh",
+        }}>
+          {/* Grid pattern */}
+          <div style={{
+            position: "absolute", inset: 0,
+            backgroundImage: `linear-gradient(${C.border} 1px, transparent 1px), linear-gradient(90deg, ${C.border} 1px, transparent 1px)`,
+            backgroundSize: "40px 40px",
+          }} />
+          <div style={{ position: "relative", textAlign: "center" }}>
+            <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.2em" }}>IMAGE PENDING</div>
+          </div>
+        </div>
+
+        {/* Bottom stats bar */}
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0,
           display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
           borderTop: `1px solid ${C.border}`,
+          background: `${C.bg}e0`, backdropFilter: "blur(8px)",
         }}>
           {STATS.map((s, i) => (
             <div key={i} style={{
-              padding: "24px 48px",
+              padding: "20px 48px",
               borderRight: i < 3 ? `1px solid ${C.border}` : "none",
             }}>
-              <div style={{ fontSize: 28, fontWeight: 700, color: C.gold, letterSpacing: "-0.02em", marginBottom: 4 }}>{s.value}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: C.gold, letterSpacing: "-0.02em", marginBottom: 4 }}>{s.value}</div>
               <div style={{ fontSize: 9, color: C.textS, letterSpacing: "0.15em" }}>{s.label}</div>
             </div>
           ))}
