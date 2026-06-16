@@ -636,13 +636,15 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
     { id: "ic", icon: ICONS.ic, label: "IC Memo" },
   ];
 
-  const activePage = nav === "intake" ? "intake" : nav === "market" ? "market" : nav === "riskbook" ? "riskbook" : currentView;
+  const activePage = nav === "intake" ? "intake" : nav === "sourcing" ? "sourcing" : nav === "diagnostic" ? "diagnostic" : nav === "icprep" ? "icprep" : nav === "execution" ? "execution" : nav === "portfolio" ? "portfolio" : currentView;
   return (
-    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("market");}else if (p==="riskbook"){setNav("riskbook");}else{setNav("pipeline");setCurrentView(p as any);} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr">
+    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="sourcing"){setNav("sourcing");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="icprep"){setNav("icprep");}else if (p==="execution"){setNav("execution");}else if (p==="portfolio"){setNav("portfolio");}else{setNav("pipeline");setCurrentView(p as any);} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr">
       <div style={{ display:"flex", height:"100%", overflow:"hidden" }}>
-        {nav === "riskbook" ? (
+        {nav === "diagnostic" ? (
             <RiskBook />
-          ) : nav === "market" ? (
+          ) : nav === "sourcing" ? (
+            <MarketScan />
+          ) : nav === "intake" ? (
           <div style={{ flex: 1, overflow: "auto" }}>
             <MarketScan />
           </div>
