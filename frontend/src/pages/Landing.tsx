@@ -226,7 +226,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
               </span>
             </div>
             <p style={{ fontSize: 13, color: "#e8e6e0", lineHeight: 1.9, marginBottom: 16 }}>
-              Luska Capital Management and COSMOS never solicit investments, offer consultations,
+              LuskaCapitalManagement and COSMOS never solicit investments, offer consultations,
               or request money transfers from individual or retail investors.
             </p>
             <p style={{ fontSize: 13, color: "#6b6b6b", lineHeight: 1.9, marginBottom: 28 }}>
