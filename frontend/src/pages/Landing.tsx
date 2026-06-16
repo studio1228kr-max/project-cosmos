@@ -193,13 +193,33 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         </button>
       </div>
 
-      {/* FOOTER */}
-      <div style={{ padding: "32px 48px", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.1em" }}>
-          © 2026 LUSKA CAPITAL MANAGEMENT · COSMOS PRIVATE CREDIT OS
+      {/* DISCLAIMER + FOOTER */}
+      <div style={{ borderTop: `1px solid ${C.border}`, padding: "48px 80px 32px", background: C.surface }}>
+        <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 20, fontWeight: 700 }}>DISCLAIMER</div>
+        <div style={{ fontSize: 11, color: C.textSS, lineHeight: 1.9, maxWidth: 1200 }}>
+          <p style={{ marginBottom: 16 }}>
+            This material is provided for informational purposes only and should not be construed as investment advice, investment recommendation, solicitation, or an offer to buy or sell any securities or adopt any investment strategy. Opinions and information contained in this material are subject to change without notice.
+          </p>
+          <p style={{ marginBottom: 16 }}>
+            This material is intended to provide general information regarding the COSMOS platform (Cosmos by LuskaCapitalManagement) and is designed to assist in understanding the Private Credit sector, including real estate, private credit, and private lending. We do not guarantee the accuracy or completeness of the information provided. Any investment decision should be based on independent professional advice and your own due diligence.
+          </p>
+          <p style={{ marginBottom: 16 }}>
+            All risk analysis, return analysis, valuation, and other calculations provided through the Cosmos platform are based on assumptions, historical data, user inputs, and other factors, and are not a guarantee of future results. All graphs and screenshots are provided for illustrative purposes only.
+          </p>
+          <p style={{ marginBottom: 16 }}>
+            The Cosmos platform is intended solely for institutional investors and qualified investors in the Republic of Korea. It is not intended for use by retail or individual investors. Users of the Cosmos platform bear full responsibility for their own investment decisions and compliance with all applicable laws and regulations. This material should not be interpreted as investment advice or a recommendation.
+          </p>
+          <p style={{ marginBottom: 24 }}>
+            Cosmos reserves the right to modify or discontinue any features or services described in this material at any time without prior notice. This material is intended for distribution only within the Republic of Korea and is not intended for use or distribution in any other jurisdiction.
+          </p>
         </div>
-        <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.1em" }}>
-          PARNAS TOWER 29F · GANGNAM · SEOUL
+        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.08em" }}>
+            © 2025 Cosmos by LuskaCapitalManagement. All Rights Reserved.
+          </div>
+          <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.08em" }}>
+            PARNAS TOWER 29F · GANGNAM · SEOUL
+          </div>
         </div>
       </div>
 
