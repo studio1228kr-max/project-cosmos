@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import API from "../api";
 
 const BG = "#111";
@@ -26,6 +26,19 @@ export default function EvidenceChecklist() {
 
   const [gc, setGc] = useState({ action_type: "", audience: "", document_type: "", confidence: "", holder: "", text: "" });
   const [gcResult, setGcResult] = useState<any>(null);
+
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchTimeout = useRef<any>(null);
+
+  const searchDeals = (q: string) => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      API.get("/api/risk-book/deals/search", { params: { q } })
+        .then(r => { setSuggestions(r.data.results); setShowSuggestions(true); })
+        .catch(() => {});
+    }, 200);
+  };
 
   const loadDealTypes = () => {
     API.get("/api/risk-book/deal-types").then(r => setDealTypes(r.data)).catch(() => {});
@@ -77,9 +90,29 @@ export default function EvidenceChecklist() {
         <div style={{ background: PANEL, border: `1px solid ${BORDER}`, padding: 16, flex: 1 }}>
           <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 8, letterSpacing: "0.1em" }}>기존 딜 조회</div>
           <div style={{ display: "flex", gap: 8 }}>
-            <input value={dealCode} onChange={e => setDealCode(e.target.value)} placeholder="deal_code (예: LSK-2026-7003EE)"
-              style={{ flex: 1, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
-            <button onClick={() => loadChecklist(dealCode)} style={{ background: "transparent", border: `1px solid ${GOLD}`, color: GOLD, padding: "6px 14px", fontSize: 11, cursor: "pointer" }}>조회</button>
+            <div style={{ flex: 1, position: "relative" }}>
+              <input
+                value={dealCode}
+                onChange={e => { setDealCode(e.target.value); searchDeals(e.target.value); }}
+                onFocus={() => searchDeals(dealCode)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                onKeyDown={e => { if (e.key === "Enter") { setShowSuggestions(false); loadChecklist(dealCode); } }}
+                placeholder="deal_code (예: LSK-2026-7003EE)"
+                style={{ width: "100%", boxSizing: "border-box", background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
+              {showSuggestions && suggestions.length > 0 && (
+                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#0d0d0d", border: `1px solid ${BORDER}`, zIndex: 10, maxHeight: 240, overflowY: "auto" }}>
+                  {suggestions.map((s: any) => (
+                    <div key={s.deal_code}
+                      onMouseDown={() => { setDealCode(s.deal_code); setShowSuggestions(false); loadChecklist(s.deal_code); }}
+                      style={{ padding: "8px 10px", fontSize: 12, cursor: "pointer", borderBottom: `1px solid ${BORDER}` }}>
+                      <span style={{ color: GOLD }}>{s.deal_code}</span>
+                      <span style={{ color: TEXT_DIM, marginLeft: 8 }}>{s.deal_name}{s.stage ? ` · ${s.stage}` : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={() => { setShowSuggestions(false); loadChecklist(dealCode); }} style={{ background: "transparent", border: `1px solid ${GOLD}`, color: GOLD, padding: "6px 14px", fontSize: 11, cursor: "pointer" }}>조회</button>
           </div>
         </div>
 
