@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 
 const C = {
-  bg:      "#09090b",
-  surface: "#0f1012",
-  border:  "#1c1e21",
-  gold:    "#b8912a",
-  goldDim: "#7a6020",
-  text:    "#e8e6e0",
-  textS:   "#6b6b6b",
-  textSS:  "#3a3a3a",
+  bg:      "#FFFFFF",
+  surface: "#F4F8FC",
+  border:  "#D9E4EF",
+  gold:    "#1D4F77",
+  goldDim: "#0E3450",
+  text:    "#15213D",
+  textS:   "#5A6B85",
+  textSS:  "#8FA3BB",
 };
 
 
@@ -92,7 +92,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
               border: `1px solid ${C.gold}`, cursor: "pointer",
               fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8,
             }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = C.gold; (e.currentTarget as HTMLButtonElement).style.color = "#000"; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = C.gold; (e.currentTarget as HTMLButtonElement).style.color = "#fff"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = C.gold; }}>
               Connect {connectOpen ? "∧" : "∨"}
             </button>
@@ -147,7 +147,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <button onClick={() => setModalOpen(true)} style={{
               padding: "14px 32px", fontSize: 11, letterSpacing: "0.15em",
-              background: C.gold, color: "#000", border: "none",
+              background: C.gold, color: "#fff", border: "none",
               cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
             }}
               onMouseEnter={e => (e.currentTarget.style.opacity = "0.8")}
@@ -215,20 +215,20 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           padding: isMobile ? "16px" : "40px",
         }}>
           <div style={{
-            background: "#0f1012", border: "1px solid #b8912a",
+            background: "#FFFFFF", border: "1px solid #1D4F77",
             maxWidth: 560, width: "100%", padding: isMobile ? "28px 24px" : "40px 48px",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <span style={{ fontSize: 16 }}>⚠️</span>
-              <span style={{ fontSize: 11, color: "#b8912a", letterSpacing: "0.2em", fontWeight: 700 }}>
+              <span style={{ fontSize: 11, color: "#1D4F77", letterSpacing: "0.2em", fontWeight: 700 }}>
                 INVESTMENT SCAM WARNING
               </span>
             </div>
-            <p style={{ fontSize: 13, color: "#e8e6e0", lineHeight: 1.9, marginBottom: 16 }}>
+            <p style={{ fontSize: 13, color: "#15213D", lineHeight: 1.9, marginBottom: 16 }}>
               LuskaCapitalManagement and COSMOS never solicit investments, offer consultations,
               or request money transfers from individual or retail investors.
             </p>
-            <p style={{ fontSize: 13, color: "#6b6b6b", lineHeight: 1.9, marginBottom: 28 }}>
+            <p style={{ fontSize: 13, color: "#5A6B85", lineHeight: 1.9, marginBottom: 28 }}>
               Scams impersonating financial companies are on the rise. If you receive any suspicious
               contact pretending to be from COSMOS or our team, please ignore it and report immediately
               to the police (112) or Financial Supervisory Service (1332).
@@ -236,7 +236,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             </p>
             <button onClick={() => setScamAlert(false)} style={{
               width: "100%", padding: "14px", fontSize: 11, letterSpacing: "0.15em",
-              background: "#b8912a", color: "#000", border: "none",
+              background: "#1D4F77", color: "#fff", border: "none",
               cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
             }}>
               I UNDERSTAND →
@@ -253,18 +253,18 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           overflowY: "auto", padding: isMobile ? "16px 8px" : "40px 24px",
         }} onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
           <div style={{
-            background: "#0f1012", border: "1px solid #1c1e21",
+            background: "#FFFFFF", border: "1px solid #D9E4EF",
             width: "100%", maxWidth: "100%", padding: isMobile ? "24px 20px" : "48px 80px",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 }}>
               <div>
-                <div style={{ fontSize: 10, color: "#b8912a", letterSpacing: "0.2em", marginBottom: 12 }}>COSMOS BY LUSKA CAPITAL</div>
-                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#e8e6e0", margin: 0 }}>
+                <div style={{ fontSize: 10, color: "#1D4F77", letterSpacing: "0.2em", marginBottom: 12 }}>COSMOS BY LUSKA CAPITAL</div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#15213D", margin: 0 }}>
                   Get in touch to learn more about COSMOS
                 </h2>
               </div>
               <button onClick={() => setModalOpen(false)} style={{
-                background: "none", border: "none", color: "#6b6b6b",
+                background: "none", border: "none", color: "#5A6B85",
                 fontSize: 20, cursor: "pointer", padding: 4,
               }}>✕</button>
             </div>
@@ -276,14 +276,14 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
                 { label: "Business Email *", key: "email", placeholder: "" },
               ].map(field => (
                 <div key={field.key}>
-                  <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>{field.label}</div>
+                  <div style={{ fontSize: 11, color: "#15213D", fontWeight: 700, marginBottom: 8 }}>{field.label}</div>
                   <input
                     value={(form as any)[field.key]}
                     onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
                     style={{
                       width: "100%", padding: "8px 0", fontSize: 13,
                       background: "transparent", border: "none",
-                      borderBottom: "1px solid #1c1e21", color: "#e8e6e0",
+                      borderBottom: "1px solid #D9E4EF", color: "#15213D",
                       fontFamily: "inherit", outline: "none", boxSizing: "border-box",
                     }}
                   />
@@ -293,12 +293,12 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 16 : 24, marginBottom: 32 }}>
               <div>
-                <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>Phone Number *</div>
-                <input style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "transparent", border: "none", borderBottom: "1px solid #1c1e21", color: "#e8e6e0", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                <div style={{ fontSize: 11, color: "#15213D", fontWeight: 700, marginBottom: 8 }}>Phone Number *</div>
+                <input style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "transparent", border: "none", borderBottom: "1px solid #D9E4EF", color: "#15213D", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
               </div>
               <div>
-                <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>Organization Type *</div>
-                <select style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "#0f1012", border: "none", borderBottom: "1px solid #1c1e21", color: "#e8e6e0", fontFamily: "inherit", outline: "none" }}>
+                <div style={{ fontSize: 11, color: "#15213D", fontWeight: 700, marginBottom: 8 }}>Organization Type *</div>
+                <select style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "#FFFFFF", border: "none", borderBottom: "1px solid #D9E4EF", color: "#15213D", fontFamily: "inherit", outline: "none" }}>
                   <option value="">Select</option>
                   <option>Pension Fund</option>
                   <option>Insurance Company</option>
@@ -309,11 +309,11 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
                 </select>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>Primary Role *</div>
+                <div style={{ fontSize: 11, color: "#15213D", fontWeight: 700, marginBottom: 8 }}>Primary Role *</div>
                 <select
                   value={form.role}
                   onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-                  style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "#0f1012", border: "none", borderBottom: "1px solid #1c1e21", color: "#e8e6e0", fontFamily: "inherit", outline: "none" }}>
+                  style={{ width: "100%", padding: "8px 0", fontSize: 13, background: "#FFFFFF", border: "none", borderBottom: "1px solid #D9E4EF", color: "#15213D", fontFamily: "inherit", outline: "none" }}>
                   <option value="">Select</option>
                   <option>CIO / CRO</option>
                   <option>Portfolio Manager</option>
@@ -325,35 +325,35 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             </div>
 
             <div style={{ marginBottom: 32 }}>
-              <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 16 }}>Areas of Interest (Select all that apply)</div>
+              <div style={{ fontSize: 11, color: "#15213D", fontWeight: 700, marginBottom: 16 }}>Areas of Interest (Select all that apply)</div>
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
                 {INTERESTS.map(item => (
                   <label key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}
                     onClick={() => toggleInterest(item)}>
                     <div style={{
                       width: 14, height: 14, flexShrink: 0, marginTop: 2,
-                      border: `1px solid ${form.interests.includes(item) ? "#b8912a" : "#1c1e21"}`,
-                      background: form.interests.includes(item) ? "#b8912a" : "transparent",
+                      border: `1px solid ${form.interests.includes(item) ? "#1D4F77" : "#D9E4EF"}`,
+                      background: form.interests.includes(item) ? "#1D4F77" : "transparent",
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
-                      {form.interests.includes(item) && <span style={{ fontSize: 9, color: "#000", fontWeight: 700 }}>✓</span>}
+                      {form.interests.includes(item) && <span style={{ fontSize: 9, color: "#fff", fontWeight: 700 }}>✓</span>}
                     </div>
-                    <span style={{ fontSize: 11, color: "#6b6b6b", lineHeight: 1.5 }}>{item}</span>
+                    <span style={{ fontSize: 11, color: "#5A6B85", lineHeight: 1.5 }}>{item}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <div style={{ marginBottom: 32 }}>
-              <div style={{ fontSize: 11, color: "#e8e6e0", fontWeight: 700, marginBottom: 8 }}>How can we help you?</div>
+              <div style={{ fontSize: 11, color: "#15213D", fontWeight: 700, marginBottom: 8 }}>How can we help you?</div>
               <textarea
                 value={form.message}
                 onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
                 rows={4}
                 style={{
                   width: "100%", padding: 12, fontSize: 13,
-                  background: "#090a0b", border: "1px solid #1c1e21",
-                  color: "#e8e6e0", fontFamily: "inherit", outline: "none",
+                  background: "#F4F8FC", border: "1px solid #D9E4EF",
+                  color: "#15213D", fontFamily: "inherit", outline: "none",
                   resize: "vertical", boxSizing: "border-box",
                 }}
               />
@@ -361,7 +361,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
             <button style={{
               padding: "14px 40px", fontSize: 11, letterSpacing: "0.15em",
-              background: "#b8912a", color: "#000", border: "none",
+              background: "#1D4F77", color: "#fff", border: "none",
               cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
             }}>SUBMIT →</button>
           </div>
