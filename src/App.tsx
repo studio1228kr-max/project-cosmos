@@ -606,9 +606,7 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
 function MainApp({ onLogout }: { onLogout: () => void }) {
   const [deals, setDeals] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<string|null>(null);
-  const [currentView, setCurrentView] = useState<"today"|"pipeline">("today");
-  const [filter, setFilter] = useState("ALL");
-  const [nav, setNav] = useState("today");
+  const [page, setPage] = useState("today");
   const [loading, setLoading] = useState(true);
 
   const loadDeals = () => {
@@ -618,97 +616,94 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => { loadDeals(); }, []);
 
-  const needsIC = deals.filter(d => d.status === "SCREENED" || d.status === "ADVANCE").length;
-  const hardKillRed = deals.filter(d => d.missing_count === 0 && d.status !== "REJECT").length;
-  const evidenceMissing = deals.filter(d => d.missing_count > 0).length;
-  const bankFollowUp = deals.filter(d => d.status === "WATCHLIST").length;
+  const PAGE_PATH: Record<string, string> = {
+    today: "/dashboard",
+    pipeline: "/pipeline",
+    intake: "/due-diligence/intake",
+    riskbook: "/risk-monitoring",
+    market: "/market",
+  };
+  const PATH_PAGE: Record<string, string> = Object.fromEntries(
+    Object.entries(PAGE_PATH).map(([k, v]) => [v, k])
+  );
 
-  const filtered = filter === "ALL" ? deals : deals.filter(d => d.status === filter);
+  const handleNavigate = (path: string) => {
+    const key = PATH_PAGE[path];
+    setPage(key ?? path);
+  };
 
-  const navItems = [
-    { id: "pipeline", icon: ICONS.pipeline, label: "Pipeline" },
-    { id: "intake", icon: ICONS.intake, label: "Deal Intake" },
-  ];
-  const comingSoon = [
-    { id: "legal", icon: ICONS.legal, label: "Legal Workstream" },
-    { id: "evidence", icon: ICONS.evidence, label: "Evidence Register" },
-    { id: "bank", icon: ICONS.bank, label: "Bank Routing" },
-    { id: "ic", icon: ICONS.ic, label: "IC Memo" },
-  ];
-
-  const activePage = nav === "intake" ? "intake" : nav === "market" ? "market" : nav === "riskbook" ? "riskbook" : currentView;
   return (
-    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("market");}else if (p==="riskbook"){setNav("riskbook");}else{setNav("pipeline");setCurrentView(p as any);} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr">
+    <Layout activePath={PAGE_PATH[page] ?? page} onNavigate={handleNavigate} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr">
       <div style={{ display:"flex", height:"100%", overflow:"hidden" }}>
-        {nav === "riskbook" ? (
+        {page === "riskbook" ? (
             <RiskBook />
-          ) : nav === "market" ? (
+          ) : page === "market" ? (
           <div style={{ flex: 1, overflow: "auto" }}>
             <MarketScan />
           </div>
-        ) : nav === "intake" ? (
+        ) : page === "intake" ? (
           <div style={{ flex: 1, overflow: "auto" }}>
-            <Intake onSaved={() => { setNav("pipeline"); loadDeals(); }} />
+            <Intake onSaved={() => { setPage("pipeline"); loadDeals(); }} />
+          </div>
+        ) : page === "today" ? (
+          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+            {/* LEFT: Deal List Panel */}
+            <div style={{ width: 280, borderRight: "1px solid #1e1e1e", display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
+              <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #1A1A1A" }}>
+                <span style={{ fontSize: 9, color: "#555", letterSpacing: "0.15em" }}>DEAL REGISTER</span>
+                <span style={{ float: "right", fontSize: 9, color: "#333" }}>{deals.length} TOTAL</span>
+              </div>
+              <div style={{ flex: 1, overflow: "auto" }}>
+                {deals.map((d: any) => {
+                  const rec = d.deal_record ? (typeof d.deal_record === "string" ? JSON.parse(d.deal_record) : d.deal_record) : {};
+                  const name = rec.asset_name || d.deal_name || "Unknown";
+                  const stColor: any = { INTAKE:"#555", SCREENED:"#4499FF", WATCHLIST:"#F59E0B", ADVANCE:"#00C87A", REJECT:"#FF4444" };
+                  const verdict = rec.luska_verdict || "—";
+                  const ltv = rec.ltv ? `LTV ${rec.ltv}` : "";
+                  return (
+                    <div key={d.id}
+                      onClick={() => { setPage("pipeline"); setSelectedId(d.id); }}
+                      style={{ padding: "10px 14px", borderBottom: "1px solid #111", cursor: "pointer", transition: "background 0.1s" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "#0A0A0A")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                        <span style={{ fontSize: 12, color: "#E8E8E8", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{name}</span>
+                        <span style={{ fontSize: 10, color: stColor[d.status] || "#555", letterSpacing: "0.06em", flexShrink: 0 }}>{d.status}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 10, color: "#555" }}>{rec.creditor || "—"}</span>
+                        <span style={{ fontSize: 9, color: verdict === "GO" ? "#00C87A" : verdict === "NO-GO" ? "#FF4444" : verdict === "HOLD" ? "#F59E0B" : "#444" }}>{verdict !== "—" ? verdict : ltv}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* RIGHT: Action Queue */}
+            <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
+              <DashboardCharts />
+              <TodayView onNavigateDeal={(id: string, action?: string) => {
+                if (id === "new" || action === "intake") { setPage("pipeline"); }
+                else if (id === "pipeline") { setPage("pipeline"); }
+                else { setPage("pipeline"); setSelectedId(id); }
+              }} />
+            </div>
+          </div>
+        ) : page === "pipeline" ? (
+          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+            <div style={{ display:"flex", flexDirection:"column", width: selectedId ? 460 : "100%", overflow:"auto", transition:"width 0.2s" }}>
+              <Pipeline onSelectDeal={() => {}} />
+            </div>
+            {selectedId && (
+              <div style={{ flex: 1, borderLeft: "1px solid #1A2638", overflow: "hidden", background: "#0D1420" }}>
+                <DealPanel dealId={selectedId} onClose={() => setSelectedId(null)} />
+              </div>
+            )}
           </div>
         ) : (
-          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            {currentView === "today" && (
-              <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-                {/* LEFT: Deal List Panel */}
-                <div style={{ width: 280, borderRight: "1px solid #1e1e1e", display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
-                  <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #1A1A1A" }}>
-                    <span style={{ fontSize: 9, color: "#555", letterSpacing: "0.15em" }}>DEAL REGISTER</span>
-                    <span style={{ float: "right", fontSize: 9, color: "#333" }}>{deals.length} TOTAL</span>
-                  </div>
-                  <div style={{ flex: 1, overflow: "auto" }}>
-                    {deals.map((d: any) => {
-                      const rec = d.deal_record ? (typeof d.deal_record === "string" ? JSON.parse(d.deal_record) : d.deal_record) : {};
-                      const name = rec.asset_name || d.deal_name || "Unknown";
-                      const stColor: any = { INTAKE:"#555", SCREENED:"#4499FF", WATCHLIST:"#F59E0B", ADVANCE:"#00C87A", REJECT:"#FF4444" };
-                      const verdict = rec.luska_verdict || "—";
-                      const ltv = rec.ltv ? `LTV ${rec.ltv}` : "";
-                      return (
-                        <div key={d.id}
-                          onClick={() => { setCurrentView("pipeline"); setSelectedId(d.id); }}
-                          style={{ padding: "10px 14px", borderBottom: "1px solid #111", cursor: "pointer", transition: "background 0.1s" }}
-                          onMouseEnter={e => (e.currentTarget.style.background = "#0A0A0A")}
-                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                            <span style={{ fontSize: 12, color: "#E8E8E8", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{name}</span>
-                            <span style={{ fontSize: 10, color: stColor[d.status] || "#555", letterSpacing: "0.06em", flexShrink: 0 }}>{d.status}</span>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ fontSize: 10, color: "#555" }}>{rec.creditor || "—"}</span>
-                            <span style={{ fontSize: 9, color: verdict === "GO" ? "#00C87A" : verdict === "NO-GO" ? "#FF4444" : verdict === "HOLD" ? "#F59E0B" : "#444" }}>{verdict !== "—" ? verdict : ltv}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                {/* RIGHT: Action Queue */}
-                <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
-                  <DashboardCharts />
-                  <TodayView onNavigateDeal={(id: string, action?: string) => {
-                    if (id === "new" || action === "intake") { setCurrentView("pipeline"); }
-                    else if (id === "pipeline") { setCurrentView("pipeline"); }
-                    else { setCurrentView("pipeline"); setSelectedId(id); }
-                  }} />
-                </div>
-              </div>
-            )}
-            {currentView === "pipeline" && (
-              <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-                <div style={{ display:"flex", flexDirection:"column", width: selectedId && currentView !== "pipeline" ? 460 : "100%", overflow:"auto", transition:"width 0.2s" }}>
-                  <Pipeline onSelectDeal={() => {}} />
-                </div>
-                {selectedId && currentView !== "pipeline" && (
-                  <div style={{ flex: 1, borderLeft: "1px solid #1A2638", overflow: "hidden", background: "#0D1420" }}>
-                    <DealPanel dealId={selectedId} onClose={() => setSelectedId(null)} />
-                  </div>
-                )}
-              </div>
-            )}
+          <div style={{ padding: 48, color: "#666", fontSize: 13 }}>
+            <div style={{ fontSize: 11, color: "#444", marginBottom: 8, fontFamily: "monospace" }}>{page}</div>
+            아직 준비 중인 화면입니다.
           </div>
         )}
       </div>

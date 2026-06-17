@@ -2,13 +2,13 @@ import { useState } from "react";
 import {
   LayoutDashboard, Radar, GitBranch, SearchCheck, Landmark,
   FileSignature, Briefcase, ShieldAlert, BarChart3, Users,
-  FolderLock, ChevronRight,
+  FolderLock, ChevronRight, TrendingUp,
 } from "lucide-react";
 import { navConfig, NavGroup, NavLeaf, NavBadge } from "./navConfig";
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
   LayoutDashboard, Radar, GitBranch, SearchCheck, Landmark,
-  FileSignature, Briefcase, ShieldAlert, BarChart3, Users, FolderLock,
+  FileSignature, Briefcase, ShieldAlert, BarChart3, Users, FolderLock, TrendingUp,
 };
 
 const GOLD = "#C9A84C";
