@@ -28,6 +28,10 @@ export default function EvidenceChecklist() {
   const [gc, setGc] = useState({ action_type: "", audience: "", document_type: "", confidence: "", holder: "", text: "" });
   const [gcResult, setGcResult] = useState<any>(null);
 
+  const [users, setUsers] = useState<any[]>([]);
+  const [waiveModal, setWaiveModal] = useState<any>(null);
+  const [waiveForm, setWaiveForm] = useState({ reason: "", approved_by: "", expires: "" });
+
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -58,9 +62,14 @@ export default function EvidenceChecklist() {
       .catch(e => console.error("action-types fetch failed:", e?.response?.status, e?.response?.data || e.message));
   };
 
+  const loadUsers = () => {
+    API.get("/api/users").then(r => setUsers(r.data.results)).catch(() => {});
+  };
+
   useEffect(() => {
     loadDealTypes();
     loadActionTypes();
+    loadUsers();
   }, []);
 
   const loadChecklist = (code: string) => {
@@ -72,17 +81,19 @@ export default function EvidenceChecklist() {
 
   const updateStatus = (item: any, status: string) => {
     if (status === "WAIVED") {
-      const reason = window.prompt("Waiver 사유:");
-      const approver = window.prompt("승인자:");
-      const expires = window.prompt("만료일 (YYYY-MM-DD):");
-      if (!reason || !approver || !expires) return;
-      API.patch(`/api/risk-book/deals/${dealCode}/checklist/${item.evidence_item_code}`, {
-        status, waiver_reason: reason, waived_by: approver, waiver_expires_at: expires,
-      }).then(() => loadChecklist(dealCode));
+      setWaiveModal(item);
+      setWaiveForm({ reason: "", approved_by: "", expires: "" });
       return;
     }
     API.patch(`/api/risk-book/deals/${dealCode}/checklist/${item.evidence_item_code}`, { status })
       .then(() => loadChecklist(dealCode));
+  };
+
+  const confirmWaive = () => {
+    if (!waiveModal || !waiveForm.reason || !waiveForm.approved_by || !waiveForm.expires) return;
+    API.patch(`/api/risk-book/deals/${dealCode}/checklist/${waiveModal.evidence_item_code}`, {
+      status: "WAIVED", waiver_reason: waiveForm.reason, waived_by: waiveForm.approved_by, waiver_expires_at: waiveForm.expires,
+    }).then(() => { setWaiveModal(null); loadChecklist(dealCode); });
   };
 
   const createDeal = () => {
@@ -172,19 +183,50 @@ export default function EvidenceChecklist() {
             {dealCode} — CHECKLIST ({checklist.length})
           </div>
           {checklist.map((item: any) => (
-            <div key={item.evidence_item_code} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", borderBottom: `1px solid #161616`, fontSize: 12 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_COLOR[item.status] || TEXT_DIM, flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>{item.evidence_item_label || item.evidence_item_code}</span>
-              <span style={{ fontSize: 10, color: TEXT_DIM }}>{item.requirement_level}</span>
-              <select value={item.status} onChange={e => updateStatus(item, e.target.value)}
-                style={{ background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, padding: "3px 6px" }}>
-                <option value="MISSING">MISSING</option>
-                <option value="RECEIVED">RECEIVED</option>
-                <option value="VERIFIED">VERIFIED</option>
-                <option value="WAIVED">WAIVED</option>
-              </select>
+            <div key={item.evidence_item_code} style={{ padding: "8px 16px", borderBottom: `1px solid #161616` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_COLOR[item.status] || TEXT_DIM, flexShrink: 0 }} />
+                <span style={{ flex: 1 }}>{item.evidence_item_label || item.evidence_item_code}</span>
+                <span style={{ fontSize: 10, color: TEXT_DIM }}>{item.requirement_level}</span>
+                <select value={item.status} onChange={e => updateStatus(item, e.target.value)}
+                  style={{ background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, padding: "3px 6px" }}>
+                  <option value="MISSING">MISSING</option>
+                  <option value="RECEIVED">RECEIVED</option>
+                  <option value="VERIFIED">VERIFIED</option>
+                  <option value="WAIVED">WAIVED</option>
+                </select>
+              </div>
+              {item.status === "WAIVED" && (
+                <div style={{ fontSize: 10, color: TEXT_DIM, marginTop: 4, paddingLeft: 18 }}>
+                  승인: {item.waived_by || "-"} · 처리: {item.performed_by || "-"} · 만료: {item.waiver_expires_at || "-"}
+                </div>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {waiveModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
+          <div style={{ background: PANEL, border: `1px solid ${BORDER}`, padding: 20, width: 360 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>WAIVED — {waiveModal.evidence_item_label || waiveModal.evidence_item_code}</div>
+            <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 4 }}>Waiver 사유</div>
+            <input value={waiveForm.reason} onChange={e => setWaiveForm({ ...waiveForm, reason: e.target.value })}
+              style={{ width: "100%", boxSizing: "border-box", background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12, marginBottom: 10 }} />
+            <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 4 }}>승인자</div>
+            <select value={waiveForm.approved_by} onChange={e => setWaiveForm({ ...waiveForm, approved_by: e.target.value })}
+              style={{ width: "100%", boxSizing: "border-box", background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12, marginBottom: 10 }}>
+              <option value="">승인자 선택</option>
+              {users.map((u: any) => <option key={u.email} value={u.email}>{u.email} ({u.role})</option>)}
+            </select>
+            <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 4 }}>만료일</div>
+            <input type="date" value={waiveForm.expires} onChange={e => setWaiveForm({ ...waiveForm, expires: e.target.value })}
+              style={{ width: "100%", boxSizing: "border-box", background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12, marginBottom: 14 }} />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setWaiveModal(null)} style={{ background: "transparent", border: `1px solid ${BORDER}`, color: TEXT_DIM, padding: "6px 14px", fontSize: 11, cursor: "pointer" }}>취소</button>
+              <button onClick={confirmWaive} style={{ background: "transparent", border: `1px solid ${GOLD}`, color: GOLD, padding: "6px 14px", fontSize: 11, cursor: "pointer" }}>확정</button>
+            </div>
+          </div>
         </div>
       )}
 
