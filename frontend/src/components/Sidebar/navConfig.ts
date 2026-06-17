@@ -51,6 +51,7 @@ export const navConfig: NavSection[] = [
         children: [
           { id: "intake", label: "Intake", path: "intake" },
           { id: "diagnostic", label: "Diagnostic", path: "diagnostic" },
+          { id: "evidence", label: "Evidence Checklist", path: "evidence" },
         ],
       },
       {

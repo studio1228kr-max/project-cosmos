@@ -8,6 +8,7 @@ import DashboardCharts from "./components/DashboardCharts";
 import Pipeline from "./pages/Pipeline";
 import MarketScan from "./pages/MarketScan";
 import RiskBook from "./pages/RiskBook";
+import EvidenceChecklist from "./pages/EvidenceChecklist";
 
 const STATUS_COLOR: any = { INTAKE: "#888", SCREENED: "#185FA5", WATCHLIST: "#854F0B", ADVANCE: "#3B6D11", REJECT: "#A32D2D" };
 const STATUS_BG: any = { INTAKE: "#F1EFE8", SCREENED: "#E6F1FB", WATCHLIST: "#FAEEDA", ADVANCE: "#EAF3DE", REJECT: "#FCEBEB" };
@@ -637,11 +638,13 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
     { id: "ic", icon: ICONS.ic, label: "IC Memo" },
   ];
 
-  const activePage = nav === "intake" ? "intake" : nav === "sourcing" ? "sourcing" : nav === "diagnostic" ? "diagnostic" : nav === "icprep" ? "icprep" : nav === "execution" ? "execution" : nav === "portfolio" ? "portfolio" : currentView;
+  const activePage = nav === "intake" ? "intake" : nav === "sourcing" ? "sourcing" : nav === "diagnostic" ? "diagnostic" : nav === "icprep" ? "icprep" : nav === "execution" ? "execution" : nav === "portfolio" ? "portfolio" : nav === "evidence" ? "evidence" : currentView;
   return (
-    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="sourcing"){setNav("sourcing");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="icprep"){setNav("icprep");}else if (p==="execution"){setNav("execution");}else if (p==="portfolio"){setNav("portfolio");}else{setNav("pipeline");setCurrentView(p as any);} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr">
+    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="sourcing"){setNav("sourcing");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="icprep"){setNav("icprep");}else if (p==="execution"){setNav("execution");}else if (p==="portfolio"){setNav("portfolio");}else if (p==="evidence"){setNav("evidence");}else{setNav("pipeline");setCurrentView(p as any);} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr">
       <div style={{ display:"flex", height:"100%", overflow:"hidden" }}>
-        {nav === "diagnostic" ? (
+        {nav === "evidence" ? (
+            <EvidenceChecklist />
+          ) : nav === "diagnostic" ? (
             <RiskBook />
           ) : nav === "sourcing" ? (
             <MarketScan />
