@@ -350,6 +350,17 @@ def api_action_types(payload: dict = Depends(verify_token)):
     return {"results": [r["action_type"] for r in rows]}
 
 
+@app.get("/api/users")
+def api_list_users(payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT email, role FROM users ORDER BY email")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"results": rows}
+
+
 @app.post("/api/risk-book/deals")
 def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token)):
     conn = get_conn()
@@ -428,10 +439,12 @@ def api_update_checklist(
         if body.status == "WAIVED" and not (body.waiver_reason and body.waived_by and body.waiver_expires_at):
             raise HTTPException(status_code=400, detail="waiver requires waiver_reason, waived_by, waiver_expires_at")
 
+        actor_email = payload.get("sub")
         cur.execute(
             """
             UPDATE deal_evidence_checklist
             SET status = %s, waiver_reason = %s, waived_by = %s, waiver_expires_at = %s,
+                performed_by = %s,
                 waived_at = CASE WHEN %s = 'WAIVED' THEN now() ELSE waived_at END,
                 received_at = CASE WHEN %s IN ('RECEIVED','VERIFIED') THEN now() ELSE received_at END,
                 verified_at = CASE WHEN %s = 'VERIFIED' THEN now() ELSE verified_at END,
@@ -439,7 +452,7 @@ def api_update_checklist(
             WHERE deal_master_id = %s AND evidence_item_code = %s
             RETURNING id
             """,
-            (body.status, body.waiver_reason, body.waived_by, body.waiver_expires_at,
+            (body.status, body.waiver_reason, body.waived_by, body.waiver_expires_at, actor_email,
              body.status, body.status, body.status, deal_id, evidence_item_code),
         )
         if not cur.fetchone():
@@ -451,6 +464,7 @@ def api_update_checklist(
             "deal_code": deal_code,
             "evidence_item_code": evidence_item_code,
             "new_status": body.status,
+            "performed_by": actor_email,
             "recomputed_gate": gate,
         }
     except HTTPException:
