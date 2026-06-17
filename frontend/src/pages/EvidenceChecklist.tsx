@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import API from "../api";
 
 const BG = "#111";
@@ -48,6 +48,11 @@ export default function EvidenceChecklist() {
   const loadActionTypes = () => {
     API.get("/api/risk-book/action-types").then(r => setActionTypes(r.data.results)).catch(() => {});
   };
+
+  useEffect(() => {
+    loadDealTypes();
+    loadActionTypes();
+  }, []);
 
   const loadChecklist = (code: string) => {
     setLoading(true); setErr("");
