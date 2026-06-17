@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 
 const API = "https://project-cosmos-production.up.railway.app";
-const token = localStorage.getItem("cosmos_token") || "";
+
 
 const C = {
   bg:       "#090a0b",
@@ -43,6 +43,7 @@ export default function RiskBook() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem("token") || "";
     axios.get(`${API}/api/risk-book/deals`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => { setDeals(r.data); if (r.data.length > 0) setSelected(r.data[0].deal_code); })
       .catch(() => {});
@@ -51,6 +52,7 @@ export default function RiskBook() {
   useEffect(() => {
     if (!selected) return;
     setLoading(true);
+    const token = localStorage.getItem("token") || "";
     axios.get(`${API}/api/risk-book/deals/${selected}/summary`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => { setData(r.data); setLoading(false); })
       .catch(() => setLoading(false));
