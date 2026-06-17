@@ -147,7 +147,25 @@ def get_ambient(payload: dict = Depends(verify_token)):
 def risk_book_deals(payload: dict = Depends(verify_token)):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM deal_master ORDER BY created_at DESC")
+    cur.execute("""
+        SELECT dm.*,
+               gr.final_gate, gr.provisional_gate, gr.ic_ready,
+               gr.hold_reasons, gr.required_actions,
+               ev.evidence_total, ev.mandatory_total, ev.mandatory_done
+        FROM deal_master dm
+        LEFT JOIN LATERAL (
+            SELECT final_gate, provisional_gate, ic_ready, hold_reasons, required_actions
+            FROM gate_results WHERE deal_master_id = dm.id
+            ORDER BY id DESC LIMIT 1
+        ) gr ON true
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS evidence_total,
+                   COUNT(*) FILTER (WHERE requirement_level='MANDATORY') AS mandatory_total,
+                   COUNT(*) FILTER (WHERE requirement_level='MANDATORY' AND status IN ('VERIFIED','WAIVED')) AS mandatory_done
+            FROM deal_evidence_checklist WHERE deal_master_id = dm.id
+        ) ev ON true
+        ORDER BY dm.created_at DESC
+    """)
     rows = cur.fetchall()
     cur.close()
     conn.close()
