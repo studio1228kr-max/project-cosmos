@@ -168,3 +168,56 @@ def risk_book_gate(deal_id: int, payload: dict = Depends(verify_token)):
     if not row:
         raise HTTPException(status_code=404, detail="no gate result")
     return row
+
+
+@app.get("/api/risk-book/deals")
+def api_risk_book_deals(payload: dict = Depends(verify_token)):
+    return risk_book_deals(payload)
+
+
+@app.get("/api/risk-book/deals/{deal_code}/summary")
+def api_risk_book_summary(deal_code: str, payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM deal_master WHERE deal_code = %s", (deal_code,))
+    deal = cur.fetchone()
+    if not deal:
+        cur.close()
+        conn.close()
+        raise HTTPException(status_code=404, detail="deal not found")
+
+    deal_id = deal["id"]
+
+    cur.execute(
+        "SELECT * FROM gate_results WHERE deal_master_id = %s ORDER BY id DESC LIMIT 1",
+        (deal_id,),
+    )
+    gate = cur.fetchone()
+
+    cur.execute(
+        "SELECT * FROM risk_scenarios WHERE deal_master_id = %s ORDER BY scenario_id",
+        (deal_id,),
+    )
+    scenarios = cur.fetchall()
+
+    cur.execute(
+        """
+        SELECT * FROM deal_financials
+        WHERE deal_master_id = %s
+        ORDER BY is_current DESC, updated_at DESC
+        LIMIT 1
+        """,
+        (deal_id,),
+    )
+    financials = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    return {
+        "deal": deal,
+        "gate": gate,
+        "scenarios": scenarios,
+        "financials": financials,
+    }
