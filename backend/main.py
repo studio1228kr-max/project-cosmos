@@ -436,11 +436,13 @@ def api_gate_check(body: GateCheckRequest, payload: dict = Depends(verify_token)
         cur.execute("SELECT * FROM fn_check_gate_action(%s, %s)", (body.deal_code, body.action_type))
         gate_status, g_allowed, g_watermark, g_approval, g_note = cur.fetchone()
 
+        fin_allowed = True
         fin_requires_tag = None
+        fin_tag_text = None
         fin_note = None
         if body.confidence and body.audience:
             cur.execute("SELECT * FROM fn_validate_financial_anchor(%s, %s)", (body.confidence, body.audience))
-            fin_requires_tag, fin_note = cur.fetchone()
+            fin_allowed, fin_requires_tag, fin_tag_text, fin_note = cur.fetchone()
 
         ctrl_allowed = True
         ctrl_note = None
@@ -477,7 +479,7 @@ def api_gate_check(body: GateCheckRequest, payload: dict = Depends(verify_token)
         return {
             "result": result,
             "gate": {"status": gate_status, "allowed": g_allowed, "watermark": g_watermark, "approval": g_approval, "note": g_note},
-            "financial": {"requires_tag": fin_requires_tag, "note": fin_note} if body.confidence else None,
+            "financial": {"allowed": fin_allowed, "requires_tag": fin_requires_tag, "tag_text": fin_tag_text, "note": fin_note} if body.confidence else None,
             "control": {"allowed": ctrl_allowed, "note": ctrl_note} if body.holder else None,
             "conditions": conditions,
         }
