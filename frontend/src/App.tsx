@@ -547,7 +547,7 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
   const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    API.get("/today").then(r => { setActions(r.data.actions||[]); setSummary(r.data.summary||{}); setLoading(false); }).catch(() => setLoading(false));
+    API.get("/api/risk-book/today").then(r => { setActions(r.data.actions||[]); setSummary(r.data.summary||{}); setLoading(false); }).catch(() => setLoading(false));
   }, []);
   const dateStr = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
   if (loading) return <div style={{ padding: 48, color: "#999", fontSize: 13 }}>Action Engine 로딩 중...</div>;
@@ -588,7 +588,7 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
                     </div>
                   )}
                 </div>
-                <button onClick={() => onNavigateDeal(action.deal_id, action.cta_action)}
+                <button onClick={() => onNavigateDeal("pipeline", "pipeline")}
                   style={{ padding: "5px 12px", background: "#222", color: "#e2e2e2", border: "1px solid #2a2a2a", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace", letterSpacing: "0.06em" }}>
                   {CTA_LABELS[action.cta_action] || action.cta}
                 </button>
@@ -615,7 +615,7 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
 
   const loadDeals = () => {
     setLoading(true);
-    API.get("/deals").then(r => { setDeals(r.data); setLoading(false); });
+    API.get("/api/risk-book/deals").then(r => { setDeals(r.data); setLoading(false); });
   };
 
   useEffect(() => { loadDeals(); }, []);
@@ -668,24 +668,22 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
                   </div>
                   <div style={{ flex: 1, overflow: "auto" }}>
                     {deals.map((d: any) => {
-                      const rec = d.deal_record ? (typeof d.deal_record === "string" ? JSON.parse(d.deal_record) : d.deal_record) : {};
-                      const name = rec.asset_name || d.deal_name || "Unknown";
-                      const stColor: any = { INTAKE:"#555", SCREENED:"#4499FF", WATCHLIST:"#F59E0B", ADVANCE:"#00C87A", REJECT:"#FF4444" };
-                      const verdict = rec.luska_verdict || "—";
-                      const ltv = rec.ltv ? `LTV ${rec.ltv}` : "";
+                      const gateColor: any = { HOLD:"#F59E0B", RESTRUCTURE:"#4499FF", ADVANCE:"#00C87A", REJECT:"#FF4444" };
+                      const mandTotal = d.mandatory_total ?? 0;
+                      const mandDone = d.mandatory_done ?? 0;
                       return (
-                        <div key={d.id}
-                          onClick={() => { setCurrentView("pipeline"); setSelectedId(d.id); }}
+                        <div key={d.deal_code}
+                          onClick={() => { setCurrentView("pipeline"); }}
                           style={{ padding: "10px 14px", borderBottom: "1px solid #111", cursor: "pointer", transition: "background 0.1s" }}
                           onMouseEnter={e => (e.currentTarget.style.background = "#0A0A0A")}
                           onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                            <span style={{ fontSize: 12, color: "#E8E8E8", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{name}</span>
-                            <span style={{ fontSize: 10, color: stColor[d.status] || "#555", letterSpacing: "0.06em", flexShrink: 0 }}>{d.status}</span>
+                            <span style={{ fontSize: 12, color: "#E8E8E8", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{d.deal_name}</span>
+                            <span style={{ fontSize: 10, color: gateColor[d.final_gate] || "#555", letterSpacing: "0.06em", flexShrink: 0 }}>{d.final_gate || "—"}</span>
                           </div>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ fontSize: 10, color: "#555" }}>{rec.creditor || "—"}</span>
-                            <span style={{ fontSize: 9, color: verdict === "GO" ? "#00C87A" : verdict === "NO-GO" ? "#FF4444" : verdict === "HOLD" ? "#F59E0B" : "#444" }}>{verdict !== "—" ? verdict : ltv}</span>
+                            <span style={{ fontSize: 10, color: "#555" }}>{d.deal_code}{d.is_test ? " · TEST" : ""}</span>
+                            <span style={{ fontSize: 9, color: mandTotal > 0 && mandDone === mandTotal ? "#00C87A" : "#444" }}>{mandDone}/{mandTotal}</span>
                           </div>
                         </div>
                       );

@@ -7,13 +7,13 @@ const C = {
   green: "#00C87A", red: "#FF4444", amber: "#F59E0B", blue: "#4499FF",
 };
 
-const STATUS_CFG: any = {
-  INTAKE:    { c: "#666",    label: "INT" },
-  SCREENED:  { c: "#4499FF", label: "SCR" },
-  WATCHLIST: { c: "#F59E0B", label: "WCH" },
-  ADVANCE:   { c: "#00C87A", label: "ADV" },
-  REJECT:    { c: "#FF4444", label: "REJ" },
+const GATE_CFG: any = {
+  HOLD:        { c: "#F59E0B", label: "HOLD" },
+  RESTRUCTURE: { c: "#4499FF", label: "RESTR" },
+  ADVANCE:     { c: "#00C87A", label: "ADV" },
+  REJECT:      { c: "#FF4444", label: "REJ" },
 };
+const GATE_ORDER = ["HOLD", "RESTRUCTURE", "ADVANCE", "REJECT"];
 
 function Ticker({ value, prev }: { value: number; prev: number }) {
   const up = value > prev;
@@ -34,7 +34,7 @@ export default function DashboardCharts() {
 
   const fetchData = async () => {
     try {
-      const [d, a] = await Promise.all([API.get("/deals"), API.get("/today")]);
+      const [d, a] = await Promise.all([API.get("/api/risk-book/deals"), API.get("/api/risk-book/today")]);
       prevDeals.current = deals.length;
       prevActions.current = actions.summary?.total || 0;
       setDeals(d.data); setActions(a.data); setLastUpdate(new Date());
@@ -43,18 +43,18 @@ export default function DashboardCharts() {
 
   useEffect(() => { fetchData(); const iv = setInterval(fetchData, 10000); return () => clearInterval(iv); }, []);
 
-  const statusCounts = ["INTAKE","SCREENED","WATCHLIST","ADVANCE","REJECT"]
-    .map(s => ({ s, count: deals.filter(d => d.status === s).length }));
+  const gateCounts = GATE_ORDER.map(g => ({ g, count: deals.filter(d => d.final_gate === g).length }));
 
   const urgent = actions.summary?.P0 || 0;
   const total = deals.length;
-  const screened = deals.filter(d => d.status !== "INTAKE").length;
+  const liveCount = deals.filter(d => !d.is_test).length;
 
   const evidenceData = deals.slice(0, 6).map(d => {
-    const rec = d.deal_record ? (typeof d.deal_record === "string" ? JSON.parse(d.deal_record) : d.deal_record) : {};
-    const name = (rec.asset_name || d.deal_name || "Unknown").slice(0, 14);
-    const ev = d.evidence_count || 0;
-    return { name, ev, pct: Math.round((ev / 6) * 100) };
+    const name = (d.deal_name || "Unknown").slice(0, 14);
+    const mandTotal = d.mandatory_total ?? 0;
+    const mandDone = d.mandatory_done ?? 0;
+    const pct = mandTotal > 0 ? Math.round((mandDone / mandTotal) * 100) : 0;
+    return { name, mandDone, mandTotal, pct };
   });
 
   const row = (label: string, value: any, color = C.text) => (
@@ -72,19 +72,19 @@ export default function DashboardCharts() {
         <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.15em", marginBottom: 6, textTransform: "uppercase" }}>DEAL METRICS</div>
         {row("TOTAL", <Ticker value={total} prev={prevDeals.current}/>, C.gold)}
         {row("URGENT", <Ticker value={urgent} prev={prevActions.current}/>, urgent > 0 ? C.red : C.text)}
-        {row("SCREENED", screened, C.blue)}
+        {row("LIVE", liveCount, C.blue)}
         {row("ACTIONS", actions.summary?.total || 0, C.amber)}
       </div>
 
-      {/* BLOCK 2: PIPELINE */}
+      {/* BLOCK 2: GATE STATUS */}
       <div style={{ minWidth: 200, padding: "0 20px", borderRight: "1px solid #222" }}>
-        <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.15em", marginBottom: 6 }}>PIPELINE STATUS</div>
-        {statusCounts.map(({ s, count }) => {
-          const cfg = STATUS_CFG[s];
+        <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.15em", marginBottom: 6 }}>GATE STATUS</div>
+        {gateCounts.map(({ g, count }) => {
+          const cfg = GATE_CFG[g];
           const pct = total > 0 ? Math.round((count / total) * 100) : 0;
           return (
-            <div key={s} style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 0" }}>
-              <span style={{ color: cfg.c, fontSize: 9, width: 28, fontWeight: 600 }}>{cfg.label}</span>
+            <div key={g} style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 0" }}>
+              <span style={{ color: cfg.c, fontSize: 9, width: 36, fontWeight: 600 }}>{cfg.label}</span>
               <div style={{ flex: 1, height: 2, background: "#1A1A1A" }}>
                 <div style={{ width: `${pct}%`, height: "100%", background: cfg.c, transition: "width 0.5s" }}/>
               </div>
@@ -96,14 +96,14 @@ export default function DashboardCharts() {
 
       {/* BLOCK 3: EVIDENCE */}
       <div style={{ minWidth: 260, padding: "0 20px", borderRight: "1px solid #222" }}>
-        <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.15em", marginBottom: 6 }}>EVIDENCE COVERAGE</div>
+        <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.15em", marginBottom: 6 }}>EVIDENCE COVERAGE (MANDATORY)</div>
         {evidenceData.map((d, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 0" }}>
             <span style={{ color: C.text3, fontSize: 9, width: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</span>
             <div style={{ flex: 1, height: 2, background: "#1A1A1A" }}>
               <div style={{ width: `${d.pct}%`, height: "100%", background: d.pct === 100 ? C.green : d.pct > 0 ? C.amber : "#333" }}/>
             </div>
-            <span style={{ color: d.ev === 6 ? C.green : C.text2, fontSize: 10, width: 24, textAlign: "right" }}>{d.ev}/6</span>
+            <span style={{ color: d.mandDone === d.mandTotal && d.mandTotal > 0 ? C.green : C.text2, fontSize: 10, width: 28, textAlign: "right" }}>{d.mandDone}/{d.mandTotal}</span>
           </div>
         ))}
       </div>
