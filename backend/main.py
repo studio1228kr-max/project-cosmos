@@ -193,6 +193,70 @@ def api_risk_book_deals(payload: dict = Depends(verify_token)):
     return risk_book_deals(payload)
 
 
+@app.get("/api/risk-book/today")
+def api_risk_book_today(payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT dm.deal_code, dm.deal_name, dm.is_test,
+               gr.final_gate, gr.hold_reasons,
+               ev.mandatory_total, ev.mandatory_done
+        FROM deal_master dm
+        LEFT JOIN LATERAL (
+            SELECT final_gate, hold_reasons
+            FROM gate_results WHERE deal_master_id = dm.id
+            ORDER BY id DESC LIMIT 1
+        ) gr ON true
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) FILTER (WHERE requirement_level='MANDATORY') AS mandatory_total,
+                   COUNT(*) FILTER (WHERE requirement_level='MANDATORY' AND status IN ('VERIFIED','WAIVED')) AS mandatory_done
+            FROM deal_evidence_checklist WHERE deal_master_id = dm.id
+        ) ev ON true
+        WHERE dm.is_test = false
+        ORDER BY dm.created_at DESC
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    actions = []
+    for r in rows:
+        gate = r["final_gate"]
+        mand_total = r["mandatory_total"] or 0
+        mand_done = r["mandatory_done"] or 0
+        missing_count = mand_total - mand_done
+        if gate in ("HOLD", "REJECT"):
+            priority = "P0"
+            reason = f"게이트 {gate} — MANDATORY {mand_done}/{mand_total} 완료"
+            missing = (r["hold_reasons"] or [])[:3]
+        elif missing_count > 0:
+            priority = "P1"
+            reason = f"MANDATORY 증거 {missing_count}건 미완료"
+            missing = []
+        else:
+            priority = "P2"
+            reason = "MANDATORY 증거 완료 — 다음 단계 검토"
+            missing = []
+        actions.append({
+            "title": r["deal_name"],
+            "deal_name": r["deal_name"],
+            "deal_id": r["deal_code"],
+            "reason": reason,
+            "missing": missing,
+            "priority": priority,
+            "cta_action": "pipeline",
+            "cta": "Pipeline에서 보기",
+        })
+
+    summary = {
+        "P0": sum(1 for a in actions if a["priority"] == "P0"),
+        "P1": sum(1 for a in actions if a["priority"] == "P1"),
+        "P2": sum(1 for a in actions if a["priority"] == "P2"),
+        "total": len(actions),
+    }
+    return {"actions": actions, "summary": summary}
+
+
 @app.get("/api/risk-book/deals/{deal_code}/summary")
 def api_risk_book_summary(deal_code: str, payload: dict = Depends(verify_token)):
     conn = get_conn()
