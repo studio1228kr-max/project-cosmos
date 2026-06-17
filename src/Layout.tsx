@@ -1,13 +1,17 @@
 import React from "react";
 import AmbientBar from "./components/AmbientBar";
+import SidebarNav from "./components/Sidebar/SidebarNav";
 
-const NAV = [
-  { key: "pipeline", label: "Deal Pipeline" },
-  { key: "today",    label: "Today" },
-  { key: "market",   label: "Market Scan" },
-  { key: "intake",   label: "New Intake" },
-  { key: "riskbook", label: "Risk Book" },
-];
+const PATH_TO_KEY: Record<string, string> = {
+  "/dashboard": "today",
+  "/sourcing": "market",
+  "/pipeline": "pipeline",
+  "/due-diligence/intake": "intake",
+  "/risk-monitoring": "riskbook",
+};
+const KEY_TO_PATH: Record<string, string> = Object.fromEntries(
+  Object.entries(PATH_TO_KEY).map(([path, key]) => [key, path])
+);
 
 type Props = {
   page: string;
@@ -19,46 +23,23 @@ type Props = {
 };
 
 export default function Layout({ page, onNav, userEmail, onLogout, children, dealCount = 0 }: Props) {
+  const activePath = KEY_TO_PATH[page] ?? "";
+
   return (
     <div style={{ display: "flex", height: "100vh", background: "#111", color: "#e2e2e2", fontFamily: "'ZenSerif', 'Inter', sans-serif", overflow: "hidden" }}>
 
       {/* SIDEBAR */}
-      <aside style={{ width: 200, background: "#111", borderRight: "1px solid #222", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-
-        {/* Logo */}
-        <div style={{ padding: "20px 16px 16px" }}>
-          <div onClick={() => onNav("today")} style={{ fontFamily: "'ZenSerif', serif", fontSize: 16, fontWeight: 700, color: "#e2e2e2", letterSpacing: "0.02em", cursor: "pointer" }}>Luska Capital</div>
-          <div style={{ fontSize: 11, color: "#4a4a4a", marginTop: 2 }}>by COSMOS</div>
-        </div>
-
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: "4px 8px" }}>
-          {NAV.map(n => {
-            const active = page === n.key;
-            return (
-              <button key={n.key} onClick={() => onNav(n.key)}
-                style={{
-                  width: "100%", textAlign: "left", padding: "7px 10px",
-                  borderRadius: 6, border: "none", cursor: "pointer",
-                  background: active ? "#222" : "transparent",
-                  color: active ? "#e2e2e2" : "#6a6a6a",
-                  fontSize: 13, fontWeight: active ? 500 : 400,
-                  fontFamily: "'ZenSerif', 'Inter', sans-serif",
-                  marginBottom: 1, display: "block",
-                  transition: "all 0.1s",
-                }}
-                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "#1a1a1a"; (e.currentTarget as HTMLElement).style.color = "#aaa"; }}
-                onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#6a6a6a"; }}}
-              >
-                {n.label}
-              </button>
-            );
-          })}
-        </nav>
+      <aside style={{ background: "#111", borderRight: "1px solid #222", display: "flex", flexDirection: "column", flexShrink: 0, overflow: "hidden" }}>
+        <SidebarNav
+          activePath={activePath}
+          onNavigate={(path) => {
+            const key = PATH_TO_KEY[path];
+            if (key) onNav(key);
+          }}
+        />
 
         {/* Footer */}
         <div style={{ padding: "12px 16px 16px", borderTop: "1px solid #1e1e1e" }}>
-          
           <button onClick={onLogout}
             style={{ fontSize: 12, color: "#6a6a6a", background: "none", border: "none", padding: 0, cursor: "pointer" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#e2e2e2")}
