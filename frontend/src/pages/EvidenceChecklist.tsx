@@ -30,23 +30,32 @@ export default function EvidenceChecklist() {
 
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const searchTimeout = useRef<any>(null);
 
   const searchDeals = (q: string) => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(() => {
       API.get("/api/risk-book/deals/search", { params: { q } })
-        .then(r => { setSuggestions(r.data.results); setShowSuggestions(true); })
+        .then(r => { setSuggestions(r.data.results); setShowSuggestions(true); setHighlightIndex(-1); })
         .catch(() => {});
     }, 200);
   };
 
+  const selectSuggestion = (code: string) => {
+    setDealCode(code); setShowSuggestions(false); setHighlightIndex(-1); loadChecklist(code);
+  };
+
   const loadDealTypes = () => {
-    API.get("/api/risk-book/deal-types").then(r => setDealTypes(r.data)).catch(() => {});
+    API.get("/api/risk-book/deal-types")
+      .then(r => setDealTypes(r.data))
+      .catch(e => console.error("deal-types fetch failed:", e?.response?.status, e?.response?.data || e.message));
   };
 
   const loadActionTypes = () => {
-    API.get("/api/risk-book/action-types").then(r => setActionTypes(r.data.results)).catch(() => {});
+    API.get("/api/risk-book/action-types")
+      .then(r => setActionTypes(r.data.results))
+      .catch(e => console.error("action-types fetch failed:", e?.response?.status, e?.response?.data || e.message));
   };
 
   useEffect(() => {
@@ -106,15 +115,26 @@ export default function EvidenceChecklist() {
                 onChange={e => { setDealCode(e.target.value); searchDeals(e.target.value); }}
                 onFocus={() => searchDeals(dealCode)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                onKeyDown={e => { if (e.key === "Enter") { setShowSuggestions(false); loadChecklist(dealCode); } }}
+                onKeyDown={e => {
+                  if (showSuggestions && suggestions.length > 0) {
+                    if (e.key === "ArrowDown") { e.preventDefault(); setHighlightIndex(i => (i + 1) % suggestions.length); return; }
+                    if (e.key === "ArrowUp") { e.preventDefault(); setHighlightIndex(i => (i - 1 + suggestions.length) % suggestions.length); return; }
+                    if (e.key === "Escape") { setShowSuggestions(false); return; }
+                    if (e.key === "Enter" && highlightIndex >= 0 && highlightIndex < suggestions.length) {
+                      e.preventDefault(); selectSuggestion(suggestions[highlightIndex].deal_code); return;
+                    }
+                  }
+                  if (e.key === "Enter") { setShowSuggestions(false); loadChecklist(dealCode); }
+                }}
                 placeholder="deal_code (예: LSK-2026-7003EE)"
                 style={{ width: "100%", boxSizing: "border-box", background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
               {showSuggestions && suggestions.length > 0 && (
                 <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#0d0d0d", border: `1px solid ${BORDER}`, zIndex: 10, maxHeight: 240, overflowY: "auto" }}>
-                  {suggestions.map((s: any) => (
+                  {suggestions.map((s: any, idx: number) => (
                     <div key={s.deal_code}
-                      onMouseDown={() => { setDealCode(s.deal_code); setShowSuggestions(false); loadChecklist(s.deal_code); }}
-                      style={{ padding: "8px 10px", fontSize: 12, cursor: "pointer", borderBottom: `1px solid ${BORDER}` }}>
+                      onMouseDown={() => selectSuggestion(s.deal_code)}
+                      onMouseEnter={() => setHighlightIndex(idx)}
+                      style={{ padding: "8px 10px", fontSize: 12, cursor: "pointer", borderBottom: `1px solid ${BORDER}`, background: idx === highlightIndex ? "#1a1a1a" : "transparent" }}>
                       <span style={{ color: GOLD }}>{s.deal_code}</span>
                       <span style={{ color: TEXT_DIM, marginLeft: 8 }}>{s.deal_name}{s.stage ? ` · ${s.stage}` : ""}</span>
                     </div>
