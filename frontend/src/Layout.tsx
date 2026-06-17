@@ -1,15 +1,6 @@
 import React, { useState } from "react";
 import AmbientBar from "./components/AmbientBar";
-
-const NAV = [
-  { key: "pipeline",   label: "Pipeline",   icon: "▦" },
-  { key: "sourcing",   label: "Sourcing",   icon: "◎" },
-  { key: "intake",     label: "Intake",     icon: "＋" },
-  { key: "diagnostic", label: "Diagnostic", icon: "◈" },
-  { key: "icprep",     label: "IC Prep",    icon: "◻" },
-  { key: "execution",  label: "Execution",  icon: "▶" },
-  { key: "portfolio",  label: "Portfolio",  icon: "◉" },
-];
+import SidebarNav from "./components/Sidebar/SidebarNav";
 
 type Props = {
   page: string;
@@ -63,39 +54,7 @@ export default function Layout({ page, onNav, userEmail, onLogout, children, dea
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: collapsed ? "4px 4px" : "4px 8px" }}>
-          {NAV.map(n => {
-            const active = page === n.key;
-            return (
-              <button key={n.key} onClick={() => onNav(n.key)}
-                title={collapsed ? n.label : undefined}
-                style={{
-                  width: "100%",
-                  textAlign: collapsed ? "center" : "left",
-                  padding: collapsed ? "8px 0" : "7px 10px",
-                  borderRadius: 6, border: "none", cursor: "pointer",
-                  background: active ? "#1e1e1e" : "transparent",
-                  color: active ? "#e2e2e2" : "#5a5a5a",
-                  fontSize: collapsed ? 16 : 13,
-                  fontWeight: active ? 500 : 400,
-                  fontFamily: "'ZenSerif', 'Inter', sans-serif",
-                  marginBottom: 2, display: "flex",
-                  alignItems: "center",
-                  gap: collapsed ? 0 : 8,
-                  justifyContent: collapsed ? "center" : "flex-start",
-                  transition: "all 0.1s",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                }}
-                onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "#1a1a1a"; (e.currentTarget as HTMLElement).style.color = "#aaa"; }}}
-                onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#5a5a5a"; }}}
-              >
-                <span style={{ fontSize: collapsed ? 14 : 11, opacity: 0.7 }}>{n.icon}</span>
-                {!collapsed && <span>{n.label}</span>}
-              </button>
-            );
-          })}
-        </nav>
+        <SidebarNav activePath={page} onNavigate={onNav} collapsed={collapsed} />
 
         {/* Footer */}
         {!collapsed && (
