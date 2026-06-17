@@ -6,7 +6,7 @@ import jwt
 import bcrypt
 import psycopg2
 import psycopg2.extras
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -83,6 +83,27 @@ def login(body: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_token(user["email"], user["role"])
     return {"token": token, "role": user["role"], "email": user["email"]}
+
+
+@app.post("/token")
+def token(username: str = Form(...), password: str = Form(...)):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT email, hashed_password, role FROM users WHERE email = %s",
+        (username,),
+    )
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not bcrypt.checkpw(
+        password.encode(), user["hashed_password"].encode()
+    ):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    access_token = create_token(user["email"], user["role"])
+    return {"access_token": access_token, "token_type": "bearer", "role": user["role"], "email": user["email"]}
 
 
 @app.get("/deals")
