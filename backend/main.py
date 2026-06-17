@@ -339,6 +339,17 @@ def api_search_deals(q: str = "", payload: dict = Depends(verify_token)):
     return {"results": rows}
 
 
+@app.get("/api/risk-book/action-types")
+def api_action_types(payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT action_type FROM gate_action_policy ORDER BY action_type")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"results": [r["action_type"] for r in rows]}
+
+
 @app.post("/api/risk-book/deals")
 def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token)):
     conn = get_conn()
