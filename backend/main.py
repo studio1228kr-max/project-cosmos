@@ -314,6 +314,31 @@ def api_get_checklist(deal_code: str, payload: dict = Depends(verify_token)):
     return {"deal_code": deal_code, "checklist": items}
 
 
+@app.get("/api/risk-book/deals/search")
+def api_search_deals(q: str = "", payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    if q.strip():
+        cur.execute(
+            """
+            SELECT deal_code, deal_name, stage
+            FROM deal_master
+            WHERE deal_code ILIKE %s OR deal_name ILIKE %s
+            ORDER BY id DESC
+            LIMIT 8
+            """,
+            (f"%{q}%", f"%{q}%"),
+        )
+    else:
+        cur.execute(
+            "SELECT deal_code, deal_name, stage FROM deal_master ORDER BY id DESC LIMIT 8"
+        )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {"results": rows}
+
+
 @app.post("/api/risk-book/deals")
 def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token)):
     conn = get_conn()
