@@ -23,6 +23,7 @@ export default function EvidenceChecklist() {
 
   const [newDeal, setNewDeal] = useState({ deal_code: "", deal_name: "", deal_type: "", asset_class: "CRE" });
   const [dealTypes, setDealTypes] = useState<any[]>([]);
+  const [actionTypes, setActionTypes] = useState<string[]>([]);
 
   const [gc, setGc] = useState({ action_type: "", audience: "", document_type: "", confidence: "", holder: "", text: "" });
   const [gcResult, setGcResult] = useState<any>(null);
@@ -42,6 +43,10 @@ export default function EvidenceChecklist() {
 
   const loadDealTypes = () => {
     API.get("/api/risk-book/deal-types").then(r => setDealTypes(r.data)).catch(() => {});
+  };
+
+  const loadActionTypes = () => {
+    API.get("/api/risk-book/action-types").then(r => setActionTypes(r.data.results)).catch(() => {});
   };
 
   const loadChecklist = (code: string) => {
@@ -162,14 +167,32 @@ export default function EvidenceChecklist() {
         <div style={{ background: PANEL, border: `1px solid ${BORDER}`, padding: 16 }}>
           <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 10, letterSpacing: "0.1em" }}>GATE PREFLIGHT — {dealCode}</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-            <input value={gc.action_type} onChange={e => setGc({ ...gc, action_type: e.target.value })} placeholder="action_type (예: PI_TEASER_GENERATION)"
-              style={{ flex: 1, minWidth: 160, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
-            <input value={gc.audience} onChange={e => setGc({ ...gc, audience: e.target.value })} placeholder="audience"
-              style={{ flex: 1, minWidth: 100, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
-            <input value={gc.confidence} onChange={e => setGc({ ...gc, confidence: e.target.value })} placeholder="confidence (LOW/MED/HIGH)"
-              style={{ flex: 1, minWidth: 100, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
-            <input value={gc.holder} onChange={e => setGc({ ...gc, holder: e.target.value })} placeholder="holder (THIRD_PARTY/LUSKA_SPC)"
-              style={{ flex: 1, minWidth: 120, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
+            <select value={gc.action_type} onChange={e => setGc({ ...gc, action_type: e.target.value })} onFocus={loadActionTypes}
+              style={{ flex: 1, minWidth: 160, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }}>
+              <option value="">action_type 선택</option>
+              {actionTypes.map((a: string) => <option key={a} value={a}>{a}</option>)}
+            </select>
+            <select value={gc.audience} onChange={e => setGc({ ...gc, audience: e.target.value })}
+              style={{ flex: 1, minWidth: 100, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }}>
+              <option value="">audience 선택</option>
+              <option value="INTERNAL">INTERNAL</option>
+              <option value="SECURITIES_PI">SECURITIES_PI</option>
+              <option value="BANK">BANK</option>
+              <option value="LEGAL">LEGAL</option>
+            </select>
+            <select value={gc.confidence} onChange={e => setGc({ ...gc, confidence: e.target.value })}
+              style={{ flex: 1, minWidth: 100, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }}>
+              <option value="">confidence 선택</option>
+              <option value="LOW">LOW</option>
+              <option value="MED">MED</option>
+              <option value="HIGH">HIGH</option>
+            </select>
+            <select value={gc.holder} onChange={e => setGc({ ...gc, holder: e.target.value })}
+              style={{ flex: 1, minWidth: 120, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }}>
+              <option value="">holder 선택</option>
+              <option value="THIRD_PARTY">THIRD_PARTY</option>
+              <option value="LUSKA_SPC">LUSKA_SPC</option>
+            </select>
             <input value={gc.text} onChange={e => setGc({ ...gc, text: e.target.value })} placeholder="검증할 문장"
               style={{ flex: 2, minWidth: 200, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
             <button onClick={runGateCheck} style={{ background: "transparent", border: `1px solid ${GOLD}`, color: GOLD, padding: "6px 14px", fontSize: 11, cursor: "pointer" }}>체크 실행</button>
