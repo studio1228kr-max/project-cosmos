@@ -650,10 +650,6 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
             <MarketScan />
           ) : nav === "intake" ? (
           <div style={{ flex: 1, overflow: "auto" }}>
-            <MarketScan />
-          </div>
-        ) : nav === "intake" ? (
-          <div style={{ flex: 1, overflow: "auto" }}>
             <Intake onSaved={() => { setNav("pipeline"); loadDeals(); }} />
           </div>
         ) : (
