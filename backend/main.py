@@ -481,6 +481,38 @@ def get_candidates(decision: str = "", limit: int = 50, payload: dict = Depends(
     return {"candidates": rows, "total": len(rows)}
 
 
+
+
+@app.get("/api/sourcing/naver-news")
+def naver_news_scan(query: str = "기한이익상실 OR 채무불이행 OR 워크아웃 OR 회생절차 OR 자본잠식", display: int = 20, payload: dict = Depends(verify_token)):
+    import requests as req_lib
+    client_id = os.getenv("NAVER_CLIENT_ID")
+    client_secret = os.getenv("NAVER_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=500, detail="NAVER API keys not set")
+
+    resp = req_lib.get(
+        "https://openapi.naver.com/v1/search/news.json",
+        headers={"X-Naver-Client-Id": client_id, "X-Naver-Client-Secret": client_secret},
+        params={"query": query, "display": display, "sort": "date"},
+        timeout=10,
+    )
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Naver API error: {resp.text}")
+
+    items = resp.json().get("items", [])
+    results = []
+    for item in items:
+        results.append({
+            "title": item.get("title","").replace("<b>","").replace("</b>",""),
+            "description": item.get("description","").replace("<b>","").replace("</b>",""),
+            "pub_date": item.get("pubDate",""),
+            "link": item.get("link",""),
+            "originallink": item.get("originallink",""),
+        })
+    return {"total": len(results), "query": query, "items": results}
+
+
 @app.post("/login")
 def login(body: LoginRequest):
     conn = get_conn()
