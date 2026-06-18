@@ -64,6 +64,82 @@ def health():
     return {"status": "ok", "time": datetime.utcnow().isoformat()}
 
 
+
+
+@app.get("/dart/scan")
+def dart_scan(days: int = 1, payload: dict = Depends(verify_token)):
+    import requests as req_lib
+    api_key = os.getenv("DART_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="DART_API_KEY not set")
+
+    end_dt = datetime.utcnow()
+    start_dt = end_dt - timedelta(days=days)
+
+    SIGNALS = {
+        "기한이익상실": ("P0", 10),
+        "채무불이행":   ("P0", 10),
+        "감사의견거절": ("P0",  9),
+        "영업정지":     ("P0",  8),
+        "채권단":       ("P0",  8),
+        "자산양도":     ("P1",  7),
+        "자산매각":     ("P1",  7),
+        "유형자산처분": ("P1",  6),
+        "담보제공":     ("P1",  6),
+        "경영권변경":   ("P1",  5),
+    }
+
+    try:
+        resp = req_lib.get(
+            "https://opendart.fss.or.kr/api/list.json",
+            params={"crtfc_key": api_key,
+                    "bgn_de": start_dt.strftime("%Y%m%d"),
+                    "end_de": end_dt.strftime("%Y%m%d"),
+                    "last_reprt_at": "N", "page_count": 100},
+            timeout=15,
+        )
+        data = resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"DART error: {e}")
+
+    if data.get("status") != "000":
+        raise HTTPException(status_code=502, detail=data.get("message", "DART API error"))
+
+    hits = []
+    for item in data.get("list", []):
+        title = item.get("report_nm", "")
+        matched = [(kw, p, s) for kw, (p, s) in SIGNALS.items() if kw in title]
+        if not matched:
+            continue
+        score = sum(s for _, _, s in matched)
+        priority = "P0" if any(p == "P0" for _, p, _ in matched) else                    "P1" if any(p == "P1" for _, p, _ in matched) else "P2"
+        hits.append({
+            "corp_name": item.get("corp_name", ""),
+            "report_title": title,
+            "disclosed_at": item.get("rcept_dt", ""),
+            "dart_url": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={item.get('rcept_no','')}",
+            "signals": [{"keyword": kw, "score": s} for kw, _, s in matched],
+            "score": score,
+            "priority": priority,
+        })
+
+    po = {"P0": 0, "P1": 1, "P2": 2}
+    hits.sort(key=lambda x: (po[x["priority"]], -x["score"]))
+
+    return {
+        "scanned_at": datetime.utcnow().isoformat(),
+        "days": days,
+        "total_scanned": len(data.get("list", [])),
+        "summary": {
+            "P0": sum(1 for h in hits if h["priority"]=="P0"),
+            "P1": sum(1 for h in hits if h["priority"]=="P1"),
+            "P2": sum(1 for h in hits if h["priority"]=="P2"),
+            "total_hits": len(hits),
+        },
+        "hits": hits,
+    }
+
+
 @app.post("/login")
 def login(body: LoginRequest):
     conn = get_conn()
