@@ -230,9 +230,12 @@ def onbid_search(
     try:
         resp = req_lib.get(
             "https://apis.data.go.kr/B010003/OnbidRlstListSrvc2/getRlstCltrList2",
-            params={"serviceKey": api_key, "pageNo": page, "numOfRows": size, "type": "json"},
+            params={"serviceKey": api_key, "pageNo": page, "numOfRows": size,
+                    "prptDivCd": "10", "pvctTrgtYn": "Y", "type": "json"},
             timeout=15,
         )
+        if not resp.text.strip():
+            return {"fetched_at": datetime.utcnow().isoformat(), "total_count": 0, "returned": 0, "items": [], "note": "no data"}
         data = resp.json()
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"OnBid error: {e}")
