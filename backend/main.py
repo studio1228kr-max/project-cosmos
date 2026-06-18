@@ -288,11 +288,9 @@ def delete_deal(deal_code: str, payload: dict = Depends(verify_token)):
         cur.close(); conn.close()
         raise HTTPException(status_code=404, detail="deal not found")
     deal_id = row["id"]
-    for tbl in ["deal_evidence_checklist","gate_results","risk_scenarios","deal_financials","contact_log"]:
-        try: cur.execute(f"DELETE FROM {tbl} WHERE deal_master_id = %s", (deal_id,))
-        except: pass
-        try: cur.execute(f"DELETE FROM {tbl} WHERE deal_id = %s", (deal_id,))
-        except: pass
+    cur.execute("DELETE FROM deal_evidence_checklist WHERE deal_master_id = %s", (deal_id,))
+    cur.execute("DELETE FROM gate_results WHERE deal_master_id = %s", (deal_id,))
+    cur.execute("DELETE FROM risk_scenarios WHERE deal_master_id = %s", (deal_id,))
     cur.execute("DELETE FROM deal_master WHERE id = %s", (deal_id,))
     conn.commit()
     cur.close(); conn.close()
