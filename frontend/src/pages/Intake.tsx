@@ -1,172 +1,174 @@
 import React, { useState } from "react";
 import API from "../api";
 
-const EVIDENCE_ITEMS = [
-  { id: "registry", label: "등기부등본", desc: "담보순위·가압류·신탁 구조 확인" },
-  { id: "building", label: "건축물대장", desc: "불법증축·용도·면적 확인" },
-  { id: "claim", label: "채권잔액확인서", desc: "실제 잔액·이자율·만기 확인" },
-  { id: "tax", label: "국세/지방세 완납증명서", desc: "세금 우선권 체크" },
-  { id: "lease", label: "임대차현황", desc: "DSCR 계산용 임차인 정보" },
-  { id: "appraisal", label: "감정평가서 또는 공시지가", desc: "LTV 계산" },
+const DEAL_TYPES = [
+  { code: "SECURED_CREDIT_ACQUISITION", label: "담보채권 매입" },
+  { code: "SPECIAL_SITUATIONS_CONTROL", label: "특수상황 Control 확보" },
+  { code: "NPL_PURCHASE", label: "부실채권 매입" },
+  { code: "BRIDGE_REFI", label: "브릿지 리파이낸싱" },
+  { code: "CAPEX_BRIDGE_NOTE", label: "케펙스 브릿지 사모채" },
+  { code: "SPONSOR_COOPERATIVE_RECAP", label: "차주 협조형 재구조화/리캡" },
 ];
 
+const POSTURES = [
+  { code: "MIXED", label: "MIXED" },
+  { code: "QUIET_ORIGINATION", label: "QUIET_ORIGINATION" },
+  { code: "ADVERSARIAL", label: "ADVERSARIAL" },
+  { code: "COOPERATIVE", label: "COOPERATIVE" },
+];
+
+const SOURCE_TYPES = [
+  { code: "NETWORK", label: "네트워크" },
+  { code: "BROKER", label: "브로커" },
+  { code: "BANK", label: "은행" },
+  { code: "INBOUND", label: "인바운드" },
+  { code: "DIRECT", label: "직접 소싱" },
+  { code: "UNKNOWN", label: "미정" },
+];
+
+function genDealCode(): string {
+  const year = new Date().getFullYear();
+  const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `LSK-${year}-${rand}`;
+}
+
+const C = {
+  bg: "#080C14", surface: "#0D1420", border: "#1A2638",
+  gold: "#C9A84C", goldDim: "rgba(201,168,76,0.12)",
+  text: "#E2E8F0", textDim: "#5A7190", textMid: "#8FA3BB",
+  green: "#22C55E", red: "#EF4444",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%", padding: "8px 12px",
+  background: C.bg, border: `1px solid ${C.border}`,
+  borderRadius: 4, color: C.text, fontSize: 12,
+  outline: "none", boxSizing: "border-box",
+  fontFamily: "inherit",
+};
+
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div>
+    <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.08em", marginBottom: 6, textTransform: "uppercase" }}>{label}</div>
+    {children}
+  </div>
+);
+
 export default function Intake({ onSaved }: { onSaved: () => void }) {
-  const [source, setSource] = useState("");
-  const [raw, setRaw] = useState("");
-  const [evidence, setEvidence] = useState<string[]>([]);
+  const [dealCode] = useState(genDealCode());
+  const [dealName, setDealName] = useState("");
+  const [dealType, setDealType] = useState("SECURED_CREDIT_ACQUISITION");
+  const [posture, setPosture] = useState("MIXED");
+  const [sourceType, setSourceType] = useState("UNKNOWN");
+  const [sourceNote, setSourceNote] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
   const [err, setErr] = useState("");
+  const [done, setDone] = useState(false);
 
-  const toggleEvidence = (id: string) => {
-    setEvidence(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]);
-  };
-
-  const coverage = evidence.length;
-  const analysisLevel = coverage === 0 ? "Intake Only" : coverage <= 2 ? "Triage" : coverage <= 4 ? "Triage+" : "Underwriting";
-  const levelColor = coverage === 0 ? "#888" : coverage <= 2 ? "#854F0B" : coverage <= 4 ? "#185FA5" : "#3B6D11";
-
-  const analyze = async () => {
-    if (!source || !raw) { setErr("소개자와 딜 설명을 입력하세요"); return; }
+  const submit = async () => {
+    if (!dealName.trim()) { setErr("딜명을 입력하세요"); return; }
     setLoading(true); setErr("");
     try {
-      const res = await API.post("/deals/analyze", { source, raw_input: raw });
-      setResult(res.data);
+      await API.post("/api/risk-book/deals", {
+        deal_code: dealCode,
+        deal_name: dealName.trim(),
+        deal_type: dealType,
+        asset_class: "CRE",
+        module_code: "CRE_SECURED_CREDIT",
+        origination_posture: posture,
+        source_type: sourceType,
+        source_replicability: "UNKNOWN",
+        source_note: sourceNote.trim() || null,
+        is_test: false,
+      });
+      setDone(true);
     } catch (e: any) {
-      setErr(e.response?.data?.detail || "분석 실패");
+      setErr(e.response?.data?.detail || "저장 실패");
     }
     setLoading(false);
   };
 
-  const hkColor = (v: string) => {
-    const l = (v||"").toLowerCase();
-    if (l.includes("critical")) return "#A32D2D";
-    if (l.includes("unknown")) return "#854F0B";
-    return "#888";
-  };
+  if (done) {
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: C.bg, color: C.text, height: "100%" }}>
+        <div style={{ fontSize: 10, color: C.green, letterSpacing: "0.14em", marginBottom: 12 }}>DEAL REGISTERED</div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 6 }}>{dealName}</div>
+        <div style={{ fontSize: 11, color: C.textDim, marginBottom: 32 }}>{dealCode} · stage: INTAKE</div>
+        <button onClick={onSaved}
+          style={{ padding: "10px 28px", background: C.gold, color: "#000", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          Pipeline에서 확인
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: "28px 36px", maxWidth: 860, fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif" }}>
-      <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: -0.3, marginBottom: 4 }}>Deal Intake</div>
-      <div style={{ fontSize: 12, color: "#999", marginBottom: 28 }}>딜 정보 입력 → COSMOS Triage → Pipeline 저장</div>
-
-      {/* Evidence Gate */}
-      <div style={{ background: "#fff", border: "0.5px solid #e5e5e5", borderRadius: 10, padding: "16px 20px", marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontSize: 12, fontWeight: 600 }}>Evidence Gate</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 11, color: "#999" }}>Coverage {coverage}/6</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: levelColor, background: levelColor+"18", padding: "2px 10px", borderRadius: 10 }}>
-              {analysisLevel}
-            </span>
-          </div>
+    <div style={{ flex: 1, overflow: "auto", background: C.bg, color: C.text, fontFamily: "Inter, sans-serif", padding: "32px 40px" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.12em", marginBottom: 4 }}>COSMOS / DEAL INTAKE</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>New Deal Registration</div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          {EVIDENCE_ITEMS.map(item => (
-            <div key={item.id} onClick={() => toggleEvidence(item.id)}
-              style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 7, border: evidence.includes(item.id) ? "0.5px solid #3B6D11" : "0.5px solid #eee", background: evidence.includes(item.id) ? "#EAF3DE" : "#FAFAFA", cursor: "pointer" }}>
-              <div style={{ width: 16, height: 16, borderRadius: 4, border: evidence.includes(item.id) ? "none" : "1.5px solid #ddd", background: evidence.includes(item.id) ? "#3B6D11" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {evidence.includes(item.id) && <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>✓</span>}
-              </div>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 500, color: evidence.includes(item.id) ? "#3B6D11" : "#333" }}>{item.label}</div>
-                <div style={{ fontSize: 10, color: "#999", marginTop: 1 }}>{item.desc}</div>
-              </div>
-            </div>
-          ))}
+
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.gold}`, borderRadius: 4, padding: "10px 14px", marginBottom: 28 }}>
+          <div style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.1em", marginBottom: 3 }}>DEAL CODE (자동 생성)</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.gold, letterSpacing: "0.06em" }}>{dealCode}</div>
         </div>
-        {coverage < 6 && (
-          <div style={{ marginTop: 10, fontSize: 11, color: "#854F0B", background: "#FAEEDA", borderRadius: 6, padding: "6px 10px" }}>
-            ⚠ Underwriting 분석은 6개 문서 충족 시 가능합니다. 현재 Run Triage만 활성화됩니다.
-          </div>
-        )}
-      </div>
 
-      {/* Input */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 11, color: "#666", marginBottom: 5, fontWeight: 500 }}>소개자 / 출처</div>
-          <input value={source} onChange={e => setSource(e.target.value)}
-            placeholder="예: 신한은행 강남지점 / 브로커 김XX"
-            style={{ width: "100%", padding: "9px 12px", border: "0.5px solid #ddd", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-        </div>
-      </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <Field label="딜명 *">
+            <input value={dealName} onChange={e => setDealName(e.target.value)}
+              placeholder="예: 봉은사로 455 신한 선순위 크레딧"
+              style={inputStyle} />
+          </Field>
 
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 11, color: "#666", marginBottom: 5, fontWeight: 500 }}>딜 설명</div>
-        <textarea value={raw} onChange={e => setRaw(e.target.value)}
-          placeholder="카톡, 이메일, 브로커 메시지 그대로 붙여넣기..."
-          style={{ width: "100%", height: 140, padding: "10px 12px", border: "0.5px solid #ddd", borderRadius: 8, fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }} />
-      </div>
-
-      {err && <div style={{ fontSize: 12, color: "#A32D2D", background: "#FCEBEB", padding: "8px 12px", borderRadius: 6, marginBottom: 12 }}>{err}</div>}
-
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={analyze} disabled={loading}
-          style={{ padding: "10px 24px", background: "#000", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}>
-          {loading ? "Triage 실행 중..." : "Run Triage"}
-        </button>
-        <button disabled
-          style={{ padding: "10px 24px", background: "#f5f5f5", color: "#ccc", border: "0.5px solid #eee", borderRadius: 8, fontSize: 13, cursor: "not-allowed" }}>
-          Run Underwriting
-        </button>
-      </div>
-
-      {/* Result */}
-      {result && (
-        <div style={{ marginTop: 32 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Triage 결과 — {result.deal_id}</div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
-            {[["자산명", result.record.asset_name], ["채권자", result.record.creditor], ["잔액", result.record.current_balance], ["DSCR", result.record.dscr]].map(([label, val]:any) => (
-              <div key={label} style={{ background: "#fff", border: "0.5px solid #e5e5e5", borderRadius: 8, padding: "10px 12px" }}>
-                <div style={{ fontSize: 10, color: "#999", marginBottom: 3 }}>{label}</div>
-                <div style={{ fontSize: 12, fontWeight: 500 }}>{val || "Unknown"}</div>
-              </div>
-            ))}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Field label="딜 타입 *">
+              <select value={dealType} onChange={e => setDealType(e.target.value)}
+                style={{ ...inputStyle, cursor: "pointer" }}>
+                {DEAL_TYPES.map(d => <option key={d.code} value={d.code}>{d.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Origination Posture">
+              <select value={posture} onChange={e => setPosture(e.target.value)}
+                style={{ ...inputStyle, cursor: "pointer" }}>
+                {POSTURES.map(p => <option key={p.code} value={p.code}>{p.label}</option>)}
+              </select>
+            </Field>
           </div>
 
-          {/* Verdict */}
-          {result.record.luska_verdict && (
-            <div style={{ background: "#fff", border: "0.5px solid #e5e5e5", borderLeft: "3px solid #111", borderRadius: "0 8px 8px 0", padding: "12px 14px", marginBottom: 16 }}>
-              <div style={{ fontSize: 10, color: "#999", fontWeight: 600, letterSpacing: 0.5, marginBottom: 5 }}>◈ LUSKA VERDICT</div>
-              <div style={{ fontSize: 12, color: "#222", lineHeight: 1.6 }}>{result.record.luska_verdict}</div>
-              {result.record.next_action && <div style={{ fontSize: 11, color: "#3B6D11", marginTop: 6 }}>→ {result.record.next_action}</div>}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Field label="소싱 채널">
+              <select value={sourceType} onChange={e => setSourceType(e.target.value)}
+                style={{ ...inputStyle, cursor: "pointer" }}>
+                {SOURCE_TYPES.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
+              </select>
+            </Field>
+            <Field label="소개자 / 출처">
+              <input value={sourceNote} onChange={e => setSourceNote(e.target.value)}
+                placeholder="예: 신한은행 강남지점 김XX"
+                style={inputStyle} />
+            </Field>
+          </div>
+
+          {err && (
+            <div style={{ fontSize: 11, color: C.red, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 4, padding: "8px 12px" }}>
+              {err}
             </div>
           )}
 
-          {/* Hard Kill */}
-          <div style={{ background: "#fff", border: "0.5px solid #e5e5e5", borderRadius: 8, padding: "14px 16px", marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 10 }}>Hard Kill 판정</div>
-            {Object.entries(result.record.hard_kill || {}).map(([k, v]: any) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: "0.5px solid #f5f5f5", fontSize: 12 }}>
-                <span style={{ color: "#666" }}>{k}</span>
-                <span style={{ color: hkColor(v), fontWeight: 500, maxWidth: 400, textAlign: "right" }}>{v}</span>
-              </div>
-            ))}
+          <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
+            <button onClick={submit} disabled={loading}
+              style={{ padding: "10px 28px", background: loading ? C.border : C.gold, color: "#000", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer" }}>
+              {loading ? "등록 중..." : "Register Deal"}
+            </button>
           </div>
 
-          {(result.record.missing_data || []).length > 0 && (
-            <div style={{ background: "#FAEEDA", border: "0.5px solid #FAC775", borderRadius: 8, padding: "12px 14px", marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#854F0B", marginBottom: 6 }}>Missing Data ({result.record.missing_data.length}개)</div>
-              {result.record.missing_data.map((m: string) => <div key={m} style={{ fontSize: 11, color: "#854F0B" }}>⚠ {m}</div>)}
-            </div>
-          )}
-
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 16 }}>
-            Analysis Level: <strong style={{ color: levelColor }}>{analysisLevel}</strong> · 
-            MinData: <strong style={{ color: result.record.minimum_data_passed ? "#3B6D11" : "#A32D2D" }}>
-              {result.record.minimum_data_score}/8 {result.record.minimum_data_passed ? "Pass ✓" : "Fail ✗"}
-            </strong> · 
-            상태: <strong>{result.status}</strong>
+          <div style={{ fontSize: 10, color: C.textDim }}>
+            등록 후 Pipeline → Evidence Checklist에서 DD 항목 진행
           </div>
-
-          <button onClick={onSaved}
-            style={{ padding: "10px 24px", background: "#000", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-            Pipeline에서 확인
-          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
