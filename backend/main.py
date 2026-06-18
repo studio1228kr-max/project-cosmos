@@ -77,16 +77,74 @@ def dart_scan(days: int = 1, payload: dict = Depends(verify_token)):
     start_dt = end_dt - timedelta(days=days)
 
     SIGNALS = {
-        "기한이익상실": ("P0", 10),
-        "채무불이행":   ("P0", 10),
-        "감사의견거절": ("P0",  9),
-        "영업정지":     ("P0",  8),
-        "채권단":       ("P0",  8),
-        "자산양도":     ("P1",  7),
-        "자산매각":     ("P1",  7),
-        "유형자산처분": ("P1",  6),
-        "담보제공":     ("P1",  6),
-        "경영권변경":   ("P1",  5),
+        "기한이익상실":     ("NEG","P0",10),
+        "채무불이행":       ("NEG","P0",10),
+        "부도":             ("NEG","P0",10),
+        "회생절차":         ("NEG","P0",10),
+        "법정관리":         ("NEG","P0",10),
+        "감사의견거절":     ("NEG","P0", 9),
+        "감사의견부적정":   ("NEG","P0", 9),
+        "계속기업":         ("NEG","P0", 9),
+        "워크아웃":         ("NEG","P0", 9),
+        "감사의견한정":     ("NEG","P0", 8),
+        "영업정지":         ("NEG","P0", 8),
+        "채권단":           ("NEG","P0", 8),
+        "주채권은행":       ("NEG","P0", 8),
+        "공동관리":         ("NEG","P0", 8),
+        "자본잠식":         ("NEG","P0", 8),
+        "주식담보":         ("NEG","P1", 7),
+        "지분담보":         ("NEG","P1", 7),
+        "자산양도":         ("NEG","P1", 7),
+        "자산매각":         ("NEG","P1", 7),
+        "상환유예":         ("NEG","P1", 7),
+        "영업양도":         ("NEG","P1", 7),
+        "사업부문양도":     ("NEG","P1", 7),
+        "담보제공":         ("NEG","P1", 6),
+        "근저당권설정":     ("NEG","P1", 6),
+        "질권설정":         ("NEG","P1", 6),
+        "최대주주변경":     ("NEG","P1", 6),
+        "신종자본증권":     ("NEG","P1", 6),
+        "만기연장":         ("NEG","P1", 6),
+        "채무인수":         ("NEG","P1", 6),
+        "사업부문양수":     ("NEG","P1", 6),
+        "경영권변경":       ("NEG","P1", 5),
+        "전환사채":         ("NEG","P1", 5),
+        "신주인수권부사채": ("NEG","P1", 5),
+        "지급보증":         ("NEG","P1", 5),
+        "손상차손":         ("NEG","P1", 5),
+        "공시번복":         ("NEG","P2", 5),
+        "등급하향":         ("NEG","P2", 4),
+        "제3자배정":        ("NEG","P2", 4),
+        "대규모차입":       ("NEG","P2", 4),
+        "영업손실":         ("NEG","P2", 4),
+        "차입금증가":       ("NEG","P2", 3),
+        "유상증자":         ("NEG","P2", 3),
+        "신용등급":         ("NEG","P2", 3),
+        "순손실":           ("NEG","P2", 3),
+        "충당부채":         ("NEG","P2", 3),
+        "특별배당":         ("NEG","P2", 3),
+        "정정공시":         ("NEG","P2", 2),
+        "재평가":           ("NEG","P2", 2),
+        "차입금상환":       ("POS","P1", 6),
+        "신용등급상향":     ("POS","P1", 6),
+        "등급상향":         ("POS","P1", 6),
+        "흑자전환":         ("POS","P1", 6),
+        "담보해지":         ("POS","P1", 5),
+        "조기상환":         ("POS","P1", 5),
+        "출자전환":         ("POS","P1", 5),
+        "전망상향":         ("POS","P1", 5),
+        "부채감축":         ("POS","P1", 5),
+        "재무구조개선":     ("POS","P1", 5),
+        "전략적투자자":     ("POS","P2", 4),
+        "재무적투자자":     ("POS","P2", 4),
+        "지분투자유치":     ("POS","P2", 4),
+        "관리종목해제":     ("POS","P2", 4),
+        "감시해제":         ("POS","P2", 4),
+        "수주증가":         ("POS","P2", 3),
+        "영업이익증가":     ("POS","P2", 3),
+        "순이익증가":       ("POS","P2", 3),
+        "장기임대차":       ("POS","P2", 3),
+        "장기공급계약":     ("POS","P2", 3),
     }
 
     try:
@@ -108,33 +166,48 @@ def dart_scan(days: int = 1, payload: dict = Depends(verify_token)):
     hits = []
     for item in data.get("list", []):
         title = item.get("report_nm", "")
-        matched = [(kw, p, s) for kw, (p, s) in SIGNALS.items() if kw in title]
+        matched = [(kw, pol, p, s) for kw, (pol, p, s) in SIGNALS.items() if kw in title]
         if not matched:
             continue
-        score = sum(s for _, _, s in matched)
-        priority = "P0" if any(p == "P0" for _, p, _ in matched) else                    "P1" if any(p == "P1" for _, p, _ in matched) else "P2"
+        neg = [(kw, p, s) for kw, pol, p, s in matched if pol == "NEG"]
+        pos = [(kw, p, s) for kw, pol, p, s in matched if pol == "POS"]
+        neg_score = sum(s for _, _, s in neg)
+        pos_score = sum(s for _, _, s in pos)
+        if neg:
+            priority = "P0" if any(p=="P0" for _,p,_ in neg) else                        "P1" if any(p=="P1" for _,p,_ in neg) else "P2"
+        else:
+            priority = "WATCH"
+        distress = "HIGH" if neg_score>=15 else "MEDIUM" if neg_score>=8 else "LOW" if neg_score>0 else "NONE"
+        oppty    = "STRONG" if pos_score>=8 else "POSITIVE" if pos_score>=4 else "MILD" if pos_score>0 else "NEUTRAL"
         hits.append({
-            "corp_name": item.get("corp_name", ""),
-            "report_title": title,
-            "disclosed_at": item.get("rcept_dt", ""),
-            "dart_url": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={item.get('rcept_no','')}",
-            "signals": [{"keyword": kw, "score": s} for kw, _, s in matched],
-            "score": score,
-            "priority": priority,
+            "corp_name":           item.get("corp_name",""),
+            "report_title":        title,
+            "disclosed_at":        item.get("rcept_dt",""),
+            "dart_url":            f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={item.get('rcept_no','')}",
+            "neg_signals":         [{"keyword":kw,"score":s} for kw,_,s in neg],
+            "pos_signals":         [{"keyword":kw,"score":s} for kw,_,s in pos],
+            "neg_score":           neg_score,
+            "pos_score":           pos_score,
+            "priority":            priority,
+            "distress_profile":    distress,
+            "opportunity_profile": oppty,
         })
 
-    po = {"P0": 0, "P1": 1, "P2": 2}
-    hits.sort(key=lambda x: (po[x["priority"]], -x["score"]))
+    po = {"P0":0,"P1":1,"P2":2,"WATCH":3}
+    hits.sort(key=lambda x: (po.get(x["priority"],4), -x["neg_score"]))
 
     return {
-        "scanned_at": datetime.utcnow().isoformat(),
-        "days": days,
-        "total_scanned": len(data.get("list", [])),
+        "scanned_at":    datetime.utcnow().isoformat(),
+        "days":          days,
+        "total_scanned": len(data.get("list",[])),
         "summary": {
-            "P0": sum(1 for h in hits if h["priority"]=="P0"),
-            "P1": sum(1 for h in hits if h["priority"]=="P1"),
-            "P2": sum(1 for h in hits if h["priority"]=="P2"),
-            "total_hits": len(hits),
+            "P0":            sum(1 for h in hits if h["priority"]=="P0"),
+            "P1":            sum(1 for h in hits if h["priority"]=="P1"),
+            "P2":            sum(1 for h in hits if h["priority"]=="P2"),
+            "WATCH":         sum(1 for h in hits if h["priority"]=="WATCH"),
+            "total_hits":    len(hits),
+            "high_distress": sum(1 for h in hits if h["distress_profile"]=="HIGH"),
+            "opportunity":   sum(1 for h in hits if h["opportunity_profile"] in ("STRONG","POSITIVE")),
         },
         "hits": hits,
     }
