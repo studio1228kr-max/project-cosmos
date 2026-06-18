@@ -291,6 +291,7 @@ def delete_deal(deal_code: str, payload: dict = Depends(verify_token)):
     cur.execute("DELETE FROM deal_evidence_checklist WHERE deal_master_id = %s", (deal_id,))
     cur.execute("DELETE FROM gate_results WHERE deal_master_id = %s", (deal_id,))
     cur.execute("DELETE FROM risk_scenarios WHERE deal_master_id = %s", (deal_id,))
+    cur.execute("DELETE FROM exception_log WHERE deal_master_id = %s", (deal_id,))
     cur.execute("DELETE FROM deal_master WHERE id = %s", (deal_id,))
     conn.commit()
     cur.close(); conn.close()
