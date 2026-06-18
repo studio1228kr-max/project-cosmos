@@ -298,6 +298,189 @@ def delete_deal(deal_code: str, payload: dict = Depends(verify_token)):
     return {"deleted": deal_code}
 
 
+
+
+def _auto_triage(hit: dict) -> dict:
+    """DART/OnBid hit → 4분기 triage + reason codes"""
+    reason_codes = []
+    neg_score = hit.get("neg_score", 0)
+    priority = hit.get("priority", "P2")
+    regulatory_risk = "low"
+    legal_flag = False
+    foreign_flag = False
+    political_flag = False
+
+    # 비재무 리스크 키워드 감지
+    title = (hit.get("report_title", "") or "").lower()
+    corp = (hit.get("corp_name", "") or "")
+
+    if any(k in title for k in ["외국법인","해외","suntrans","international","overseas"]):
+        foreign_flag = True
+        reason_codes.append("FLAG_FOREIGN_ENTITY")
+
+    if any(k in title for k in ["행정처분","영업정지","과태료","행정명령","세금체납","압류"]):
+        legal_flag = True
+        regulatory_risk = "high"
+        reason_codes.append("FLAG_LEGAL_ISSUE")
+
+    if any(k in title for k in ["국가기간","방산","국방","공공기관","국유","공기업"]):
+        political_flag = True
+        regulatory_risk = "high"
+        reason_codes.append("FLAG_POLITICAL_SENSITIVITY")
+
+    if priority == "P0":
+        regulatory_risk = "high" if regulatory_risk == "low" else regulatory_risk
+
+    # 4분기 결정
+    if regulatory_risk == "high" and legal_flag:
+        decision = "AUTO_REJECT"
+        reason_codes.append("REJECT_REGULATORY_LEGAL")
+        explanation = f"규제/법적 리스크 HIGH. 자동 거절."
+    elif priority == "P0" and neg_score >= 15:
+        decision = "AUTO_REJECT"
+        reason_codes.append("REJECT_EXTREME_DISTRESS")
+        explanation = f"NEG score {neg_score}, P0. 극단적 distress — 구조화 여지 검토 필요."
+    elif foreign_flag or political_flag:
+        decision = "MANUAL_REVIEW"
+        reason_codes.append("MANUAL_FOREIGN_OR_POLITICAL")
+        explanation = f"외국법인/정치 민감도 플래그. 수동 검토 필요."
+    elif priority == "P0" or (priority == "P1" and neg_score >= 8):
+        decision = "AUTO_CREATE_DEAL"
+        reason_codes.append(f"AUTO_P{priority[1]}_DISTRESS_SIGNAL")
+        explanation = f"{priority} 신호 (neg_score={neg_score}). deal_candidates 등록."
+    elif priority == "P1":
+        decision = "WATCHLIST"
+        reason_codes.append("WATCH_P1_MILD")
+        explanation = f"P1 신호이나 score 낮음 ({neg_score}). 모니터링."
+    else:
+        decision = "WATCHLIST"
+        reason_codes.append("WATCH_P2_LOW_SIGNAL")
+        explanation = f"P2 약한 신호. 와치리스트."
+
+    return {
+        "decision": decision,
+        "regulatory_risk": regulatory_risk,
+        "legal_issue_flag": legal_flag,
+        "foreign_entity_flag": foreign_flag,
+        "political_sensitivity_flag": political_flag,
+        "decision_reason_codes": reason_codes,
+        "decision_explanation": explanation,
+    }
+
+
+@app.post("/api/sourcing/dart-to-candidates")
+def dart_to_candidates(days: int = 1, payload: dict = Depends(verify_token)):
+    """DART scan → deal_candidates 자동 저장 + triage"""
+    import requests as req_lib
+    api_key = os.getenv("DART_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="DART_API_KEY not set")
+
+    end_dt = datetime.utcnow()
+    start_dt = end_dt - timedelta(days=days)
+
+    SIGNALS = {
+        "기한이익상실":("NEG","P0",10),"채무불이행":("NEG","P0",10),"부도":("NEG","P0",10),
+        "회생절차":("NEG","P0",10),"법정관리":("NEG","P0",10),"감사의견거절":("NEG","P0",9),
+        "계속기업":("NEG","P0",9),"워크아웃":("NEG","P0",9),"자본잠식":("NEG","P0",8),
+        "채권단":("NEG","P0",8),"주채권은행":("NEG","P0",8),"영업정지":("NEG","P0",8),
+        "주식담보":("NEG","P1",7),"자산양도":("NEG","P1",7),"상환유예":("NEG","P1",7),
+        "담보제공":("NEG","P1",6),"최대주주변경":("NEG","P1",6),"만기연장":("NEG","P1",6),
+        "전환사채":("NEG","P1",5),"손상차손":("NEG","P1",5),
+    }
+
+    try:
+        resp = req_lib.get(
+            "https://opendart.fss.or.kr/api/list.json",
+            params={"crtfc_key": api_key,
+                    "bgn_de": start_dt.strftime("%Y%m%d"),
+                    "end_de": end_dt.strftime("%Y%m%d"),
+                    "last_reprt_at": "N", "page_count": 100},
+            timeout=15,
+        )
+        data = resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    conn = get_conn()
+    cur = conn.cursor()
+    created = 0
+    skipped = 0
+
+    for item in data.get("list", []):
+        title = item.get("report_nm", "")
+        matched = [(kw, pol, p, s) for kw, (pol, p, s) in SIGNALS.items() if kw in title]
+        if not matched:
+            continue
+
+        neg = [(kw, p, s) for kw, pol, p, s in matched if pol == "NEG"]
+        neg_score = sum(s for _, _, s in neg)
+        priority = "P0" if any(p=="P0" for _,p,_ in neg) else "P1" if any(p=="P1" for _,p,_ in neg) else "P2"
+
+        hit = {
+            "corp_name": item.get("corp_name",""),
+            "report_title": title,
+            "disclosed_at": item.get("rcept_dt",""),
+            "dart_url": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={item.get('rcept_no','')}",
+            "neg_score": neg_score,
+            "pos_score": 0,
+            "priority": priority,
+            "distress_profile": "HIGH" if neg_score>=15 else "MEDIUM" if neg_score>=8 else "LOW",
+            "neg_signals": [{"keyword":kw,"score":s} for kw,_,s in neg],
+        }
+
+        t = _auto_triage(hit)
+
+        # 중복 체크 (같은 dart_url)
+        cur.execute("SELECT id FROM deal_candidates WHERE dart_url = %s", (hit["dart_url"],))
+        if cur.fetchone():
+            skipped += 1
+            continue
+
+        cur.execute("""
+            INSERT INTO deal_candidates
+            (source_system, corp_name, report_title, disclosed_at, dart_url,
+             neg_score, pos_score, priority, distress_profile, neg_signals,
+             regulatory_risk, legal_issue_flag, foreign_entity_flag, political_sensitivity_flag,
+             decision, decision_reason_codes, decision_explanation)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (
+            "DART", hit["corp_name"], hit["report_title"], hit["disclosed_at"], hit["dart_url"],
+            hit["neg_score"], hit["pos_score"], hit["priority"], hit["distress_profile"],
+            psycopg2.extras.Json(hit["neg_signals"]),
+            t["regulatory_risk"], t["legal_issue_flag"], t["foreign_entity_flag"],
+            t["political_sensitivity_flag"], t["decision"],
+            psycopg2.extras.Json(t["decision_reason_codes"]), t["decision_explanation"]
+        ))
+        created += 1
+
+    conn.commit()
+    cur.close(); conn.close()
+
+    return {
+        "scanned_at": datetime.utcnow().isoformat(),
+        "days": days,
+        "created": created,
+        "skipped_duplicates": skipped,
+    }
+
+
+@app.get("/api/sourcing/candidates")
+def get_candidates(decision: str = "", limit: int = 50, payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    if decision:
+        cur.execute(
+            "SELECT * FROM deal_candidates WHERE decision = %s ORDER BY created_at DESC LIMIT %s",
+            (decision, limit)
+        )
+    else:
+        cur.execute("SELECT * FROM deal_candidates ORDER BY created_at DESC LIMIT %s", (limit,))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return {"candidates": rows, "total": len(rows)}
+
+
 @app.post("/login")
 def login(body: LoginRequest):
     conn = get_conn()
