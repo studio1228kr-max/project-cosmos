@@ -213,6 +213,66 @@ def dart_scan(days: int = 1, payload: dict = Depends(verify_token)):
     }
 
 
+
+
+@app.get("/assets/onbid")
+def onbid_search(
+    keyword: str = "",
+    page: int = 1,
+    size: int = 20,
+    payload: dict = Depends(verify_token)
+):
+    import requests as req_lib
+    api_key = os.getenv("DATA_GO_KR_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="DATA_GO_KR_KEY not set")
+
+    try:
+        resp = req_lib.get(
+            "https://apis.data.go.kr/B010003/OnbidRlstListSrvc2/getRlstCltrList2",
+            params={"serviceKey": api_key, "pageNo": page, "numOfRows": size, "type": "json"},
+            timeout=15,
+        )
+        data = resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OnBid error: {e}")
+
+    body = data.get("response", {}).get("body", {})
+    total_count = body.get("totalCount", 0)
+    items = body.get("items", {})
+    if isinstance(items, dict):
+        items = items.get("item", [])
+    if isinstance(items, dict):
+        items = [items]
+    if not isinstance(items, list):
+        items = []
+
+    if keyword:
+        items = [i for i in items if keyword in (i.get("ldNm", "") or "")]
+
+    results = []
+    for item in items:
+        results.append({
+            "cltr_no":        item.get("cltrNo"),
+            "name":           item.get("cltrNm"),
+            "asset_type":     item.get("prdtylNm"),
+            "location":       item.get("ldNm"),
+            "area":           item.get("area"),
+            "appraised_value": item.get("apprsAmt"),
+            "min_bid_price":  item.get("minBidPrc"),
+            "bid_start":      item.get("bidBeginDt"),
+            "bid_end":        item.get("bidEndDt"),
+            "disp_method":    item.get("dspsMethodNm"),
+        })
+
+    return {
+        "fetched_at":  datetime.utcnow().isoformat(),
+        "total_count": total_count,
+        "returned":    len(results),
+        "items":       results,
+    }
+
+
 @app.post("/login")
 def login(body: LoginRequest):
     conn = get_conn()
