@@ -276,6 +276,27 @@ def onbid_search(
     }
 
 
+
+
+@app.delete("/api/risk-book/deals/{deal_code}")
+def delete_deal(deal_code: str, payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, is_test FROM deal_master WHERE deal_code = %s", (deal_code,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="deal not found")
+    deal_id = row["id"]
+    cur.execute("DELETE FROM deal_evidence_checklist WHERE deal_master_id = %s", (deal_id,))
+    cur.execute("DELETE FROM gate_results WHERE deal_master_id = %s", (deal_id,))
+    cur.execute("DELETE FROM risk_scenarios WHERE deal_master_id = %s", (deal_id,))
+    cur.execute("DELETE FROM deal_master WHERE id = %s", (deal_id,))
+    conn.commit()
+    cur.close(); conn.close()
+    return {"deleted": deal_code}
+
+
 @app.post("/login")
 def login(body: LoginRequest):
     conn = get_conn()
