@@ -642,27 +642,34 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
       {/* 좌측 — 항상 보이는 고정 패널 */}
       <div style={{ width: expanded ? 360 : "50%", flexShrink: 0, padding: "0 32px", boxSizing: "border-box" as const }}>
         <div style={{ fontSize: 11, color: C.textDim, marginBottom: 4 }}>COSMOS / TODAY — {dateStr}</div>
-        {repDeal && (
-          <div style={{ fontSize: 13, color: C.text, marginBottom: 10, fontFamily: "'IBM Plex Mono', monospace" }}>
-            {repDeal.deal_name}
-            {expAmt ? ` · 익스포저 ${(expAmt / 100000000).toFixed(1)}억` : ""}
-            {dday !== null ? ` · 만기 D-${dday}` : ""}
-          </div>
-        )}
 
-        <div style={{ display: "flex", gap: 20, marginBottom: 6, justifyContent: "flex-start", alignItems: "center" }}>
-          <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
-          <ScoreGauge label="진행 건강도" value={scores.health_score} max={100} color={scores.health_score < 60 ? C.red : scores.health_score < 80 ? C.amber : C.green} />
-          <span onClick={() => setExpanded((v: boolean) => !v)} style={{ fontSize: 18, color: C.textDim, cursor: "pointer", marginLeft: 4 }}>
-            {expanded ? "<" : ">"}
-          </span>
-        </div>
+        {deals.map((d: any) => {
+          const dExp = d.exposure_amount;
+          const dMaturity = d.maturity_date ? new Date(d.maturity_date) : null;
+          const dDday = dMaturity && !isNaN(dMaturity.getTime()) ? Math.ceil((dMaturity.getTime() - Date.now()) / 86400000) : null;
+          return (
+            <div key={d.deal_code} style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 13, color: C.text, marginBottom: 10, fontFamily: "'IBM Plex Mono', monospace" }}>
+                {d.deal_name}
+                {dExp ? ` · 익스포저 ${(dExp / 100000000).toFixed(1)}억` : ""}
+                {dDday !== null ? ` · 만기 D-${dDday}` : ""}
+              </div>
+              <div style={{ display: "flex", gap: 20, justifyContent: "flex-start", alignItems: "center" }}>
+                <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
+                <ScoreGauge label="진행 건강도" value={scores.health_score} max={100} color={scores.health_score < 60 ? C.red : scores.health_score < 80 ? C.amber : C.green} />
+              </div>
+            </div>
+          );
+        })}
 
-        <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 4 }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 4 }}>
           <button onClick={() => onNavigateDeal("sourcing", "sourcing")}
             style={{ padding: "5px 14px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, color: "#6FA8FF", fontSize: 11, cursor: "pointer" }}>
             Signal Room에서 신호 처리하기
           </button>
+          <span onClick={() => setExpanded((v: boolean) => !v)} style={{ fontSize: 18, color: C.textDim, cursor: "pointer" }}>
+            {expanded ? "<" : ">"}
+          </span>
         </div>
       </div>
 
