@@ -641,7 +641,18 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
 
       {/* 좌측 — 항상 보이는 고정 패널 */}
       <div style={{ width: expanded ? 360 : "50%", flexShrink: 0, padding: "0 32px", boxSizing: "border-box" as const }}>
-        <div style={{ fontSize: 11, color: C.textDim, marginBottom: 4 }}>COSMOS / TODAY — {dateStr}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: C.textDim }}>COSMOS / TODAY — {dateStr}</div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <button onClick={() => onNavigateDeal("sourcing", "sourcing")}
+              style={{ padding: "5px 14px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, color: "#6FA8FF", fontSize: 11, cursor: "pointer" }}>
+              Signal Room에서 신호 처리하기
+            </button>
+            <span onClick={() => setExpanded((v: boolean) => !v)} style={{ fontSize: 18, color: C.textDim, cursor: "pointer" }}>
+              {expanded ? "<" : ">"}
+            </span>
+          </div>
+        </div>
 
         {deals.map((d: any) => {
           const dExp = d.exposure_amount;
@@ -661,16 +672,6 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
             </div>
           );
         })}
-
-        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 4 }}>
-          <button onClick={() => onNavigateDeal("sourcing", "sourcing")}
-            style={{ padding: "5px 14px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, color: "#6FA8FF", fontSize: 11, cursor: "pointer" }}>
-            Signal Room에서 신호 처리하기
-          </button>
-          <span onClick={() => setExpanded((v: boolean) => !v)} style={{ fontSize: 18, color: C.textDim, cursor: "pointer" }}>
-            {expanded ? "<" : ">"}
-          </span>
-        </div>
       </div>
 
       {expanded && (
