@@ -9,6 +9,7 @@ import psycopg2.extras
 from evidence_engine import evaluate_evidence_engine
 from refi_path_engine import evaluate_refi_path_engine
 from recovery_strategy_engine_kr import evaluate_korea_recovery_strategy_engine
+from deal_pipeline_orchestrator import evaluate_deal_pipeline
 from fastapi import FastAPI, HTTPException, Depends, Header, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -575,6 +576,30 @@ def recovery_kr_evaluate(body: dict, payload: dict = Depends(verify_token)):
             policy=body.get("policy"),
             evidence_package=body.get("evidence_package"),
             refi_path_package=body.get("refi_path_package"),
+        )
+        return result.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
+
+@app.post("/api/risk-book/deal-pipeline/evaluate")
+def deal_pipeline_evaluate(body: dict, payload: dict = Depends(verify_token)):
+    """통합 딜 파이프라인 — Evidence → Refi Path → Recovery Waterfall 순차 실행"""
+    try:
+        result = evaluate_deal_pipeline(
+            deal_master=body.get("deal_master", {}),
+            evidence_items=body.get("evidence_items"),
+            required_fields=body.get("required_fields"),
+            p0_fields=body.get("p0_fields"),
+            evidence_field_policies=body.get("evidence_field_policies"),
+            refi_path_input=body.get("refi_path_input"),
+            refi_scenarios=body.get("refi_scenarios"),
+            refi_policy=body.get("refi_policy"),
+            recovery_input=body.get("recovery_input"),
+            recovery_scenarios=body.get("recovery_scenarios"),
+            recovery_policy=body.get("recovery_policy"),
         )
         return result.to_dict()
     except Exception as e:
