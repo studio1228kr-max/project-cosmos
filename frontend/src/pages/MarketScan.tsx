@@ -14,6 +14,7 @@ export default function MarketScan() {
   const [newsData, setNewsData] = useState<any>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [justActed, setJustActed] = useState<Set<number>>(new Set());
 
   const fetchAll = async () => {
     setLoading(true);
@@ -34,6 +35,10 @@ export default function MarketScan() {
     try {
       await API.patch(`/api/sourcing/candidates/${id}/decision`, { decision });
       setCandidates(prev => prev.map(c => c.id === id ? { ...c, decision } : c));
+      setJustActed(prev => new Set(prev).add(id));
+      setTimeout(() => {
+        setJustActed(prev => { const next = new Set(prev); next.delete(id); return next; });
+      }, 5000);
     } catch { alert("처리 실패"); }
   };
 
@@ -47,7 +52,7 @@ export default function MarketScan() {
   });
   feed.sort((a, b) => (b.time > a.time ? 1 : -1));
 
-  const triageList = candidates.filter(c => ["PENDING", "MANUAL_REVIEW", "AUTO_CREATE_DEAL"].includes(c.decision));
+  const triageList = candidates.filter(c => ["PENDING", "MANUAL_REVIEW", "AUTO_CREATE_DEAL"].includes(c.decision) || justActed.has(c.id));
 
   const dartCount = dartData?.hits?.length || 0;
   const newsCount = newsData?.total || 0;
@@ -90,34 +95,38 @@ export default function MarketScan() {
           <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 10 }}>Triage 대상 — 지금 판단할 신호</div>
           {triageList.length === 0 ? (
             <div style={{ fontSize: 12, color: C.textDim }}>처리할 신호 없음</div>
-          ) : triageList.map((c: any) => (
-            <div key={c.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px", marginBottom: 10 }}>
+          ) : triageList.map((c: any) => {
+            const done = justActed.has(c.id);
+            return (
+            <div key={c.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px", marginBottom: 10, opacity: done ? 0.6 : 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>{c.corp_name}</span>
                 <span style={{ fontSize: 10, fontWeight: 700, color: c.priority === "P0" ? C.red : C.amber }}>{c.priority}</span>
               </div>
               <div style={{ fontSize: 11, color: C.textDim, marginBottom: 10 }}>{c.decision_explanation}</div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => act(c.id, "PROMOTED")}
-                  style={{ flex: 1, padding: "6px 0", background: C.green, border: "none", borderRadius: 4, color: C.bg, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                  등록
-                </button>
-                <button onClick={() => act(c.id, "WATCHLIST")}
-                  style={{ flex: 1, padding: "6px 0", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.textMid, fontSize: 11, cursor: "pointer" }}>
-                  보류
-                </button>
-                <button onClick={() => act(c.id, "REJECTED")}
-                  style={{ flex: 1, padding: "6px 0", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.red, fontSize: 11, cursor: "pointer" }}>
-                  폐기
-                </button>
-              </div>
-              {c.decision === "PROMOTED" && (
-                <div style={{ marginTop: 8, fontSize: 10, color: C.green }}>
-                  등록됨 — Intake에서 "{c.corp_name}" 으로 딜 생성하세요
+              {done ? (
+                <div style={{ fontSize: 11, color: c.decision === "PROMOTED" ? C.green : c.decision === "REJECTED" ? C.red : C.textMid }}>
+                  {c.decision === "PROMOTED" ? `등록됨 — Intake에서 "${c.corp_name}" 으로 딜 생성하세요` : c.decision === "WATCHLIST" ? "보류 처리됨" : "폐기됨"}
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => act(c.id, "PROMOTED")}
+                    style={{ flex: 1, padding: "6px 0", background: C.green, border: "none", borderRadius: 4, color: C.bg, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                    등록
+                  </button>
+                  <button onClick={() => act(c.id, "WATCHLIST")}
+                    style={{ flex: 1, padding: "6px 0", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.textMid, fontSize: 11, cursor: "pointer" }}>
+                    보류
+                  </button>
+                  <button onClick={() => act(c.id, "REJECTED")}
+                    style={{ flex: 1, padding: "6px 0", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.red, fontSize: 11, cursor: "pointer" }}>
+                    폐기
+                  </button>
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
