@@ -567,8 +567,9 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
       (dart.data?.hits || []).slice(0, 6).forEach((h: any) =>
         f.push({ time: h.disclosed_at || "", source: "공시", text: `[${h.priority}] ${h.corp_name} — ${h.report_title}` })
       );
+      const decodeHtml = (t: string) => (t || "").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/<[^>]*>/g, "");
       (news.data?.items || []).slice(0, 6).forEach((it: any) =>
-        f.push({ time: it.pub_date || "", source: "뉴스", text: it.title })
+        f.push({ time: it.pub_date || "", source: "뉴스", text: decodeHtml(it.title) })
       );
       f.sort((a, b) => (b.time > a.time ? 1 : -1));
       setFeed(f);
