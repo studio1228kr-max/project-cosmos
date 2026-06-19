@@ -553,9 +553,9 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
 
   const load = () => {
     Promise.all([
-      API.get("/api/risk-book/deals"),
-      API.get("/api/dashboard/meaningful-changes"),
-      API.get("/api/dashboard/market-read"),
+      API.get("/api/risk-book/deals").catch(() => ({ data: [] })),
+      API.get("/api/dashboard/meaningful-changes").catch(() => ({ data: [] })),
+      API.get("/api/dashboard/market-read").catch(() => ({ data: { text: "", updated_at: null } })),
       API.get("/dart/scan?days=1").catch(() => ({ data: { hits: [] } })),
       API.get("/api/sourcing/naver-news").catch(() => ({ data: { items: [] } })),
     ]).then(([d, m, mr, dart, news]) => {
