@@ -6,6 +6,7 @@ import jwt
 import bcrypt
 import psycopg2
 import psycopg2.extras
+from evidence_engine import evaluate_evidence_engine
 from fastapi import FastAPI, HTTPException, Depends, Header, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -521,6 +522,24 @@ def naver_news_scan(query: str = "기한이익상실 OR 채무불이행 OR 워�
             continue
     results.sort(key=lambda x: x["pub_date"], reverse=True)
     return {"total": len(results), "keywords_scanned": len(KEYWORDS), "items": results}
+
+
+
+
+@app.post("/api/risk-book/evidence/evaluate")
+def evidence_evaluate(body: dict, payload: dict = Depends(verify_token)):
+    """범용 Evidence Engine — 어떤 deal_master/evidence_items이든 입력받아 평가"""
+    try:
+        result = evaluate_evidence_engine(
+            deal_master=body.get("deal_master", {}),
+            evidence_items=body.get("evidence_items", []),
+            required_fields=body.get("required_fields"),
+            p0_fields=body.get("p0_fields"),
+            field_policies=body.get("field_policies"),
+        )
+        return result.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/login")
