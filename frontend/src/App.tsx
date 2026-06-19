@@ -903,10 +903,10 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
             )}
             {currentView === "pipeline" && (
               <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-                <div style={{ display:"flex", flexDirection:"column", width: selectedId && currentView !== "pipeline" ? 460 : "100%", overflow:"auto", transition:"width 0.2s" }}>
+                <div style={{ display:"flex", flexDirection:"column", width: selectedId ? 460 : "100%", overflow:"auto", transition:"width 0.2s" }}>
                   <Pipeline onSelectDeal={() => {}} />
                 </div>
-                {selectedId && currentView !== "pipeline" && (
+                {selectedId && (
                   <div style={{ flex: 1, borderLeft: "1px solid #1A2638", overflow: "hidden", background: "#0D1420" }}>
                     <DealPanel dealId={selectedId} onClose={() => setSelectedId(null)} />
                   </div>
