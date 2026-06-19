@@ -1023,6 +1023,8 @@ class NewDealRequest(BaseModel):
     source_replicability: str = "UNKNOWN"
     source_note: Optional[str] = None
     is_test: bool = False
+    maturity_date: Optional[str] = None
+    exposure_amount: Optional[int] = None
 
 
 class ChecklistUpdateRequest(BaseModel):
@@ -1167,12 +1169,13 @@ def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token))
             """
             INSERT INTO deal_master
                 (deal_code, deal_name, deal_type, stage, source_type, source_replicability, source_note,
-                 asset_class, module_code, origination_posture, is_test)
-            VALUES (%s,%s,%s,'INTAKE',%s,%s,%s,%s,%s,%s,%s)
+                 asset_class, module_code, origination_posture, is_test, maturity_date, exposure_amount)
+            VALUES (%s,%s,%s,'INTAKE',%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
             """,
             (body.deal_code, body.deal_name, body.deal_type, body.source_type, body.source_replicability,
-             body.source_note, body.asset_class, body.module_code, body.origination_posture, body.is_test),
+             body.source_note, body.asset_class, body.module_code, body.origination_posture, body.is_test,
+             body.maturity_date, body.exposure_amount),
         )
         deal_id = cur.fetchone()["id"]
 
