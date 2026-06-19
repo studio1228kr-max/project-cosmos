@@ -652,19 +652,19 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
           )}
         </div>
 
-        <div style={{ display: "flex", gap: 20, marginBottom: 6, justifyContent: "center" }}>
+        <div style={{ display: "flex", gap: 20, marginBottom: 6, justifyContent: "flex-start" }}>
           <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
           <ScoreGauge label="진행 건강도" value={scores.health_score} max={100} color={scores.health_score < 60 ? C.red : scores.health_score < 80 ? C.amber : C.green} />
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}>
+        <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 4 }}>
           <button onClick={() => onNavigateDeal("sourcing", "sourcing")}
             style={{ padding: "5px 14px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, color: "#6FA8FF", fontSize: 11, cursor: "pointer" }}>
             Signal Room에서 신호 처리하기
           </button>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center" }}>
+        <div style={{ display: "flex", justifyContent: "flex-start" }}>
           <span onClick={() => setExpanded((v: boolean) => !v)} style={{ fontSize: 18, color: C.textDim, cursor: "pointer" }}>
             {expanded ? "<" : ">"}
           </span>
