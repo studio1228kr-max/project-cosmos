@@ -649,6 +649,60 @@ def update_candidate_decision(candidate_id: int, body: dict, payload: dict = Dep
     return {"id": candidate_id, "decision": decision}
 
 
+
+
+@app.get("/api/dashboard/meaningful-changes")
+def list_meaningful_changes(payload: dict = Depends(verify_token)):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT id, title, note, source_link, created_at FROM meaningful_changes ORDER BY created_at DESC LIMIT 5")
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [{"id": r[0], "title": r[1], "note": r[2], "source_link": r[3], "created_at": r[4].isoformat() if r[4] else None} for r in rows]
+
+
+@app.post("/api/dashboard/meaningful-changes")
+def add_meaningful_change(body: dict, payload: dict = Depends(verify_token)):
+    title = body.get("title")
+    if not title:
+        raise HTTPException(status_code=400, detail="title required")
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO meaningful_changes (title, note, source_link) VALUES (%s, %s, %s) RETURNING id",
+        (title, body.get("note"), body.get("source_link")),
+    )
+    new_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close(); conn.close()
+    return {"id": new_id}
+
+
+@app.delete("/api/dashboard/meaningful-changes/{change_id}")
+def delete_meaningful_change(change_id: int, payload: dict = Depends(verify_token)):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("DELETE FROM meaningful_changes WHERE id=%s", (change_id,))
+    conn.commit()
+    cur.close(); conn.close()
+    return {"deleted": change_id}
+
+
+@app.get("/api/dashboard/market-read")
+def get_market_read(payload: dict = Depends(verify_token)):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT text, updated_at FROM market_read WHERE id=1")
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return {"text": row[0] if row else "", "updated_at": row[1].isoformat() if row and row[1] else None}
+
+
+@app.put("/api/dashboard/market-read")
+def update_market_read(body: dict, payload: dict = Depends(verify_token)):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("UPDATE market_read SET text=%s, updated_at=NOW() WHERE id=1", (body.get("text", ""),))
+    conn.commit()
+    cur.close(); conn.close()
+    return {"ok": True}
+
+
 @app.post("/login")
 def login(body: LoginRequest):
     conn = get_conn()
