@@ -554,6 +554,7 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
   const [newSinceExample, setNewSinceExample] = useState<string | null>(null);
   const [scores, setScores] = useState<any>({ activity_score: 0, activity_breakdown: {}, health_score: 100, health_breakdown: {} });
   const [expanded, setExpanded] = useState(false);
+  const [selectedDealCode, setSelectedDealCode] = useState<string | null>(null);
   const lastCheckRef = useRef<Date | null>(null);
   const hasSetLastCheck = useRef(false);
 
@@ -626,6 +627,7 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
 
   const holdDeals = deals.filter((d: any) => d.final_gate === "HOLD");
   const repDeal = holdDeals[0] || deals[0];
+  const selDeal = deals.find((d: any) => d.deal_code === selectedDealCode) || repDeal;
   const topReason = repDeal?.hold_reasons?.[0];
   const topAction = repDeal?.required_actions?.[0] || repDeal?.hold_reasons?.[1];
   const expAmt = repDeal?.exposure_amount;
@@ -659,15 +661,12 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
           const dMaturity = d.maturity_date ? new Date(d.maturity_date) : null;
           const dDday = dMaturity && !isNaN(dMaturity.getTime()) ? Math.ceil((dMaturity.getTime() - Date.now()) / 86400000) : null;
           return (
-            <div key={d.deal_code} style={{ marginBottom: 18 }}>
-              <div onClick={() => onNavigateDeal(d.deal_code, "pipeline")}
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, cursor: "pointer", marginBottom: 10 }}>
-                <div style={{ fontSize: 13, color: C.text, fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {d.deal_name}
-                  {dExp ? ` · 익스포저 ${(dExp / 100000000).toFixed(1)}억` : ""}
-                  {dDday !== null ? ` · 만기 D-${dDday}` : ""}
-                </div>
-                <span style={{ fontSize: 14, color: C.textDim, flexShrink: 0 }}>›</span>
+            <div key={d.deal_code} onClick={() => { setSelectedDealCode(d.deal_code); setExpanded(true); }}
+              style={{ marginBottom: 18, cursor: "pointer" }}>
+              <div style={{ fontSize: 13, color: C.text, marginBottom: 10, fontFamily: "'IBM Plex Mono', monospace" }}>
+                {d.deal_name}
+                {dExp ? ` · 익스포저 ${(dExp / 100000000).toFixed(1)}억` : ""}
+                {dDday !== null ? ` · 만기 D-${dDday}` : ""}
               </div>
               <div style={{ display: "flex", gap: 20, justifyContent: "flex-start", alignItems: "center" }}>
                 <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
@@ -681,35 +680,26 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
       {expanded && (
       <div style={{ flex: 1, minWidth: 0, padding: "0 32px", boxSizing: "border-box" as const, borderLeft: `1px solid ${C.border}`, overflow: "auto" }}>
 
-      {/* 오늘의 상태 변화 — Activity / Health 분리 */}
+      {/* 선택한 딜 진단 — 활동점수 치트시트 대신 실제 딜 막힘 사유/필요조치 표시 */}
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10, marginBottom: 14 }}>
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px", minWidth: 0, overflow: "hidden" }}>
-          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>활동 점수 구성</div>
-          {[
-            ["Signal Room triage", scores.activity_breakdown?.triage, "sourcing"],
-            ["Meaningful Changes", scores.activity_breakdown?.meaningful_changes, "sourcing"],
-            ["딜 등록", scores.activity_breakdown?.deals_registered, "intake"],
-            ["Evidence 완료", scores.activity_breakdown?.evidence_completed, "evidence"],
-            ["Market Read", scores.activity_breakdown?.market_read, "today"],
-          ].map(([label, val, nav]: any) => (
-            <div key={label} onClick={() => onNavigateDeal(nav as string, nav as string)}
-              style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", cursor: "pointer" }}>
-              <span style={{ fontSize: 12, color: C.textMid, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
-              <span style={{ fontSize: 12, color: C.text, flexShrink: 0 }}>{val || 0}건 ›</span>
-            </div>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {selDeal ? `${selDeal.deal_name} — 왜 막혔나` : "왜 막혔나"}
+          </div>
+          {(!selDeal || (selDeal.hold_reasons || []).length === 0) ? (
+            <div style={{ fontSize: 12, color: C.textDim }}>막힌 사유 없음</div>
+          ) : (selDeal.hold_reasons as string[]).map((r: string, i: number) => (
+            <div key={i} style={{ fontSize: 12, color: C.text, borderLeft: `2px solid ${C.red}`, paddingLeft: 8, marginBottom: 6 }}>{r}</div>
           ))}
         </div>
 
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px", minWidth: 0, overflow: "hidden" }}>
-          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>진행 건강도 상세</div>
-          <div onClick={() => onNavigateDeal("pipeline", "pipeline")} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", cursor: "pointer" }}>
-            <span style={{ fontSize: 12, color: C.textMid, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>막힌 딜 (전일 대비 변화 추적 예정)</span>
-            <span style={{ fontSize: 12, color: scores.health_breakdown?.blocked_deals > 0 ? C.red : C.text, flexShrink: 0 }}>{scores.health_breakdown?.blocked_deals || 0}건 ›</span>
-          </div>
-          <div onClick={() => onNavigateDeal("evidence", "evidence")} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", cursor: "pointer" }}>
-            <span style={{ fontSize: 12, color: C.textMid, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>필수자료 미완료</span>
-            <span style={{ fontSize: 12, color: scores.health_breakdown?.missing_mandatory > 0 ? C.amber : C.text, flexShrink: 0 }}>{scores.health_breakdown?.missing_mandatory || 0}건 ›</span>
-          </div>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>뭘 풀어야 하나</div>
+          {(!selDeal || (selDeal.required_actions || []).length === 0) ? (
+            <div style={{ fontSize: 12, color: C.textDim }}>필요 조치 없음</div>
+          ) : (selDeal.required_actions as string[]).map((a: string, i: number) => (
+            <div key={i} style={{ fontSize: 12, color: C.text, marginBottom: 6 }}>{a}</div>
+          ))}
         </div>
       </div>
 
