@@ -32,7 +32,7 @@ export default function Layout({ page, onNav, userEmail, onLogout, children, dea
         {/* Logo + Toggle */}
         <div style={{ padding: collapsed ? "16px 8px" : "20px 16px 16px", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between" }}>
           {!collapsed && (
-            <div onClick={() => onNav("pipeline")} style={{ cursor: "pointer" }}>
+            <div onClick={() => onNav("today")} style={{ cursor: "pointer" }}>
               <div style={{ fontFamily: "'ZenSerif', serif", fontSize: 15, fontWeight: 700, color: "#e2e2e2", letterSpacing: "0.02em" }}>Luska Capital</div>
               <div style={{ fontSize: 10, color: "#3a3a3a", marginTop: 2 }}>by COSMOS</div>
             </div>
