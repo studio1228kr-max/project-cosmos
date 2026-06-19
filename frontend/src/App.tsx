@@ -637,41 +637,43 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
   const C = { surface: "#11161D", border: "#1E2630", text: "#E4E7EB", textMid: "#8B95A3", textDim: "#525C6B", amber: "#F0A93B", red: "#E5484D", green: "#2BC48A" };
 
   return (
-    <div style={{ width: (expanded || fullWidth) ? "100%" : "50%", margin: 0, padding: "28px 32px", boxSizing: "border-box" as const }}>
-      <div style={{ marginBottom: 6 }}>
-        <div style={{ fontSize: 11, color: C.textDim }}>COSMOS / TODAY — {dateStr}</div>
-      </div>
+    <div style={{ width: "100%", display: "flex", padding: "28px 0", boxSizing: "border-box" as const }}>
 
-      {/* Current Exposure — 노출 한 줄 */}
-      {repDeal && (
-        <div style={{ fontSize: 11, color: C.textDim, marginBottom: 18, fontFamily: "'IBM Plex Mono', monospace" }}>
-          {repDeal.deal_name}
-          {expAmt ? ` · 익스포저 ${(expAmt / 100000000).toFixed(1)}억` : ""}
-          {dday !== null ? ` · 만기 D-${dday}` : ""}
+      {/* 좌측 — 항상 보이는 고정 패널 */}
+      <div style={{ width: expanded ? 360 : "50%", flexShrink: 0, padding: "0 32px", boxSizing: "border-box" as const }}>
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ fontSize: 11, color: C.textDim }}>COSMOS / TODAY — {dateStr}</div>
         </div>
-      )}
 
-      {/* 원형 게이지 2개 */}
-      <div style={{ display: "flex", gap: 24, marginBottom: 14, justifyContent: "center" }}>
-        <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
-        <ScoreGauge label="진행 건강도" value={scores.health_score} max={100} color={scores.health_score < 60 ? C.red : scores.health_score < 80 ? C.amber : C.green} />
-      </div>
+        {repDeal && (
+          <div style={{ fontSize: 11, color: C.textDim, marginBottom: 18, fontFamily: "'IBM Plex Mono', monospace" }}>
+            {repDeal.deal_name}
+            {expAmt ? ` · 익스포저 ${(expAmt / 100000000).toFixed(1)}억` : ""}
+            {dday !== null ? ` · 만기 D-${dday}` : ""}
+          </div>
+        )}
 
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
-        <button onClick={() => onNavigateDeal("sourcing", "sourcing")}
-          style={{ padding: "8px 18px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, color: "#6FA8FF", fontSize: 12, cursor: "pointer" }}>
-          Signal Room에서 신호 처리하기
-        </button>
-      </div>
+        <div style={{ display: "flex", gap: 24, marginBottom: 14, justifyContent: "center" }}>
+          <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
+          <ScoreGauge label="진행 건강도" value={scores.health_score} max={100} color={scores.health_score < 60 ? C.red : scores.health_score < 80 ? C.amber : C.green} />
+        </div>
 
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-        <span onClick={() => setExpanded(v => !v)} style={{ fontSize: 18, color: C.textDim, cursor: "pointer" }}>
-          {expanded ? "▲" : "▼"}
-        </span>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <button onClick={() => onNavigateDeal("sourcing", "sourcing")}
+            style={{ padding: "8px 18px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, color: "#6FA8FF", fontSize: 12, cursor: "pointer" }}>
+            Signal Room에서 신호 처리하기
+          </button>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <span onClick={() => setExpanded((v: boolean) => !v)} style={{ fontSize: 18, color: C.textDim, cursor: "pointer" }}>
+            {expanded ? "<" : ">"}
+          </span>
+        </div>
       </div>
 
       {expanded && (
-      <>
+      <div style={{ flex: 1, padding: "0 32px", boxSizing: "border-box" as const, borderLeft: `1px solid ${C.border}`, overflow: "auto" }}>
 
       {/* 오늘의 상태 변화 — Activity / Health 분리 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
@@ -803,7 +805,7 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
         <button onClick={() => onNavigateDeal("pipeline", "pipeline")} style={{ padding: "5px 12px", background: "transparent", color: "#444", border: "1px solid #1A1A1A", borderRadius: 0, fontSize: 9, cursor: "pointer", fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace", letterSpacing: "0.08em" }}>Pipeline 전체 보기</button>
       </div>
 
-      </>
+      </div>
       )}
     </div>
   );
