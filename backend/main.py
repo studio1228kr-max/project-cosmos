@@ -8,6 +8,7 @@ import psycopg2
 import psycopg2.extras
 from evidence_engine import evaluate_evidence_engine
 from refi_path_engine import evaluate_refi_path_engine
+from recovery_strategy_engine_kr import evaluate_korea_recovery_strategy_engine
 from fastapi import FastAPI, HTTPException, Depends, Header, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -555,6 +556,25 @@ def refi_path_evaluate(body: dict, payload: dict = Depends(verify_token)):
             scenarios=body.get("scenarios"),
             policy=body.get("policy"),
             evidence_package=body.get("evidence_package"),
+        )
+        return result.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
+
+@app.post("/api/risk-book/recovery-kr/evaluate")
+def recovery_kr_evaluate(body: dict, payload: dict = Depends(verify_token)):
+    """한국 특화 Recovery Waterfall Engine — 우선순위(국세/임금/임차보증금/신탁) 반영 LGD"""
+    try:
+        result = evaluate_korea_recovery_strategy_engine(
+            deal_master=body.get("deal_master", {}),
+            recovery_input=body.get("recovery_input", {}),
+            scenarios=body.get("scenarios"),
+            policy=body.get("policy"),
+            evidence_package=body.get("evidence_package"),
+            refi_path_package=body.get("refi_path_package"),
         )
         return result.to_dict()
     except Exception as e:
