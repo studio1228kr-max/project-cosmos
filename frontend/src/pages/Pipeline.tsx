@@ -79,8 +79,8 @@ export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string)
         {/* 딜 목록 */}
         <div style={{ width: 280, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
           <div style={{ padding: "11px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.1em" }}>DEAL PIPELINE</span>
-            <span style={{ fontSize: 10, color: C.textDim }}>{deals.length} TOTAL</span>
+            <span style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.1em" }}>딜 목록</span>
+            <span style={{ fontSize: 10, color: C.textDim }}>{deals.length} 전체</span>
           </div>
           <div style={{ flex: 1, overflow: "auto" }}>
             {loading ? <div style={{ padding: 20, color: C.textDim, fontSize: 12 }}>로딩 중...</div> :
@@ -149,12 +149,13 @@ export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string)
               {selected.final_gate && (
                 <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 1fr", gap: 0, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, marginBottom: 16, overflow: "hidden" }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "18px 8px", borderRight: `1px solid ${C.border}` }}>
-                    <span style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.08em", marginBottom: 8 }}>FINAL GATE</span>
+                    <span style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.08em", marginBottom: 8 }}>최종 판정</span>
+                    <span style={{ fontSize: 8, color: C.textDim, marginTop: 2 }}>이 딜이 진행 가능한지</span>
                     <span style={{ fontSize: 20, fontWeight: 800, color: gateColor(selected.final_gate) }}>{selected.final_gate}</span>
                   </div>
 
                   <div style={{ padding: "14px 16px", borderRight: `1px solid ${C.border}` }}>
-                    <div style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.08em", marginBottom: 8 }}>WHY (막힌 이유)</div>
+                    <div style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.08em", marginBottom: 8 }}>왜 막혔나 (Why)</div>
                     {(selected.hold_reasons || []).length === 0 ? (
                       <div style={{ fontSize: 11, color: C.textDim }}>없음</div>
                     ) : (selected.hold_reasons || []).slice(0, 4).map((r: string, i: number) => (
@@ -163,7 +164,7 @@ export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string)
                   </div>
 
                   <div style={{ padding: "14px 16px" }}>
-                    <div style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.08em", marginBottom: 8 }}>WHAT CHANGES THIS (필요 조치)</div>
+                    <div style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.08em", marginBottom: 8 }}>뭘 풀어야 하나 (What changes this)</div>
                     {(selected.required_actions || []).length === 0 ? (
                       <div style={{ fontSize: 11, color: C.textDim }}>없음</div>
                     ) : (selected.required_actions || []).slice(0, 4).map((r: string, i: number) => (
@@ -196,7 +197,7 @@ export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string)
               {/* Evidence */}
               <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 5, padding: "10px 14px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em" }}>EVIDENCE CHECKLIST</span>
+                  <span style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em" }}>증빙 체크리스트</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: (selected.mandatory_done || 0) === (selected.mandatory_total || 0) && (selected.mandatory_total || 0) > 0 ? C.green : C.red }}>
                     {selected.mandatory_done || 0}/{selected.mandatory_total || 0}
                   </span>
