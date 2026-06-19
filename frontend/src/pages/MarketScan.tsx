@@ -1,188 +1,125 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import API from "../api";
 
 const C = {
-  bg: "#080C14", surface: "#0D1420", border: "#1A2638",
-  gold: "#C9A84C", goldDim: "rgba(201,168,76,0.12)",
-  text: "#E2E8F0", textDim: "#5A7190", textMid: "#8FA3BB",
-  green: "#22C55E", amber: "#F59E0B", red: "#EF4444",
+  bg: "#0A0E14", surface: "#11161D", surface2: "#161C26", border: "#1E2630",
+  text: "#E4E7EB", textMid: "#8B95A3", textDim: "#525C6B",
+  amber: "#F0A93B", red: "#E5484D", green: "#2BC48A", blue: "#4C8DFF",
 };
 
-const PC: any = {
-  P0: { color: C.red, bg: "rgba(239,68,68,0.1)", label: "즉시확인" },
-  P1: { color: C.amber, bg: "rgba(245,158,11,0.1)", label: "검토필요" },
-  P2: { color: C.textDim, bg: "rgba(90,113,144,0.1)", label: "참고" },
-};
+type FeedItem = { time: string; source: "DART" | "NAVER"; text: string; link?: string };
 
 export default function MarketScan() {
-  const [days, setDays] = useState(1);
-  const [loading, setLoading] = useState(false);
   const [dartData, setDartData] = useState<any>(null);
-  const [onbidData, setOnbidData] = useState<any>(null);
-  const [molitData, setMolitData] = useState<any>(null);
-  const [sending, setSending] = useState<string | null>(null);
+  const [newsData, setNewsData] = useState<any>(null);
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const fullScan = async () => {
+  const fetchAll = async () => {
     setLoading(true);
-    setDartData(null); setOnbidData(null); setMolitData(null);
     try {
-      const [dart, onbid, molit] = await Promise.allSettled([
-        API.get(`/dart/scan?days=${days}`),
-        API.get(`/assets/onbid/search?keyword=강남`),
-        API.get(`/assets/11680/transaction`),
+      const [d, n, c] = await Promise.all([
+        API.get("/dart/scan?days=1"),
+        API.get("/api/sourcing/naver-news"),
+        API.get("/api/sourcing/candidates"),
       ]);
-      if (dart.status === "fulfilled") setDartData(dart.value.data);
-      if (onbid.status === "fulfilled") setOnbidData(onbid.value.data);
-      if (molit.status === "fulfilled") setMolitData(molit.value.data);
-    } catch (e) {}
+      setDartData(d.data); setNewsData(n.data); setCandidates(c.data?.candidates || []);
+    } catch {}
     setLoading(false);
   };
 
-  const intake = async (hit: any) => {
-    const key = hit.corp_name || hit.deal_id || "x";
-    setSending(key);
+  useEffect(() => { fetchAll(); const i = setInterval(fetchAll, 60000); return () => clearInterval(i); }, []);
+
+  const act = async (id: number, decision: string) => {
     try {
-      await API.post("/deals/analyze", {
-        source: `DART — ${hit.corp_name}`,
-        raw_input: `법인명: ${hit.corp_name}\n공시: ${hit.report_title}\n일자: ${hit.disclosed_at}\nURL: ${hit.dart_url}\n신호: ${(hit.signals||[]).map((s:any)=>s.keyword).join(", ")}\n스코어: ${hit.score}`
-      });
-      alert(`✓ ${hit.corp_name} — INTAKE 등록`);
-    } catch { alert("등록 실패"); }
-    setSending(null);
+      await API.patch(`/api/sourcing/candidates/${id}/decision`, { decision });
+      setCandidates(prev => prev.map(c => c.id === id ? { ...c, decision } : c));
+    } catch { alert("처리 실패"); }
   };
 
-  const SectionHeader = ({ label, count, color }: any) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "28px 0 14px" }}>
-      <span style={{ fontSize: 10, letterSpacing: "0.14em", color: color || C.gold, fontWeight: 700 }}>{label}</span>
-      {count !== undefined && <span style={{ fontSize: 10, color: C.textDim }}>({count}건)</span>}
-      <div style={{ flex: 1, height: 1, background: C.border }} />
-    </div>
-  );
+  // Collection Feed 구성
+  const feed: FeedItem[] = [];
+  (dartData?.hits || []).forEach((h: any) => {
+    feed.push({ time: h.disclosed_at || "", source: "DART", text: `[${h.priority}] ${h.corp_name} — ${h.report_title}`, link: h.dart_url });
+  });
+  (newsData?.items || []).slice(0, 15).forEach((it: any) => {
+    feed.push({ time: it.pub_date || "", source: "NAVER", text: it.title, link: it.link });
+  });
+  feed.sort((a, b) => (b.time > a.time ? 1 : -1));
+
+  const triageList = candidates.filter(c => ["PENDING", "MANUAL_REVIEW", "AUTO_CREATE_DEAL"].includes(c.decision));
+
+  const dartCount = dartData?.hits?.length || 0;
+  const newsCount = newsData?.total || 0;
+  const allHealthy = dartData !== null && newsData !== null;
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", color: C.text, fontFamily: "'IBM Plex Mono', monospace", padding: 24 }}>
-      {/* 헤더 */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.12em", marginBottom: 4 }}>LUSKA CAPITAL — COSMOS</div>
-        <div style={{ fontSize: 20, fontWeight: 700, color: C.gold }}>DEAL SOURCING</div>
-        <div style={{ fontSize: 10, color: C.textDim, marginTop: 4 }}>DART · OnBid · MOLIT 통합 마켓 스캔</div>
+    <div style={{ height: "100%", background: C.bg, color: C.text, fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column" }}>
+
+      {/* 상태 바 */}
+      <div style={{ padding: "10px 18px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 14, fontFamily: "'IBM Plex Mono', monospace" }}>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: allHealthy ? C.green : C.amber }} />
+        <span style={{ fontSize: 11, color: C.textMid }}>
+          {allHealthy ? "핵심 피드 정상" : "피드 확인 중"} · 공시 {dartCount}건 · 뉴스 {newsCount}건 · triage 대기 {triageList.length}건
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: 10, color: C.textDim }}>Signal Room — 공시·뉴스 신호를 모아 triage하는 공간</span>
       </div>
 
-      {/* 컨트롤 */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-        {[1,3,7].map(d => (
-          <button key={d} onClick={() => setDays(d)}
-            style={{ padding: "6px 14px", border: `1px solid ${days===d ? C.gold : C.border}`, background: days===d ? C.goldDim : "transparent", color: days===d ? C.gold : C.textDim, cursor: "pointer", fontSize: 11, borderRadius: 4 }}>
-            {d}일
-          </button>
-        ))}
-        <button onClick={fullScan} disabled={loading}
-          style={{ marginLeft: "auto", padding: "10px 28px", background: loading ? C.border : C.gold, color: "#0a0a0f", border: "none", cursor: loading ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 13, borderRadius: 4 }}>
-          {loading ? "스캔 중..." : "▶ FULL SCAN"}
-        </button>
-      </div>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-      {/* 요약 카드 */}
-      {dartData && (
-        <div style={{ display: "flex", gap: 10, marginBottom: 4 }}>
-          {[
-            { label: "DART 스캔", val: dartData.total_scanned },
-            { label: "TOTAL HITS", val: dartData.summary?.total_hits },
-            { label: "P0 즉시확인", val: dartData.summary?.P0, color: C.red },
-            { label: "P1 검토필요", val: dartData.summary?.P1, color: C.amber },
-          ].map(item => (
-            <div key={item.label} style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "10px 14px" }}>
-              <div style={{ fontSize: 9, color: C.textDim, marginBottom: 3 }}>{item.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: item.color || C.text }}>{item.val ?? "-"}</div>
+        {/* 좌측: Collection Feed */}
+        <div style={{ flex: 1.4, borderRight: `1px solid ${C.border}`, overflow: "auto", padding: "14px 18px" }}>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 10 }}>수집 피드 — 뭐가 들어왔나</div>
+          {loading ? <div style={{ fontSize: 12, color: C.textDim }}>로딩 중...</div> :
+            feed.length === 0 ? <div style={{ fontSize: 12, color: C.textDim }}>오늘 수집된 신호 없음</div> :
+            feed.map((item, i) => (
+              <a key={i} href={item.link} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                <div style={{ display: "flex", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.border}`, alignItems: "baseline" }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: C.bg, background: item.source === "DART" ? C.red : C.blue, padding: "1px 5px", borderRadius: 2, flexShrink: 0 }}>
+                    {item.source === "DART" ? "공시" : "뉴스"}
+                  </span>
+                  <span style={{ fontSize: 12, color: C.textMid, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.text}</span>
+                </div>
+              </a>
+            ))}
+        </div>
+
+        {/* 우측: Triage 대상 */}
+        <div style={{ flex: 1, overflow: "auto", padding: "14px 18px" }}>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 10 }}>Triage 대상 — 지금 판단할 신호</div>
+          {triageList.length === 0 ? (
+            <div style={{ fontSize: 12, color: C.textDim }}>처리할 신호 없음</div>
+          ) : triageList.map((c: any) => (
+            <div key={c.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px", marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{c.corp_name}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: c.priority === "P0" ? C.red : C.amber }}>{c.priority}</span>
+              </div>
+              <div style={{ fontSize: 11, color: C.textDim, marginBottom: 10 }}>{c.decision_explanation}</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => act(c.id, "PROMOTED")}
+                  style={{ flex: 1, padding: "6px 0", background: C.green, border: "none", borderRadius: 4, color: C.bg, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                  등록
+                </button>
+                <button onClick={() => act(c.id, "WATCHLIST")}
+                  style={{ flex: 1, padding: "6px 0", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.textMid, fontSize: 11, cursor: "pointer" }}>
+                  보류
+                </button>
+                <button onClick={() => act(c.id, "REJECTED")}
+                  style={{ flex: 1, padding: "6px 0", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.red, fontSize: 11, cursor: "pointer" }}>
+                  폐기
+                </button>
+              </div>
+              {c.decision === "PROMOTED" && (
+                <div style={{ marginTop: 8, fontSize: 10, color: C.green }}>
+                  등록됨 — Intake에서 "{c.corp_name}" 으로 딜 생성하세요
+                </div>
+              )}
             </div>
           ))}
         </div>
-      )}
-      {dartData && <div style={{ fontSize: 9, color: C.textDim, marginBottom: 4 }}>스캔: {new Date(dartData.scanned_at).toLocaleString("ko-KR")} · {days}일</div>}
-
-      {/* ━━ DART 섹션 ━━ */}
-      {dartData && (
-        <>
-          <SectionHeader label="DART 공시" count={dartData.summary?.total_hits} color={C.red} />
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                {["우선","법인명","공시일","공시제목","신호","스코어",""].map(h => (
-                  <th key={h} style={{ padding: "6px 10px", color: C.textDim, textAlign: "left", fontWeight: 400, fontSize: 9 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(dartData.hits || []).map((hit: any, i: number) => {
-                const pc = PC[hit.priority] || PC.P2;
-                return (
-                  <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: "9px 10px" }}>
-                      <span style={{ background: pc.bg, color: pc.color, padding: "2px 7px", borderRadius: 3, fontSize: 9 }}>{hit.priority}</span>
-                    </td>
-                    <td style={{ padding: "9px 10px", fontWeight: 600 }}>{hit.corp_name}</td>
-                    <td style={{ padding: "9px 10px", color: C.textDim, fontSize: 10 }}>{hit.disclosed_at?.slice(0,10)}</td>
-                    <td style={{ padding: "9px 10px" }}>
-                      <a href={hit.dart_url} target="_blank" rel="noreferrer" style={{ color: C.text, textDecoration: "none" }}>
-                        {hit.report_title?.replace("주요사항보고서","").replace(/[()]/g,"").slice(0,30)}
-                      </a>
-                    </td>
-                    <td style={{ padding: "9px 10px", fontSize: 10, color: C.amber }}>
-                      {(hit.signals||[]).slice(0,2).map((s:any)=>s.keyword).join(" · ")}
-                    </td>
-                    <td style={{ padding: "9px 10px", color: pc.color, fontWeight: 700 }}>{hit.score}</td>
-                    <td style={{ padding: "9px 10px" }}>
-                      <button onClick={() => intake(hit)} disabled={sending === hit.corp_name}
-                        style={{ padding: "3px 9px", background: C.goldDim, color: C.gold, border: `1px solid ${C.gold}`, cursor: "pointer", fontSize: 9, borderRadius: 3 }}>
-                        INTAKE
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {(dartData.hits || []).length === 0 && (
-                <tr><td colSpan={7} style={{ padding: 20, color: C.textDim, fontSize: 11, textAlign: "center" }}>신호 없음</td></tr>
-              )}
-            </tbody>
-          </table>
-        </>
-      )}
-
-      {/* ━━ OnBid 섹션 ━━ */}
-      {onbidData && (
-        <>
-          <SectionHeader label="OnBid 공매" color={C.amber} />
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: 14, fontSize: 11, color: C.textMid }}>
-            {onbidData.error ? (
-              <span style={{ color: C.textDim }}>연동 오류: {onbidData.error}</span>
-            ) : onbidData.raw ? (
-              <span style={{ color: C.textDim }}>API 응답: {onbidData.raw}</span>
-            ) : (
-              <pre style={{ margin: 0, overflow: "auto", maxHeight: 200 }}>{JSON.stringify(onbidData, null, 2)}</pre>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ━━ MOLIT 섹션 ━━ */}
-      {molitData && (
-        <>
-          <SectionHeader label="MOLIT 실거래 (강남구)" color={C.green} />
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: 14, fontSize: 11, color: C.textMid }}>
-            {molitData.error ? (
-              <span style={{ color: C.textDim }}>연동 오류: {molitData.error}</span>
-            ) : (
-              <pre style={{ margin: 0, overflow: "auto", maxHeight: 200 }}>{JSON.stringify(molitData, null, 2)}</pre>
-            )}
-          </div>
-        </>
-      )}
-
-      {!dartData && !loading && (
-        <div style={{ textAlign: "center", color: C.textDim, fontSize: 12, marginTop: 60 }}>
-          FULL SCAN을 눌러 DART · OnBid · MOLIT 동시 스캔
-        </div>
-      )}
+      </div>
     </div>
   );
 }

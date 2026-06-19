@@ -628,6 +628,27 @@ def deal_pipeline_evaluate(body: dict, payload: dict = Depends(verify_token)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+
+
+@app.patch("/api/sourcing/candidates/{candidate_id}/decision")
+def update_candidate_decision(candidate_id: int, body: dict, payload: dict = Depends(verify_token)):
+    """신호룸 triage 액션 — 등록/보류/폐기"""
+    decision = body.get("decision")
+    valid = {"WATCHLIST", "REJECTED", "PROMOTED", "MANUAL_REVIEW", "AUTO_CREATE_DEAL"}
+    if decision not in valid:
+        raise HTTPException(status_code=400, detail=f"decision must be one of {valid}")
+
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE deal_candidates SET decision=%s, reviewed_at=NOW(), reviewed_by=%s WHERE id=%s",
+        (decision, body.get("reviewed_by", "mwkim"), candidate_id),
+    )
+    conn.commit()
+    cur.close(); conn.close()
+    return {"id": candidate_id, "decision": decision}
+
+
 @app.post("/login")
 def login(body: LoginRequest):
     conn = get_conn()
