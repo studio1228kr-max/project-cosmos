@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import AmbientBar from "./components/AmbientBar";
 import SidebarNav from "./components/Sidebar/SidebarNav";
 
 type Props = {
@@ -78,7 +77,6 @@ export default function Layout({ page, onNav, userEmail, onLogout, children, dea
 
       {/* MAIN */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <AmbientBar />
         <div style={{ flex: 1, overflow: "auto" }}>
           {children}
         </div>
