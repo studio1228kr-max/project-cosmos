@@ -660,10 +660,14 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
           const dDday = dMaturity && !isNaN(dMaturity.getTime()) ? Math.ceil((dMaturity.getTime() - Date.now()) / 86400000) : null;
           return (
             <div key={d.deal_code} style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 13, color: C.text, marginBottom: 10, fontFamily: "'IBM Plex Mono', monospace" }}>
-                {d.deal_name}
-                {dExp ? ` · 익스포저 ${(dExp / 100000000).toFixed(1)}억` : ""}
-                {dDday !== null ? ` · 만기 D-${dDday}` : ""}
+              <div onClick={() => onNavigateDeal(d.deal_code, "pipeline")}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, cursor: "pointer", marginBottom: 10 }}>
+                <div style={{ fontSize: 13, color: C.text, fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {d.deal_name}
+                  {dExp ? ` · 익스포저 ${(dExp / 100000000).toFixed(1)}억` : ""}
+                  {dDday !== null ? ` · 만기 D-${dDday}` : ""}
+                </div>
+                <span style={{ fontSize: 14, color: C.textDim, flexShrink: 0 }}>›</span>
               </div>
               <div style={{ display: "flex", gap: 20, justifyContent: "flex-start", alignItems: "center" }}>
                 <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
