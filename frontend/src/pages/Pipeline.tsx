@@ -35,7 +35,7 @@ function DeleteModal({ dealName, onConfirm, onCancel }: { dealName: string; onCo
   );
 }
 
-export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string) => void }) {
+export default function Pipeline({ onSelectDeal, initialDealCode }: { onSelectDeal?: (id: string) => void; initialDealCode?: string | null }) {
   const [deals, setDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);
@@ -50,6 +50,13 @@ export default function Pipeline({ onSelectDeal }: { onSelectDeal?: (id: string)
   };
 
   useEffect(() => { fetchDeals(); }, []);
+
+  useEffect(() => {
+    if (initialDealCode && deals.length > 0) {
+      const match = deals.find((d: any) => d.deal_code === initialDealCode);
+      if (match) setSelected(match);
+    }
+  }, [initialDealCode, deals]);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
