@@ -553,6 +553,7 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
   const [newSinceCount, setNewSinceCount] = useState(0);
   const [newSinceExample, setNewSinceExample] = useState<string | null>(null);
   const [scores, setScores] = useState<any>({ activity_score: 0, activity_breakdown: {}, health_score: 100, health_breakdown: {} });
+  const [expanded, setExpanded] = useState(false);
   const lastCheckRef = useRef<Date | null>(null);
   const hasSetLastCheck = useRef(false);
 
@@ -636,7 +637,7 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
   const C = { surface: "#11161D", border: "#1E2630", text: "#E4E7EB", textMid: "#8B95A3", textDim: "#525C6B", amber: "#F0A93B", red: "#E5484D", green: "#2BC48A" };
 
   return (
-    <div style={{ width: fullWidth ? "100%" : "50%", margin: 0, padding: "28px 32px", boxSizing: "border-box" as const }}>
+    <div style={{ width: (expanded || fullWidth) ? "100%" : "50%", margin: 0, padding: "28px 32px", boxSizing: "border-box" as const }}>
       <div style={{ marginBottom: 6 }}>
         <div style={{ fontSize: 11, color: C.textDim }}>COSMOS / TODAY — {dateStr}</div>
       </div>
@@ -662,6 +663,15 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
           Signal Room에서 신호 처리하기
         </button>
       </div>
+
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+        <span onClick={() => setExpanded(v => !v)} style={{ fontSize: 18, color: C.textDim, cursor: "pointer" }}>
+          {expanded ? "▲" : "▼"}
+        </span>
+      </div>
+
+      {expanded && (
+      <>
 
       {/* 오늘의 상태 변화 — Activity / Health 분리 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
@@ -792,9 +802,13 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
         <button onClick={() => onNavigateDeal("new", "intake")} style={{ padding: "5px 12px", background: "transparent", color: "#666", border: "1px solid #222", borderRadius: 0, fontSize: 9, cursor: "pointer", fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace", letterSpacing: "0.08em" }}>+ New Deal</button>
         <button onClick={() => onNavigateDeal("pipeline", "pipeline")} style={{ padding: "5px 12px", background: "transparent", color: "#444", border: "1px solid #1A1A1A", borderRadius: 0, fontSize: 9, cursor: "pointer", fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace", letterSpacing: "0.08em" }}>Pipeline 전체 보기</button>
       </div>
+
+      </>
+      )}
     </div>
   );
 }
+
 
 function topDealColor(holdCount: number, C: any) {
   return holdCount > 0 ? C.amber : C.border;
