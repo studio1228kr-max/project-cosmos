@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
 import Intake from "./pages/Intake";
@@ -548,8 +548,12 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
   const [marketRead, setMarketRead] = useState<{ text: string; updated_at: string | null }>({ text: "", updated_at: null });
   const [marketDraft, setMarketDraft] = useState("");
   const [editingMarket, setEditingMarket] = useState(false);
-  const [feed, setFeed] = useState<{ time: string; source: string; text: string }[]>([]);
+  const [feed, setFeed] = useState<{ time: string; source: string; text: string; link?: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newSinceCount, setNewSinceCount] = useState(0);
+  const [newSinceExample, setNewSinceExample] = useState<string | null>(null);
+  const lastCheckRef = useRef<Date | null>(null);
+  const hasSetLastCheck = useRef(false);
 
   const load = () => {
     Promise.all([
@@ -563,16 +567,39 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
       setMeaningful(m.data || []);
       setMarketRead(mr.data || { text: "", updated_at: null });
       setMarketDraft(mr.data?.text || "");
+
+      const decodeHtml = (t: string) => (t || "").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/<[^>]*>/g, "");
+
       const f: any[] = [];
       (dart.data?.hits || []).slice(0, 6).forEach((h: any) =>
-        f.push({ time: h.disclosed_at || "", source: "공시", text: `[${h.priority}] ${h.corp_name} — ${h.report_title}` })
+        f.push({ time: h.disclosed_at || "", source: "공시", text: `[${h.priority}] ${h.corp_name} — ${h.report_title}`, link: h.dart_url })
       );
-      const decodeHtml = (t: string) => (t || "").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/<[^>]*>/g, "");
       (news.data?.items || []).slice(0, 6).forEach((it: any) =>
-        f.push({ time: it.pub_date || "", source: "뉴스", text: decodeHtml(it.title) })
+        f.push({ time: it.pub_date || "", source: "뉴스", text: decodeHtml(it.title), link: it.link })
       );
       f.sort((a, b) => (b.time > a.time ? 1 : -1));
       setFeed(f);
+
+      if (!hasSetLastCheck.current) {
+        const stored = localStorage.getItem("cosmos_last_check_ts");
+        lastCheckRef.current = stored ? new Date(stored) : null;
+        localStorage.setItem("cosmos_last_check_ts", new Date().toISOString());
+        hasSetLastCheck.current = true;
+      }
+      let newCount = 0;
+      let example: string | null = null;
+      if (lastCheckRef.current) {
+        f.forEach(item => {
+          const d = new Date(item.time);
+          if (!isNaN(d.getTime()) && d > lastCheckRef.current!) {
+            newCount++;
+            if (!example) example = `${item.source} — ${item.text}`;
+          }
+        });
+      }
+      setNewSinceCount(newCount);
+      setNewSinceExample(example);
+
       setLoading(false);
     }).catch(() => setLoading(false));
   };
@@ -594,89 +621,122 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
   const dateStr = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
 
   const holdDeals = deals.filter((d: any) => d.final_gate === "HOLD");
-  const evidenceMissing = deals.filter((d: any) => (d.mandatory_done ?? 0) < (d.mandatory_total ?? 0));
-  const openQuestions = holdDeals.flatMap((d: any) =>
-    (d.hold_reasons || []).slice(0, 2).map((r: string) => ({ dealName: d.deal_name, question: `${d.deal_name}, ${r} 없이 다음 단계 가능한가?` }))
-  );
+  const repDeal = holdDeals[0] || deals[0];
+  const topReason = repDeal?.hold_reasons?.[0];
+  const topAction = repDeal?.required_actions?.[0] || repDeal?.hold_reasons?.[1];
+  const expAmt = repDeal?.exposure_amount;
+  const maturity = repDeal?.maturity_date ? new Date(repDeal.maturity_date) : null;
+  const dday = maturity && !isNaN(maturity.getTime()) ? Math.ceil((maturity.getTime() - Date.now()) / 86400000) : null;
 
   if (loading) return <div style={{ padding: 48, color: "#999", fontSize: 13 }}>로딩 중...</div>;
 
   const C = { surface: "#11161D", border: "#1E2630", text: "#E4E7EB", textMid: "#8B95A3", textDim: "#525C6B", amber: "#F0A93B", red: "#E5484D", green: "#2BC48A" };
 
   return (
-    <div style={{ maxWidth: 980, margin: "0 auto", padding: "28px 32px" }}>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 11, color: C.textDim, marginBottom: 4 }}>COSMOS / TODAY — {dateStr}</div>
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 32px" }}>
+      <div style={{ marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: C.textDim }}>COSMOS / TODAY — {dateStr}</div>
       </div>
 
-      {/* 4블록 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+      {/* Current Exposure — 노출 한 줄 */}
+      {repDeal && (
+        <div style={{ fontSize: 11, color: C.textDim, marginBottom: 18, fontFamily: "'IBM Plex Mono', monospace" }}>
+          {repDeal.deal_name}
+          {expAmt ? ` · 익스포저 ${(expAmt / 100000000).toFixed(1)}억` : ""}
+          {dday !== null ? ` · 만기 D-${dday}` : ""}
+        </div>
+      )}
 
-        {/* Market Read */}
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em" }}>MARKET READ</span>
-            <span onClick={() => setEditingMarket(v => !v)} style={{ fontSize: 10, color: C.textMid, cursor: "pointer" }}>{editingMarket ? "취소" : "수정"}</span>
-          </div>
-          {editingMarket ? (
-            <>
-              <textarea value={marketDraft} onChange={e => setMarketDraft(e.target.value)} rows={4}
-                style={{ width: "100%", background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 4, color: C.text, fontSize: 12, padding: 8, boxSizing: "border-box", fontFamily: "inherit", resize: "vertical" }} />
-              <button onClick={saveMarketRead} style={{ marginTop: 6, padding: "5px 12px", background: C.green, border: "none", borderRadius: 4, color: "#0A0E14", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>저장</button>
-            </>
-          ) : (
-            <div style={{ fontSize: 12, color: marketRead.text ? C.text : C.textDim, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-              {marketRead.text || "오늘 시장 한 줄 평을 입력하세요"}
+      {/* My Priority Today */}
+      <div style={{
+        background: C.surface, border: `1px solid ${topDealColor(holdDeals.length, C)}`,
+        borderLeft: `4px solid ${holdDeals.length > 0 ? C.amber : C.green}`, borderRadius: 6,
+        padding: "18px 20px", marginBottom: 12,
+      }}>
+        <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.08em", marginBottom: 10 }}>MY PRIORITY TODAY</div>
+        {holdDeals.length > 0 ? (
+          <>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 6 }}>
+              {repDeal.deal_name} — {topReason}
             </div>
-          )}
-        </div>
+            {topAction && <div style={{ fontSize: 13, color: C.textMid, marginBottom: 12 }}>{topAction}</div>}
+            <button onClick={() => onNavigateDeal(repDeal.deal_code, "pipeline")}
+              style={{ padding: "7px 16px", background: C.amber, border: "none", borderRadius: 4, color: "#0A0E14", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              딜 상세 보기
+            </button>
+          </>
+        ) : (
+          <div style={{ fontSize: 14, color: C.green }}>오늘 우선 처리할 이슈 없음</div>
+        )}
+      </div>
 
-        {/* Pipeline Pressure */}
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px" }}>
-          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>PIPELINE PRESSURE</div>
-          <div style={{ display: "flex", gap: 18 }}>
-            <div><div style={{ fontSize: 22, fontWeight: 700, color: holdDeals.length > 0 ? C.amber : C.text }}>{holdDeals.length}</div><div style={{ fontSize: 10, color: C.textDim }}>HOLD</div></div>
-            <div><div style={{ fontSize: 22, fontWeight: 700, color: evidenceMissing.length > 0 ? C.red : C.text }}>{evidenceMissing.length}</div><div style={{ fontSize: 10, color: C.textDim }}>자료 미비</div></div>
-            <div><div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>{deals.length}</div><div style={{ fontSize: 10, color: C.textDim }}>전체 딜</div></div>
-          </div>
-        </div>
+      {/* Blockers / At Risk */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 16px", marginBottom: 10 }}>
+        <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 6 }}>BLOCKERS / AT RISK</div>
+        {holdDeals.length === 0 ? (
+          <div style={{ fontSize: 12, color: C.textDim }}>막힌 딜 없음</div>
+        ) : (
+          <div style={{ fontSize: 13, color: C.text }}>{holdDeals.length}건이 <strong>{topReason}</strong>로 막힘</div>
+        )}
+      </div>
 
-        {/* Meaningful Changes */}
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px" }}>
-          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>MEANINGFUL CHANGES</div>
-          {meaningful.length === 0 ? (
-            <div style={{ fontSize: 11, color: C.textDim }}>Signal Room에서 ★ 표시한 항목이 여기 모입니다</div>
-          ) : meaningful.map((m: any) => (
-            <div key={m.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, paddingLeft: 8, borderLeft: `2px solid ${C.green}` }}>
-              <span style={{ fontSize: 12, color: C.text }}>{m.title}</span>
+      {/* Since Last Check */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 16px", marginBottom: 10 }}>
+        <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 6 }}>SINCE LAST CHECK</div>
+        {newSinceCount === 0 ? (
+          <div style={{ fontSize: 12, color: C.textDim }}>마지막 확인 이후 새 외부 신호 없음</div>
+        ) : (
+          <div style={{ fontSize: 12, color: C.text }}>새 외부 신호 {newSinceCount}건 감지 — {newSinceExample}</div>
+        )}
+      </div>
+
+      {/* Worth Reading Now */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 16px", marginBottom: 16 }}>
+        <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 6 }}>WORTH READING NOW</div>
+        {meaningful.length === 0 ? (
+          <div style={{ fontSize: 11, color: C.textDim }}>Signal Room에서 ★ 표시한 항목이 여기 모입니다</div>
+        ) : meaningful.map((m: any) => (
+          <div key={m.id} style={{ marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              {m.source_link ? (
+                <a href={m.source_link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.text, fontWeight: 600, textDecoration: "underline", textDecorationColor: C.textDim }}>{m.title}</a>
+              ) : (
+                <span style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{m.title}</span>
+              )}
               <span onClick={() => removeMeaningful(m.id)} style={{ fontSize: 11, color: C.textDim, cursor: "pointer" }}>×</span>
             </div>
-          ))}
-        </div>
-
-        {/* Open Questions Today */}
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px" }}>
-          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>OPEN QUESTIONS TODAY</div>
-          {openQuestions.length === 0 ? (
-            <div style={{ fontSize: 11, color: C.textDim }}>열린 질문 없음</div>
-          ) : openQuestions.slice(0, 4).map((q: any, i: number) => (
-            <div key={i} onClick={() => onNavigateDeal("pipeline", "pipeline")}
-              style={{ fontSize: 12, color: C.textMid, marginBottom: 6, paddingLeft: 8, borderLeft: `2px solid ${C.amber}`, cursor: "pointer" }}>
-              {q.question}
-            </div>
-          ))}
-        </div>
+            {m.note && <div style={{ fontSize: 11, color: C.textMid, marginTop: 2 }}>{m.note}</div>}
+          </div>
+        ))}
       </div>
 
-      {/* Live Ticker */}
-      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 6, padding: "8px 14px", overflow: "hidden" }}>
-        <div style={{ fontSize: 9, color: C.textDim, marginBottom: 6 }}>LIVE — 수집 신호 (Signal Room에서 자세히 보기)</div>
+      {/* Market Read + Live Feed — 하단, 작게 */}
+      <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+          <span style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.06em" }}>MARKET READ</span>
+          <span onClick={() => setEditingMarket(v => !v)} style={{ fontSize: 10, color: C.textMid, cursor: "pointer" }}>{editingMarket ? "취소" : "수정"}</span>
+        </div>
+        {editingMarket ? (
+          <>
+            <textarea value={marketDraft} onChange={e => setMarketDraft(e.target.value)} rows={3}
+              style={{ width: "100%", background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 4, color: C.text, fontSize: 12, padding: 8, boxSizing: "border-box", fontFamily: "inherit", resize: "vertical" }} />
+            <button onClick={saveMarketRead} style={{ marginTop: 6, padding: "5px 12px", background: C.green, border: "none", borderRadius: 4, color: "#0A0E14", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>저장</button>
+          </>
+        ) : (
+          <div style={{ fontSize: 11, color: marketRead.text ? C.textMid : C.textDim, marginBottom: 12 }}>
+            {marketRead.text || "오늘 시장 판단을 입력하세요"}
+          </div>
+        )}
+
+        <div style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.06em", marginBottom: 6 }}>LIVE FEED</div>
         {feed.length === 0 ? (
           <div style={{ fontSize: 11, color: C.textDim }}>신호 없음</div>
         ) : feed.slice(0, 5).map((item, i) => (
-          <div key={i} onClick={() => onNavigateDeal("sourcing", "sourcing")} style={{ fontSize: 11, color: C.textMid, padding: "3px 0", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            <span style={{ color: C.textDim }}>{item.source}</span> · {item.text}
-          </div>
+          <a key={i} href={item.link || "#"} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+            <div style={{ fontSize: 11, color: C.textMid, padding: "3px 0", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span style={{ color: C.textDim }}>{item.source}</span> · {item.text}
+            </div>
+          </a>
         ))}
       </div>
 
@@ -686,6 +746,10 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
       </div>
     </div>
   );
+}
+
+function topDealColor(holdCount: number, C: any) {
+  return holdCount > 0 ? C.amber : C.border;
 }
 
 
