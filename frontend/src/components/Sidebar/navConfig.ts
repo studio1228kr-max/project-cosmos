@@ -37,54 +37,54 @@ export const navConfig: NavSection[] = [
   {
     id: "top",
     items: [
-      { type: "leaf", id: "dashboard", label: "Dashboard", path: "today", icon: "◆" },
+      { type: "leaf", id: "dashboard", label: "대시보드", path: "today", icon: "◆" },
     ],
   },
   {
     id: "lifecycle",
-    label: "DEAL LIFECYCLE",
+    label: "딜 진행 단계",
     items: [
-      { type: "leaf", id: "sourcing", label: "Sourcing", path: "market", icon: "◎" },
-      { type: "leaf", id: "pipeline", label: "Pipeline", path: "pipeline", icon: "▦" },
+      { type: "leaf", id: "sourcing", label: "딜 소싱", path: "market", icon: "◎" },
+      { type: "leaf", id: "pipeline", label: "딜 목록", path: "pipeline", icon: "▦" },
       {
-        type: "group", id: "dd", label: "Due Diligence", icon: "◈",
+        type: "group", id: "dd", label: "실사", icon: "◈",
         children: [
-          { id: "intake", label: "Intake", path: "intake" },
-          { id: "diagnostic", label: "Diagnostic", path: "diagnostic" },
-          { id: "evidence", label: "Evidence Checklist", path: "evidence" },
+          { id: "intake", label: "딜 등록", path: "intake" },
+          { id: "diagnostic", label: "진단", path: "diagnostic" },
+          { id: "evidence", label: "증빙 체크리스트", path: "evidence" },
         ],
       },
       {
-        type: "group", id: "ic", label: "Investment Committee", icon: "◻",
+        type: "group", id: "ic", label: "투자심의위원회", icon: "◻",
         children: [
-          { id: "ic-prep", label: "IC Prep", path: "ic-prep" },
-          { id: "ic-minutes", label: "IC Minutes", path: "ic-minutes" },
+          { id: "ic-prep", label: "심의 준비", path: "ic-prep" },
+          { id: "ic-minutes", label: "심의록", path: "ic-minutes" },
         ],
       },
-      { type: "leaf", id: "closing", label: "Closing & Execution", path: "closing", icon: "▶" },
+      { type: "leaf", id: "closing", label: "클로징·실행", path: "closing", icon: "▶" },
     ],
   },
   {
     id: "portfolio",
-    label: "PORTFOLIO",
+    label: "포트폴리오",
     items: [
-      { type: "leaf", id: "portfolio-mgmt", label: "Portfolio Management", path: "portfolio", icon: "◉" },
-      { type: "leaf", id: "risk", label: "Risk & Monitoring", path: "riskbook", icon: "⚠" },
+      { type: "leaf", id: "portfolio-mgmt", label: "포트폴리오 관리", path: "portfolio", icon: "◉" },
+      { type: "leaf", id: "risk", label: "리스크 모니터링", path: "riskbook", icon: "⚠" },
     ],
   },
   {
     id: "reporting",
-    label: "REPORTING",
+    label: "보고서",
     items: [
-      { type: "leaf", id: "reporting", label: "Reporting & Analytics", path: "reporting", icon: "▤" },
-      { type: "leaf", id: "investor-reporting", label: "Investor Reporting", path: "investor-reporting", icon: "▥" },
+      { type: "leaf", id: "reporting", label: "보고서·분석", path: "reporting", icon: "▤" },
+      { type: "leaf", id: "investor-reporting", label: "투자자 보고", path: "investor-reporting", icon: "▥" },
     ],
   },
   {
     id: "reference",
-    label: "REFERENCE",
+    label: "참고자료",
     items: [
-      { type: "leaf", id: "documents", label: "Documents", path: "documents", icon: "▧" },
+      { type: "leaf", id: "documents", label: "문서", path: "documents", icon: "▧" },
     ],
   },
 ];
