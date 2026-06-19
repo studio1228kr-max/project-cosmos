@@ -542,7 +542,7 @@ const CTA_LABELS: Record<string, string> = {
   ic_memo: "IC Memo 생성 →", evidence: "Evidence 확인 →",
   deal: "딜 열기 →", underwriting: "Underwriting 실행 →",
 };
-function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: string) => void }) {
+function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string, action?: string) => void; fullWidth?: boolean }) {
   const [deals, setDeals] = useState<any[]>([]);
   const [meaningful, setMeaningful] = useState<any[]>([]);
   const [marketRead, setMarketRead] = useState<{ text: string; updated_at: string | null }>({ text: "", updated_at: null });
@@ -636,7 +636,7 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
   const C = { surface: "#11161D", border: "#1E2630", text: "#E4E7EB", textMid: "#8B95A3", textDim: "#525C6B", amber: "#F0A93B", red: "#E5484D", green: "#2BC48A" };
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 32px" }}>
+    <div style={{ width: fullWidth ? "100%" : "50%", margin: 0, padding: "28px 32px", boxSizing: "border-box" as const }}>
       <div style={{ marginBottom: 6 }}>
         <div style={{ fontSize: 11, color: C.textDim }}>COSMOS / TODAY — {dateStr}</div>
       </div>
@@ -826,6 +826,7 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
   const [currentView, setCurrentView] = useState<"today"|"pipeline">("today");
   const [filter, setFilter] = useState("ALL");
   const [nav, setNav] = useState("today");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadDeals = () => {
@@ -855,7 +856,7 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
 
   const activePage = nav === "intake" ? "intake" : nav === "sourcing" ? "market" : nav === "diagnostic" ? "diagnostic" : nav === "evidence" ? "evidence" : currentView;
   return (
-    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("sourcing");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="evidence"){setNav("evidence");}else if (p==="today"){setNav("pipeline");setCurrentView("today");}else if (p==="pipeline"){setNav("pipeline");setCurrentView("pipeline");}else{setNav("pipeline");setCurrentView("today");} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr">
+    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("sourcing");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="evidence"){setNav("evidence");}else if (p==="today"){setNav("pipeline");setCurrentView("today");}else if (p==="pipeline"){setNav("pipeline");setCurrentView("pipeline");}else{setNav("pipeline");setCurrentView("today");} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr" onCollapsedChange={setSidebarCollapsed}>
       <div style={{ display:"flex", height:"100%", overflow:"hidden" }}>
         {nav === "evidence" ? (
             <EvidenceChecklist />
@@ -872,7 +873,7 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
             {currentView === "today" && (
               <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
                 <DashboardCharts />
-                <TodayView onNavigateDeal={(id: string, action?: string) => {
+                <TodayView fullWidth={sidebarCollapsed} onNavigateDeal={(id: string, action?: string) => {
                   if (id === "new" || action === "intake") { setCurrentView("pipeline"); }
                   else if (id === "pipeline") { setCurrentView("pipeline"); }
                   else { setCurrentView("pipeline"); setSelectedId(id); }

@@ -9,10 +9,16 @@ type Props = {
   onLogout: () => void;
   children: React.ReactNode;
   dealCount?: number;
+  onCollapsedChange?: (collapsed: boolean) => void;
 };
 
-export default function Layout({ page, onNav, userEmail, onLogout, children, dealCount = 0 }: Props) {
+export default function Layout({ page, onNav, userEmail, onLogout, children, dealCount = 0, onCollapsedChange }: Props) {
   const [collapsed, setCollapsed] = useState(false);
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    onCollapsedChange?.(next);
+  };
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#111", color: "#e2e2e2", fontFamily: "'ZenSerif', 'Inter', sans-serif", overflow: "hidden" }}>
@@ -38,7 +44,7 @@ export default function Layout({ page, onNav, userEmail, onLogout, children, dea
             </div>
           )}
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggleCollapsed}
             style={{
               background: "none", border: "none", cursor: "pointer",
               color: "#4a4a4a", fontSize: 14, padding: 4,
