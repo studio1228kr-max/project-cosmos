@@ -23,6 +23,7 @@ export default function DashboardCharts() {
   const [deals, setDeals] = useState<any[]>([]);
   const [actions, setActions] = useState<any>({ summary: { P0: 0, P1: 0, P2: 0, total: 0 } });
   const [dartSignals, setDartSignals] = useState<any>(null);
+  const [newsSignals, setNewsSignals] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const prevDeals = useRef(0);
   const prevActions = useRef(0);
@@ -46,11 +47,19 @@ export default function DashboardCharts() {
     } catch {}
   };
 
+  const fetchNews = async () => {
+    try {
+      const r = await API.get("/api/sourcing/naver-news");
+      setNewsSignals(r.data);
+    } catch {}
+  };
+
   useEffect(() => {
-    fetchData(); fetchDart();
+    fetchData(); fetchDart(); fetchNews();
     const iv1 = setInterval(fetchData, 10000);
     const iv2 = setInterval(fetchDart, 300000); // 5분
-    return () => { clearInterval(iv1); clearInterval(iv2); };
+    const iv3 = setInterval(fetchNews, 300000); // 5분
+    return () => { clearInterval(iv1); clearInterval(iv2); clearInterval(iv3); };
   }, []);
 
   const gateCounts = ["HOLD","RESTRUCTURE","ADVANCE","REJECT"].map(g => ({
