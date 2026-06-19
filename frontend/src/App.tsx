@@ -888,7 +888,6 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {currentView === "today" && (
               <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
-                <DashboardCharts />
                 <TodayView fullWidth={sidebarCollapsed} onNavigateDeal={(id: string, action?: string) => {
                   if (id === "new" || action === "intake") { setCurrentView("pipeline"); }
                   else if (id === "pipeline") { setCurrentView("pipeline"); }
