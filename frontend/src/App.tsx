@@ -543,67 +543,150 @@ const CTA_LABELS: Record<string, string> = {
   deal: "딜 열기 →", underwriting: "Underwriting 실행 →",
 };
 function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: string) => void }) {
-  const [actions, setActions] = useState<any[]>([]);
-  const [summary, setSummary] = useState<any>({});
+  const [deals, setDeals] = useState<any[]>([]);
+  const [meaningful, setMeaningful] = useState<any[]>([]);
+  const [marketRead, setMarketRead] = useState<{ text: string; updated_at: string | null }>({ text: "", updated_at: null });
+  const [marketDraft, setMarketDraft] = useState("");
+  const [editingMarket, setEditingMarket] = useState(false);
+  const [feed, setFeed] = useState<{ time: string; source: string; text: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    API.get("/api/risk-book/today").then(r => { setActions(r.data.actions||[]); setSummary(r.data.summary||{}); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
+
+  const load = () => {
+    Promise.all([
+      API.get("/api/risk-book/deals"),
+      API.get("/api/dashboard/meaningful-changes"),
+      API.get("/api/dashboard/market-read"),
+      API.get("/dart/scan?days=1").catch(() => ({ data: { hits: [] } })),
+      API.get("/api/sourcing/naver-news").catch(() => ({ data: { items: [] } })),
+    ]).then(([d, m, mr, dart, news]) => {
+      setDeals(d.data || []);
+      setMeaningful(m.data || []);
+      setMarketRead(mr.data || { text: "", updated_at: null });
+      setMarketDraft(mr.data?.text || "");
+      const f: any[] = [];
+      (dart.data?.hits || []).slice(0, 6).forEach((h: any) =>
+        f.push({ time: h.disclosed_at || "", source: "공시", text: `[${h.priority}] ${h.corp_name} — ${h.report_title}` })
+      );
+      (news.data?.items || []).slice(0, 6).forEach((it: any) =>
+        f.push({ time: it.pub_date || "", source: "뉴스", text: it.title })
+      );
+      f.sort((a, b) => (b.time > a.time ? 1 : -1));
+      setFeed(f);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); const i = setInterval(load, 60000); return () => clearInterval(i); }, []);
+
+  const saveMarketRead = async () => {
+    try {
+      await API.put("/api/dashboard/market-read", { text: marketDraft });
+      setMarketRead({ text: marketDraft, updated_at: new Date().toISOString() });
+      setEditingMarket(false);
+    } catch {}
+  };
+
+  const removeMeaningful = async (id: number) => {
+    try { await API.delete(`/api/dashboard/meaningful-changes/${id}`); setMeaningful(prev => prev.filter(m => m.id !== id)); } catch {}
+  };
+
   const dateStr = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
-  if (loading) return <div style={{ padding: 48, color: "#999", fontSize: 13 }}>Action Engine 로딩 중...</div>;
+
+  const holdDeals = deals.filter((d: any) => d.final_gate === "HOLD");
+  const evidenceMissing = deals.filter((d: any) => (d.mandatory_done ?? 0) < (d.mandatory_total ?? 0));
+  const openQuestions = holdDeals.flatMap((d: any) =>
+    (d.hold_reasons || []).slice(0, 2).map((r: string) => ({ dealName: d.deal_name, question: `${d.deal_name}, ${r} 없이 다음 단계 가능한가?` }))
+  );
+
+  if (loading) return <div style={{ padding: 48, color: "#999", fontSize: 13 }}>로딩 중...</div>;
+
+  const C = { surface: "#11161D", border: "#1E2630", text: "#E4E7EB", textMid: "#8B95A3", textDim: "#525C6B", amber: "#F0A93B", red: "#E5484D", green: "#2BC48A" };
+
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto", padding: "32px" }}>
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 12, color: "#4a4a4a", letterSpacing: 0, marginBottom: 6 }}>COSMOS / TODAY — {dateStr}</div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "#C9A84C", letterSpacing: "0.12em", fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace" }}>{"Today's Actions"}</div>
-        <div style={{ display: "none" }}>시스템이 자동 생성한 오늘의 실행 목록</div>
+    <div style={{ maxWidth: 980, margin: "0 auto", padding: "28px 32px" }}>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11, color: C.textDim, marginBottom: 4 }}>COSMOS / TODAY — {dateStr}</div>
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {[{label:"긴급",count:summary.P0||0,color:"#F5222D",bg:"#FFF1F0"},{label:"처리 필요",count:summary.P1||0,color:"#FA8C16",bg:"#FFFBE6"},{label:"준비 완료",count:summary.P2||0,color:"#52C41A",bg:"#F6FFED"}].map(s => (
-          <div key={s.label} style={{ padding: "8px 16px", background: "transparent", border: "none", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 10, color: s.color, fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace", letterSpacing: "0.05em" }}>{s.label}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: s.color, fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace" }}>{s.count}</span>
+
+      {/* 4블록 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+
+        {/* Market Read */}
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em" }}>MARKET READ</span>
+            <span onClick={() => setEditingMarket(v => !v)} style={{ fontSize: 10, color: C.textMid, cursor: "pointer" }}>{editingMarket ? "취소" : "수정"}</span>
+          </div>
+          {editingMarket ? (
+            <>
+              <textarea value={marketDraft} onChange={e => setMarketDraft(e.target.value)} rows={4}
+                style={{ width: "100%", background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 4, color: C.text, fontSize: 12, padding: 8, boxSizing: "border-box", fontFamily: "inherit", resize: "vertical" }} />
+              <button onClick={saveMarketRead} style={{ marginTop: 6, padding: "5px 12px", background: C.green, border: "none", borderRadius: 4, color: "#0A0E14", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>저장</button>
+            </>
+          ) : (
+            <div style={{ fontSize: 12, color: marketRead.text ? C.text : C.textDim, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+              {marketRead.text || "오늘 시장 한 줄 평을 입력하세요"}
+            </div>
+          )}
+        </div>
+
+        {/* Pipeline Pressure */}
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px" }}>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>PIPELINE PRESSURE</div>
+          <div style={{ display: "flex", gap: 18 }}>
+            <div><div style={{ fontSize: 22, fontWeight: 700, color: holdDeals.length > 0 ? C.amber : C.text }}>{holdDeals.length}</div><div style={{ fontSize: 10, color: C.textDim }}>HOLD</div></div>
+            <div><div style={{ fontSize: 22, fontWeight: 700, color: evidenceMissing.length > 0 ? C.red : C.text }}>{evidenceMissing.length}</div><div style={{ fontSize: 10, color: C.textDim }}>자료 미비</div></div>
+            <div><div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>{deals.length}</div><div style={{ fontSize: 10, color: C.textDim }}>전체 딜</div></div>
+          </div>
+        </div>
+
+        {/* Meaningful Changes */}
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px" }}>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>MEANINGFUL CHANGES</div>
+          {meaningful.length === 0 ? (
+            <div style={{ fontSize: 11, color: C.textDim }}>Signal Room에서 ★ 표시한 항목이 여기 모입니다</div>
+          ) : meaningful.map((m: any) => (
+            <div key={m.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, paddingLeft: 8, borderLeft: `2px solid ${C.green}` }}>
+              <span style={{ fontSize: 12, color: C.text }}>{m.title}</span>
+              <span onClick={() => removeMeaningful(m.id)} style={{ fontSize: 11, color: C.textDim, cursor: "pointer" }}>×</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Open Questions Today */}
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px" }}>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>OPEN QUESTIONS TODAY</div>
+          {openQuestions.length === 0 ? (
+            <div style={{ fontSize: 11, color: C.textDim }}>열린 질문 없음</div>
+          ) : openQuestions.slice(0, 4).map((q: any, i: number) => (
+            <div key={i} onClick={() => onNavigateDeal("pipeline", "pipeline")}
+              style={{ fontSize: 12, color: C.textMid, marginBottom: 6, paddingLeft: 8, borderLeft: `2px solid ${C.amber}`, cursor: "pointer" }}>
+              {q.question}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Live Ticker */}
+      <div style={{ background: "#0A0E14", border: `1px solid ${C.border}`, borderRadius: 6, padding: "8px 14px", overflow: "hidden" }}>
+        <div style={{ fontSize: 9, color: C.textDim, marginBottom: 6 }}>LIVE — 수집 신호 (Signal Room에서 자세히 보기)</div>
+        {feed.length === 0 ? (
+          <div style={{ fontSize: 11, color: C.textDim }}>신호 없음</div>
+        ) : feed.slice(0, 5).map((item, i) => (
+          <div key={i} onClick={() => onNavigateDeal("sourcing", "sourcing")} style={{ fontSize: 11, color: C.textMid, padding: "3px 0", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ color: C.textDim }}>{item.source}</span> · {item.text}
           </div>
         ))}
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "#444", fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace" }}>TOTAL {summary.total||0}</span>
       </div>
-      {actions.length === 0 ? (
-        <div style={{ padding: 48, textAlign: "center", color: "#bbb", fontSize: 13, background: "#FAFAFA", borderRadius: 12, border: "1px solid #eee" }}>오늘 처리할 Action이 없습니다.</div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-          {actions.map((action: any, i: number) => {
-            const pc = PRIORITY_CONFIG[action.priority] || PRIORITY_CONFIG.P1;
-            return (
-              <div key={i} style={{ background: "#1a1a1a", border: "1px solid #222", borderLeft: `3px solid ${action.priority === "P0" ? "#e5534b" : action.priority === "P1" ? "#e8a838" : "#4a4a4a"}`, borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: pc.dot, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#E8E8E8" }}>{action.title}</span>
-                    <span style={{ fontSize: 9, background: pc.bg, color: pc.dot, padding: "1px 6px", borderRadius: 6, fontWeight: 600 }}>{pc.label}</span>
-                  </div>
-                  <div style={{ fontSize: 10, color: "#555", marginBottom: action.missing?.length ? 3 : 0 }}>{action.deal_name} — {action.reason}</div>
-                  {action.missing?.length > 0 && (
-                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                      {action.missing.map((m: string, j: number) => <span key={j} style={{ fontSize: 9, background: "transparent", color: "#444", padding: "0 4px", borderRadius: 0, fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace" }}>{m}</span>)}
-                    </div>
-                  )}
-                </div>
-                <button onClick={() => onNavigateDeal("pipeline", "pipeline")}
-                  style={{ padding: "5px 12px", background: "#222", color: "#e2e2e2", border: "1px solid #2a2a2a", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace", letterSpacing: "0.06em" }}>
-                  {CTA_LABELS[action.cta_action] || action.cta}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid #111", display: "flex", gap: 8 }}>
-        <button onClick={() => onNavigateDeal("new", "intake")} style={{ padding: "5px 12px", background: "transparent", color: "#666", border: "1px solid #222", borderRadius: 0, fontSize: 9, fontWeight: 400, cursor: "pointer", fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace", letterSpacing: "0.08em" }}>+ New Deal</button>
+
+      <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
+        <button onClick={() => onNavigateDeal("new", "intake")} style={{ padding: "5px 12px", background: "transparent", color: "#666", border: "1px solid #222", borderRadius: 0, fontSize: 9, cursor: "pointer", fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace", letterSpacing: "0.08em" }}>+ New Deal</button>
         <button onClick={() => onNavigateDeal("pipeline", "pipeline")} style={{ padding: "5px 12px", background: "transparent", color: "#444", border: "1px solid #1A1A1A", borderRadius: 0, fontSize: 9, cursor: "pointer", fontFamily: "'ZenSerif', 'IBM Plex Mono', monospace", letterSpacing: "0.08em" }}>Pipeline 전체 보기</button>
       </div>
     </div>
   );
 }
+
 
 function MainApp({ onLogout }: { onLogout: () => void }) {
   const [deals, setDeals] = useState<any[]>([]);
