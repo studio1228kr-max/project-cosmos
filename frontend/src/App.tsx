@@ -641,16 +641,14 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
 
       {/* 좌측 — 항상 보이는 고정 패널 */}
       <div style={{ width: expanded ? 360 : "50%", flexShrink: 0, padding: "0 32px", boxSizing: "border-box" as const }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
-          <div style={{ fontSize: 11, color: C.textDim }}>COSMOS / TODAY — {dateStr}</div>
-          {repDeal && (
-            <div style={{ fontSize: 11, color: C.textDim, fontFamily: "'IBM Plex Mono', monospace" }}>
-              {repDeal.deal_name}
-              {expAmt ? ` · 익스포저 ${(expAmt / 100000000).toFixed(1)}억` : ""}
-              {dday !== null ? ` · 만기 D-${dday}` : ""}
-            </div>
-          )}
-        </div>
+        <div style={{ fontSize: 11, color: C.textDim, marginBottom: 4 }}>COSMOS / TODAY — {dateStr}</div>
+        {repDeal && (
+          <div style={{ fontSize: 13, color: C.text, marginBottom: 10, fontFamily: "'IBM Plex Mono', monospace" }}>
+            {repDeal.deal_name}
+            {expAmt ? ` · 익스포저 ${(expAmt / 100000000).toFixed(1)}억` : ""}
+            {dday !== null ? ` · 만기 D-${dday}` : ""}
+          </div>
+        )}
 
         <div style={{ display: "flex", gap: 20, marginBottom: 6, justifyContent: "flex-start", alignItems: "center" }}>
           <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
