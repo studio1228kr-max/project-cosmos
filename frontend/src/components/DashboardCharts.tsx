@@ -75,38 +75,61 @@ export default function DashboardCharts() {
   return (
     <div style={{ background: C.bg1, borderBottom: `1px solid ${C.border}`, padding: "10px 16px", display: "flex", gap: 0, fontFamily: "'IBM Plex Mono', monospace", overflowX: "auto" }}>
 
-      {/* BLOCK 1: DART 신호 */}
-      <div style={{ minWidth: 220, paddingRight: 20, borderRight: `1px solid ${C.border}` }}>
-        <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.15em", marginBottom: 6 }}>DART EWS TODAY</div>
-        {dartSignals === null ? (
-          <div style={{ fontSize: 9, color: C.text3 }}>로딩 중...</div>
-        ) : dartHits.length === 0 ? (
-          <div style={{ fontSize: 9, color: C.text3 }}>신호 없음</div>
-        ) : (
-          <>
-            <div style={{ display: "flex", gap: 12, marginBottom: 6 }}>
-              <div>
-                <span style={{ fontSize: 9, color: C.text3 }}>P0 </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: p0hits.length > 0 ? C.red : C.text3 }}>{p0hits.length}</span>
-              </div>
-              <div>
-                <span style={{ fontSize: 9, color: C.text3 }}>P1 </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: p1hits.length > 0 ? C.amber : C.text3 }}>{p1hits.length}</span>
-              </div>
-              <div>
-                <span style={{ fontSize: 9, color: C.text3 }}>SCANNED </span>
-                <span style={{ fontSize: 11, color: C.text2 }}>{dartSignals.total_scanned}</span>
-              </div>
+      {/* BLOCK 1: 오늘 EWS — HARD/SOFT 분리 */}
+      <div style={{ minWidth: 280, paddingRight: 20, borderRight: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.15em", marginBottom: 6 }}>오늘 EWS — 공시·뉴스 기반 선행 신호</div>
+        <div style={{ display: "flex", gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+              <span style={{ fontSize: 8, fontWeight: 700, color: C.bg, background: C.red, padding: "1px 4px", borderRadius: 2 }}>HARD</span>
+              <span style={{ fontSize: 8, color: C.text3 }}>DART</span>
             </div>
-            {dartHits.slice(0, 3).map((h: any, i: number) => (
-              <div key={i} style={{ fontSize: 9, color: h.priority === "P0" ? C.red : C.amber, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>
-                <a href={h.dart_url} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
-                  [{h.priority}] {h.corp_name}
-                </a>
-              </div>
-            ))}
-          </>
-        )}
+            {dartSignals === null ? (
+              <div style={{ fontSize: 9, color: C.text3 }}>로딩 중...</div>
+            ) : dartHits.length === 0 ? (
+              <div style={{ fontSize: 9, color: C.text3 }}>신호 없음</div>
+            ) : (
+              <>
+                <div style={{ display: "flex", gap: 10, marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: p0hits.length > 0 ? C.red : C.text3 }}>P0 {p0hits.length}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: p1hits.length > 0 ? C.amber : C.text3 }}>P1 {p1hits.length}</span>
+                </div>
+                {dartHits.slice(0, 3).map((h: any, i: number) => (
+                  <div key={i} style={{ fontSize: 9, color: h.priority === "P0" ? C.red : C.amber, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 130 }}>
+                    <a href={h.dart_url} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                      [{h.priority}] {h.corp_name}
+                    </a>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+              <span style={{ fontSize: 8, fontWeight: 700, color: C.bg, background: C.blue, padding: "1px 4px", borderRadius: 2 }}>SOFT</span>
+              <span style={{ fontSize: 8, color: C.text3 }}>뉴스</span>
+            </div>
+            {newsSignals === null ? (
+              <div style={{ fontSize: 9, color: C.text3 }}>로딩 중...</div>
+            ) : (newsSignals.items || []).length === 0 ? (
+              <div style={{ fontSize: 9, color: C.text3 }}>신호 없음</div>
+            ) : (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.blue, marginBottom: 4 }}>
+                  {newsSignals.total}건 ({newsSignals.keywords_scanned}개 키워드)
+                </div>
+                {(newsSignals.items || []).slice(0, 3).map((it: any, i: number) => (
+                  <div key={i} style={{ fontSize: 9, color: C.text2, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 130 }}>
+                    <a href={it.link} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                      {it.title}
+                    </a>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* BLOCK 2: DEAL METRICS */}
