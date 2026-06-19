@@ -552,6 +552,7 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
   const [loading, setLoading] = useState(true);
   const [newSinceCount, setNewSinceCount] = useState(0);
   const [newSinceExample, setNewSinceExample] = useState<string | null>(null);
+  const [scores, setScores] = useState<any>({ activity_score: 0, activity_breakdown: {}, health_score: 100, health_breakdown: {} });
   const lastCheckRef = useRef<Date | null>(null);
   const hasSetLastCheck = useRef(false);
 
@@ -562,11 +563,13 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
       API.get("/api/dashboard/market-read").catch(() => ({ data: { text: "", updated_at: null } })),
       API.get("/dart/scan?days=1").catch(() => ({ data: { hits: [] } })),
       API.get("/api/sourcing/naver-news").catch(() => ({ data: { items: [] } })),
-    ]).then(([d, m, mr, dart, news]) => {
+      API.get("/api/dashboard/scores").catch(() => ({ data: { activity_score: 0, activity_breakdown: {}, health_score: 100, health_breakdown: {} } })),
+    ]).then(([d, m, mr, dart, news, sc]) => {
       setDeals(d.data || []);
       setMeaningful(m.data || []);
       setMarketRead(mr.data || { text: "", updated_at: null });
       setMarketDraft(mr.data?.text || "");
+      setScores(sc.data || { activity_score: 0, activity_breakdown: {}, health_score: 100, health_breakdown: {} });
 
       const decodeHtml = (t: string) => (t || "").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/<[^>]*>/g, "");
 
@@ -646,6 +649,51 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
           {dday !== null ? ` · 만기 D-${dday}` : ""}
         </div>
       )}
+
+      {/* 원형 게이지 2개 */}
+      <div style={{ display: "flex", gap: 24, marginBottom: 14, justifyContent: "center" }}>
+        <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
+        <ScoreGauge label="진행 건강도" value={scores.health_score} max={100} color={scores.health_score < 60 ? C.red : scores.health_score < 80 ? C.amber : C.green} />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+        <button onClick={() => onNavigateDeal("sourcing", "sourcing")}
+          style={{ padding: "8px 18px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, color: "#6FA8FF", fontSize: 12, cursor: "pointer" }}>
+          Signal Room에서 신호 처리하기
+        </button>
+      </div>
+
+      {/* 오늘의 상태 변화 — Activity / Health 분리 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px" }}>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>활동 점수 구성</div>
+          {[
+            ["Signal Room triage", scores.activity_breakdown?.triage, "sourcing"],
+            ["Meaningful Changes", scores.activity_breakdown?.meaningful_changes, "sourcing"],
+            ["딜 등록", scores.activity_breakdown?.deals_registered, "intake"],
+            ["Evidence 완료", scores.activity_breakdown?.evidence_completed, "evidence"],
+            ["Market Read", scores.activity_breakdown?.market_read, "today"],
+          ].map(([label, val, nav]: any) => (
+            <div key={label} onClick={() => onNavigateDeal(nav as string, nav as string)}
+              style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", cursor: "pointer" }}>
+              <span style={{ fontSize: 12, color: C.textMid }}>{label}</span>
+              <span style={{ fontSize: 12, color: C.text }}>{val || 0}건 ›</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px" }}>
+          <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>진행 건강도 상세</div>
+          <div onClick={() => onNavigateDeal("pipeline", "pipeline")} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", cursor: "pointer" }}>
+            <span style={{ fontSize: 12, color: C.textMid }}>막힌 딜 (전일 대비 변화 추적 예정)</span>
+            <span style={{ fontSize: 12, color: scores.health_breakdown?.blocked_deals > 0 ? C.red : C.text }}>{scores.health_breakdown?.blocked_deals || 0}건 ›</span>
+          </div>
+          <div onClick={() => onNavigateDeal("evidence", "evidence")} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", cursor: "pointer" }}>
+            <span style={{ fontSize: 12, color: C.textMid }}>필수자료 미완료</span>
+            <span style={{ fontSize: 12, color: scores.health_breakdown?.missing_mandatory > 0 ? C.amber : C.text }}>{scores.health_breakdown?.missing_mandatory || 0}건 ›</span>
+          </div>
+        </div>
+      </div>
 
       {/* My Priority Today */}
       <div style={{
@@ -750,6 +798,25 @@ function TodayView({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: s
 
 function topDealColor(holdCount: number, C: any) {
   return holdCount > 0 ? C.amber : C.border;
+}
+
+function ScoreGauge({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = Math.min(1, Math.max(0, value / max));
+  const r = 42, circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct);
+  return (
+    <div style={{ textAlign: "center" }}>
+      <svg width={100} height={100} viewBox="0 0 100 100">
+        <circle cx={50} cy={50} r={r} fill="none" stroke="#1E2630" strokeWidth={8} />
+        <circle cx={50} cy={50} r={r} fill="none" stroke={color} strokeWidth={8}
+          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+          transform="rotate(-90 50 50)" style={{ transition: "stroke-dashoffset 0.4s ease" }} />
+        <text x={50} y={47} textAnchor="middle" fontSize={20} fontWeight={700} fill="#E4E7EB">{value}</text>
+        <text x={50} y={62} textAnchor="middle" fontSize={9} fill="#525C6B">점</text>
+      </svg>
+      <div style={{ fontSize: 11, color: "#8B95A3", marginTop: 2 }}>{label}</div>
+    </div>
+  );
 }
 
 
