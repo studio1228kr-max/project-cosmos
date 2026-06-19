@@ -675,11 +675,11 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
       </div>
 
       {expanded && (
-      <div style={{ flex: 1, padding: "0 32px", boxSizing: "border-box" as const, borderLeft: `1px solid ${C.border}`, overflow: "auto" }}>
+      <div style={{ flex: 1, minWidth: 0, padding: "0 32px", boxSizing: "border-box" as const, borderLeft: `1px solid ${C.border}`, overflow: "auto" }}>
 
       {/* 오늘의 상태 변화 — Activity / Health 분리 */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10, marginBottom: 14 }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px", minWidth: 0, overflow: "hidden" }}>
           <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>활동 점수 구성</div>
           {[
             ["Signal Room triage", scores.activity_breakdown?.triage, "sourcing"],
@@ -689,22 +689,22 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
             ["Market Read", scores.activity_breakdown?.market_read, "today"],
           ].map(([label, val, nav]: any) => (
             <div key={label} onClick={() => onNavigateDeal(nav as string, nav as string)}
-              style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", cursor: "pointer" }}>
-              <span style={{ fontSize: 12, color: C.textMid }}>{label}</span>
-              <span style={{ fontSize: 12, color: C.text }}>{val || 0}건 ›</span>
+              style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", cursor: "pointer" }}>
+              <span style={{ fontSize: 12, color: C.textMid, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+              <span style={{ fontSize: 12, color: C.text, flexShrink: 0 }}>{val || 0}건 ›</span>
             </div>
           ))}
         </div>
 
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px" }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 14px", minWidth: 0, overflow: "hidden" }}>
           <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 8 }}>진행 건강도 상세</div>
-          <div onClick={() => onNavigateDeal("pipeline", "pipeline")} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", cursor: "pointer" }}>
-            <span style={{ fontSize: 12, color: C.textMid }}>막힌 딜 (전일 대비 변화 추적 예정)</span>
-            <span style={{ fontSize: 12, color: scores.health_breakdown?.blocked_deals > 0 ? C.red : C.text }}>{scores.health_breakdown?.blocked_deals || 0}건 ›</span>
+          <div onClick={() => onNavigateDeal("pipeline", "pipeline")} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", cursor: "pointer" }}>
+            <span style={{ fontSize: 12, color: C.textMid, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>막힌 딜 (전일 대비 변화 추적 예정)</span>
+            <span style={{ fontSize: 12, color: scores.health_breakdown?.blocked_deals > 0 ? C.red : C.text, flexShrink: 0 }}>{scores.health_breakdown?.blocked_deals || 0}건 ›</span>
           </div>
-          <div onClick={() => onNavigateDeal("evidence", "evidence")} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", cursor: "pointer" }}>
-            <span style={{ fontSize: 12, color: C.textMid }}>필수자료 미완료</span>
-            <span style={{ fontSize: 12, color: scores.health_breakdown?.missing_mandatory > 0 ? C.amber : C.text }}>{scores.health_breakdown?.missing_mandatory || 0}건 ›</span>
+          <div onClick={() => onNavigateDeal("evidence", "evidence")} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "4px 0", cursor: "pointer" }}>
+            <span style={{ fontSize: 12, color: C.textMid, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>필수자료 미완료</span>
+            <span style={{ fontSize: 12, color: scores.health_breakdown?.missing_mandatory > 0 ? C.amber : C.text, flexShrink: 0 }}>{scores.health_breakdown?.missing_mandatory || 0}건 ›</span>
           </div>
         </div>
       </div>
