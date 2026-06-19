@@ -7,6 +7,7 @@ import bcrypt
 import psycopg2
 import psycopg2.extras
 from evidence_engine import evaluate_evidence_engine
+from refi_path_engine import evaluate_refi_path_engine
 from fastapi import FastAPI, HTTPException, Depends, Header, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -536,6 +537,24 @@ def evidence_evaluate(body: dict, payload: dict = Depends(verify_token)):
             required_fields=body.get("required_fields"),
             p0_fields=body.get("p0_fields"),
             field_policies=body.get("field_policies"),
+        )
+        return result.to_dict()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
+
+@app.post("/api/risk-book/refi-path/evaluate")
+def refi_path_evaluate(body: dict, payload: dict = Depends(verify_token)):
+    """범용 Refi Path Engine — 월별 refi capacity/gap/DSRA depletion 경로 분석"""
+    try:
+        result = evaluate_refi_path_engine(
+            deal_master=body.get("deal_master", {}),
+            refi_path_input=body.get("refi_path_input", {}),
+            scenarios=body.get("scenarios"),
+            policy=body.get("policy"),
+            evidence_package=body.get("evidence_package"),
         )
         return result.to_dict()
     except Exception as e:
