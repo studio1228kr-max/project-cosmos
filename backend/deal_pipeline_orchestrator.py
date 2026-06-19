@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
 from enum import Enum
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from evidence_engine import evaluate_evidence_engine, EvidencePackage
 from refi_path_engine import evaluate_refi_path_engine, RefiPathPackage
@@ -32,6 +32,19 @@ _SEVERITY_TO_COMBINED = {
     3: CombinedGate.REJECT_OR_DROP,
 }
 
+CP_CATEGORY_KEYWORDS: Dict[str, List[str]] = {
+    "TAX_CP": ["TAX", "PRIORITY_CLAIMS"],
+    "TENANCY_CP": ["TENANT", "TENANCY", "OCCUPANCY", "EVICTION", "JEONSE"],
+    "CASHFLOW_CP": ["DSRA", "DSCR", "CASH"],
+    "COLLATERAL_CP": ["TITLE", "PERFECTION", "SENIOR", "LIEN", "COLLATERAL", "VIOLATION"],
+    "LEGAL_CP": ["LEGAL", "COURT", "BLOCKER"],
+    "STRUCTURE_CP": ["MARKET", "FUND_LIFE", "STRUCTURE", "REFI_GAP"],
+    "PAYOFF_CP": ["SUPPORT", "PAYOFF", "CURE"],
+    "DOC_CP": ["DOCUMENT", "SOURCE", "EXCERPT", "MISSING"],
+}
+
+_BLOCKER_KEYWORDS = ["UNVERIFIED", "TITLE", "LEGAL_BLOCKER", "DROP", "TAX", "SENIOR", "REJECT"]
+
 
 @dataclass(frozen=True)
 class DealDecisionPackage:
@@ -39,6 +52,8 @@ class DealDecisionPackage:
     deal_name: str
 
     combined_gate: CombinedGate
+    final_gate: str
+    final_gate_reasons: List[str]
 
     evidence_gate: Optional[str]
     refi_gate: Optional[str]
@@ -50,6 +65,7 @@ class DealDecisionPackage:
     binding_constraints: List[str]
     flags: List[str]
     required_actions: List[str]
+    required_cps: List[Dict[str, Any]]
 
     evidence_package: Optional[Dict[str, Any]]
     refi_path_package: Optional[Dict[str, Any]]
@@ -62,6 +78,8 @@ class DealDecisionPackage:
             "deal_id": self.deal_id,
             "deal_name": self.deal_name,
             "combined_gate": self.combined_gate.value,
+            "final_gate": self.final_gate,
+            "final_gate_reasons": self.final_gate_reasons,
             "evidence_gate": self.evidence_gate,
             "refi_gate": self.refi_gate,
             "recovery_gate": self.recovery_gate,
@@ -70,6 +88,7 @@ class DealDecisionPackage:
             "binding_constraints": self.binding_constraints,
             "flags": self.flags,
             "required_actions": self.required_actions,
+            "required_cps": self.required_cps,
             "evidence_package": self.evidence_package,
             "refi_path_package": self.refi_path_package,
             "recovery_package": self.recovery_package,
@@ -105,7 +124,6 @@ def evaluate_deal_pipeline(
     refi_gate_value: Optional[str] = None
     recovery_gate_value: Optional[str] = None
 
-    # ---------------- Stage 1: Evidence ----------------
     if evidence_items:
         evidence_package: EvidencePackage = evaluate_evidence_engine(
             deal_master=deal_master,
@@ -127,7 +145,6 @@ def evaluate_deal_pipeline(
     else:
         stages_skipped.append("EVIDENCE")
 
-    # ---------------- Stage 2: Refi Path ----------------
     if refi_path_input:
         refi_path_package: RefiPathPackage = evaluate_refi_path_engine(
             deal_master=deal_master,
@@ -149,7 +166,6 @@ def evaluate_deal_pipeline(
     else:
         stages_skipped.append("REFI_PATH")
 
-    # ---------------- Stage 3: Recovery Waterfall ----------------
     if recovery_input:
         recovery_package: KoreaRecoveryPackage = evaluate_korea_recovery_strategy_engine(
             deal_master=deal_master,
@@ -174,9 +190,24 @@ def evaluate_deal_pipeline(
 
     combined_gate = compute_combined_gate(evidence_gate_value, refi_gate_value, recovery_gate_value)
 
+    final_gate, final_gate_reasons = apply_final_gate_rules(
+        evidence_gate=evidence_gate_value,
+        refi_gate=refi_gate_value,
+        recovery_gate=recovery_gate_value,
+        flags=all_flags,
+        recovery_dict=recovery_dict,
+    )
+
+    flags_unique = sorted(set(all_flags))
+    actions_unique = sorted(set(all_actions))
+
+    required_cps = extract_required_cps(flags_unique)
+
     memo_summary = build_combined_memo(
         deal_master=deal_master,
         combined_gate=combined_gate,
+        final_gate=final_gate,
+        final_gate_reasons=final_gate_reasons,
         evidence_gate_value=evidence_gate_value,
         refi_gate_value=refi_gate_value,
         recovery_gate_value=recovery_gate_value,
@@ -189,14 +220,17 @@ def evaluate_deal_pipeline(
         deal_id=str(deal_master.get("deal_id", "")),
         deal_name=str(deal_master.get("deal_name", "")),
         combined_gate=combined_gate,
+        final_gate=final_gate,
+        final_gate_reasons=final_gate_reasons,
         evidence_gate=evidence_gate_value,
         refi_gate=refi_gate_value,
         recovery_gate=recovery_gate_value,
         stages_run=stages_run,
         stages_skipped=stages_skipped,
         binding_constraints=sorted(set(all_binding)),
-        flags=sorted(set(all_flags)),
-        required_actions=sorted(set(all_actions)),
+        flags=flags_unique,
+        required_actions=actions_unique,
+        required_cps=required_cps,
         evidence_package=evidence_dict,
         refi_path_package=refi_dict,
         recovery_package=recovery_dict,
@@ -218,9 +252,102 @@ def compute_combined_gate(
     return _SEVERITY_TO_COMBINED[worst_severity]
 
 
+def apply_final_gate_rules(
+    evidence_gate: Optional[str],
+    refi_gate: Optional[str],
+    recovery_gate: Optional[str],
+    flags: Sequence[str],
+    recovery_dict: Optional[Dict[str, Any]],
+) -> Tuple[str, List[str]]:
+    """하우스 룰 truth table — IRR이 좋아도 이 룰을 못 뚫는다."""
+    reasons: List[str] = []
+
+    if evidence_gate == "REJECT":
+        reasons.append("Evidence gate REJECT — 핵심 숫자 신뢰 불가")
+        return "REJECT_OR_DROP", reasons
+
+    if evidence_gate == "HOLD":
+        reasons.append("Evidence gate HOLD (P0 필드 미검증) → Final HOLD")
+        return "HOLD", reasons
+
+    if any("UNVERIFIED_PRIORITY_CLAIMS" in f for f in flags):
+        reasons.append("미검증 법정 우선채권 존재 (세금/임금/임차보증금) → Final HOLD")
+        return "HOLD", reasons
+
+    if any("TITLE_OR_PERFECTION_ISSUE" in f for f in flags):
+        reasons.append("담보 등기/perfection 미확인 → Final HOLD")
+        return "HOLD", reasons
+
+    if any("SENIOR_OR_PARI_PASSU_CLAIMS_PRESENT" in f for f in flags):
+        reasons.append("선순위/동순위 채권 존재 — 검증 전까지 Final HOLD")
+        return "HOLD", reasons
+
+    if recovery_dict is not None:
+        worst_lgd = recovery_dict.get("worst_pv_lgd")
+        if worst_lgd is not None and worst_lgd > 0.25:
+            reasons.append(f"Tail PV LGD {worst_lgd:.1%} > 25% 하우스 한도 → DROP/재구조화 필요")
+            return "REJECT_OR_DROP", reasons
+
+    if refi_gate == "DROP" and recovery_gate == "DROP":
+        reasons.append("Refi DROP + Recovery DROP → Final DROP")
+        return "REJECT_OR_DROP", reasons
+
+    if refi_gate == "DROP":
+        reasons.append("Refi DROP (리파이 경로 막힘) → 재구조화 조건부 HOLD")
+        return "HOLD", reasons
+
+    gates = [g for g in [evidence_gate, refi_gate, recovery_gate] if g]
+    if not gates:
+        return "NOT_EVALUATED", reasons
+
+    worst = max(_GATE_SEVERITY.get(g, 2) for g in gates)
+
+    if worst == 0:
+        reasons.append("Evidence/Refi/Recovery 전부 PASS, P0 블로커 없음 — WATCH로 사람 검토 필요 (자동 ADVANCE 없음)")
+        return "WATCH", reasons
+
+    reasons.append(f"개별 게이트 중 최악 심각도 기준 ({worst})")
+    return _SEVERITY_TO_COMBINED[worst].value, reasons
+
+
+def categorize_flag(flag: str) -> str:
+    upper = flag.upper()
+    for category, keywords in CP_CATEGORY_KEYWORDS.items():
+        if any(k in upper for k in keywords):
+            return category
+    return "DOC_CP"
+
+
+def extract_required_cps(flags: Sequence[str]) -> List[Dict[str, Any]]:
+    cps: List[Dict[str, Any]] = []
+    seen = set()
+
+    for flag in flags:
+        if flag in seen:
+            continue
+        seen.add(flag)
+
+        category = categorize_flag(flag)
+        severity = "BLOCKER" if any(k in flag.upper() for k in _BLOCKER_KEYWORDS) else "WARNING"
+
+        cps.append({
+            "cp_id": f"CP-{len(cps) + 1:03d}",
+            "category": category,
+            "description": flag,
+            "severity": severity,
+            "status": "OPEN",
+            "owner": None,
+            "due_date": None,
+        })
+
+    return cps
+
+
 def build_combined_memo(
     deal_master: Mapping[str, Any],
     combined_gate: CombinedGate,
+    final_gate: str,
+    final_gate_reasons: Sequence[str],
     evidence_gate_value: Optional[str],
     refi_gate_value: Optional[str],
     recovery_gate_value: Optional[str],
@@ -229,7 +356,9 @@ def build_combined_memo(
     recovery_dict: Optional[Dict[str, Any]],
 ) -> str:
     deal_name = deal_master.get("deal_name", "Unnamed deal")
-    lines = [f"Deal pipeline result for {deal_name}: combined gate = {combined_gate.value}."]
+    lines = [f"Deal pipeline result for {deal_name}: FINAL GATE = {final_gate}."]
+    lines.append(f"Reason: {'; '.join(final_gate_reasons)}.")
+    lines.append(f"(Reference combined_gate by severity: {combined_gate.value})")
 
     if evidence_dict:
         lines.append(
@@ -239,14 +368,10 @@ def build_combined_memo(
 
     if refi_dict:
         memo = refi_dict.get("memo_summary", {})
-        lines.append(
-            f"Refi gate: {refi_gate_value}. {memo.get('memo_language', '')}"
-        )
+        lines.append(f"Refi gate: {refi_gate_value}. {memo.get('memo_language', '')}")
 
     if recovery_dict:
         memo = recovery_dict.get("memo_summary", {})
-        lines.append(
-            f"Recovery gate: {recovery_gate_value}. {memo.get('memo_language', '')}"
-        )
+        lines.append(f"Recovery gate: {recovery_gate_value}. {memo.get('memo_language', '')}")
 
     return " ".join(lines)

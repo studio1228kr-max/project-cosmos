@@ -601,7 +601,29 @@ def deal_pipeline_evaluate(body: dict, payload: dict = Depends(verify_token)):
             recovery_scenarios=body.get("recovery_scenarios"),
             recovery_policy=body.get("recovery_policy"),
         )
-        return result.to_dict()
+        result_dict = result.to_dict()
+
+        try:
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO pipeline_runs (deal_id, deal_name, input_payload, output_payload, final_gate, combined_gate) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (
+                    result_dict.get("deal_id"),
+                    result_dict.get("deal_name"),
+                    psycopg2.extras.Json(body),
+                    psycopg2.extras.Json(result_dict),
+                    result_dict.get("final_gate"),
+                    result_dict.get("combined_gate"),
+                ),
+            )
+            conn.commit()
+            cur.close(); conn.close()
+        except Exception:
+            pass
+
+        return result_dict
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
