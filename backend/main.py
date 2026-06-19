@@ -703,6 +703,74 @@ def update_market_read(body: dict, payload: dict = Depends(verify_token)):
     return {"ok": True}
 
 
+
+
+@app.get("/api/dashboard/scores")
+def get_dashboard_scores(payload: dict = Depends(verify_token)):
+    """Activity Score(0부터 누적) + Execution Health(100부터 감점) — 전부 실제 레코드 기반"""
+    conn = get_conn(); cur = conn.cursor()
+
+    cur.execute("SELECT COUNT(*) FROM deal_candidates WHERE decision != 'PENDING'")
+    triage_count = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM meaningful_changes")
+    meaningful_count = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM deal_master WHERE is_test = false")
+    deal_count = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM deal_evidence_checklist WHERE status IN ('VERIFIED','WAIVED')")
+    evidence_done = cur.fetchone()[0]
+    cur.execute("SELECT text FROM market_read WHERE id=1")
+    mr_row = cur.fetchone()
+    market_read_filled = 1 if (mr_row and mr_row[0]) else 0
+
+    activity_score = triage_count + meaningful_count + deal_count + evidence_done + market_read_filled
+
+    cur.execute("""
+        SELECT dm.deal_code, gr.final_gate, ev.mandatory_total, ev.mandatory_done
+        FROM deal_master dm
+        LEFT JOIN LATERAL (
+            SELECT final_gate FROM gate_results WHERE deal_master_id=dm.id ORDER BY id DESC LIMIT 1
+        ) gr ON true
+        LEFT JOIN LATERAL (
+            SELECT COUNT(*) FILTER (WHERE requirement_level='MANDATORY') AS mandatory_total,
+                   COUNT(*) FILTER (WHERE requirement_level='MANDATORY' AND status IN ('VERIFIED','WAIVED')) AS mandatory_done
+            FROM deal_evidence_checklist WHERE deal_master_id=dm.id
+        ) ev ON true
+        WHERE dm.is_test = false
+    """)
+    deals = cur.fetchall()
+    cur.close(); conn.close()
+
+    health = 100
+    blocked_count = 0
+    missing_mandatory_total = 0
+    for d in deals:
+        gate, mand_total, mand_done = d[1], d[2] or 0, d[3] or 0
+        missing = mand_total - mand_done
+        missing_mandatory_total += missing
+        if gate == "HOLD":
+            health -= 20; blocked_count += 1
+        elif gate == "REJECT":
+            health -= 40; blocked_count += 1
+        health -= missing * 3
+    health = max(0, health)
+
+    return {
+        "activity_score": activity_score,
+        "activity_breakdown": {
+            "triage": triage_count,
+            "meaningful_changes": meaningful_count,
+            "deals_registered": deal_count,
+            "evidence_completed": evidence_done,
+            "market_read": market_read_filled,
+        },
+        "health_score": health,
+        "health_breakdown": {
+            "blocked_deals": blocked_count,
+            "missing_mandatory": missing_mandatory_total,
+        },
+    }
+
+
 @app.post("/login")
 def login(body: LoginRequest):
     conn = get_conn()
