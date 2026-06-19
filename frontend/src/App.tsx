@@ -784,16 +784,6 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
           </div>
         )}
 
-        <div style={{ fontSize: 9, color: C.textDim, letterSpacing: "0.06em", marginBottom: 6 }}>LIVE FEED</div>
-        {feed.length === 0 ? (
-          <div style={{ fontSize: 11, color: C.textDim }}>신호 없음</div>
-        ) : feed.slice(0, 5).map((item, i) => (
-          <a key={i} href={item.link || "#"} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-            <div style={{ fontSize: 11, color: C.textMid, padding: "3px 0", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              <span style={{ color: C.textDim }}>{item.source}</span> · {item.text}
-            </div>
-          </a>
-        ))}
       </div>
 
       <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
