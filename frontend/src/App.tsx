@@ -870,46 +870,13 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
         ) : (
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {currentView === "today" && (
-              <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-                {/* LEFT: Deal List Panel */}
-                <div style={{ width: 280, borderRight: "1px solid #1e1e1e", display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
-                  <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #1A1A1A" }}>
-                    <span style={{ fontSize: 9, color: "#555", letterSpacing: "0.15em" }}>DEAL REGISTER</span>
-                    <span style={{ float: "right", fontSize: 9, color: "#333" }}>{deals.length} TOTAL</span>
-                  </div>
-                  <div style={{ flex: 1, overflow: "auto" }}>
-                    {deals.map((d: any) => {
-                      const gateColor: any = { HOLD:"#F59E0B", RESTRUCTURE:"#4499FF", ADVANCE:"#00C87A", REJECT:"#FF4444" };
-                      const mandTotal = d.mandatory_total ?? 0;
-                      const mandDone = d.mandatory_done ?? 0;
-                      return (
-                        <div key={d.deal_code}
-                          onClick={() => { setCurrentView("pipeline"); }}
-                          style={{ padding: "10px 14px", borderBottom: "1px solid #111", cursor: "pointer", transition: "background 0.1s" }}
-                          onMouseEnter={e => (e.currentTarget.style.background = "#0A0A0A")}
-                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                            <span style={{ fontSize: 12, color: "#E8E8E8", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>{d.deal_name}</span>
-                            <span style={{ fontSize: 10, color: gateColor[d.final_gate] || "#555", letterSpacing: "0.06em", flexShrink: 0 }}>{d.final_gate || "—"}</span>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ fontSize: 10, color: "#555" }}>{d.deal_code}{d.is_test ? " · TEST" : ""}</span>
-                            <span style={{ fontSize: 9, color: mandTotal > 0 && mandDone === mandTotal ? "#00C87A" : "#444" }}>{mandDone}/{mandTotal}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                {/* RIGHT: Action Queue */}
-                <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
-                  <DashboardCharts />
-                  <TodayView onNavigateDeal={(id: string, action?: string) => {
-                    if (id === "new" || action === "intake") { setCurrentView("pipeline"); }
-                    else if (id === "pipeline") { setCurrentView("pipeline"); }
-                    else { setCurrentView("pipeline"); setSelectedId(id); }
-                  }} />
-                </div>
+              <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
+                <DashboardCharts />
+                <TodayView onNavigateDeal={(id: string, action?: string) => {
+                  if (id === "new" || action === "intake") { setCurrentView("pipeline"); }
+                  else if (id === "pipeline") { setCurrentView("pipeline"); }
+                  else { setCurrentView("pipeline"); setSelectedId(id); }
+                }} />
               </div>
             )}
             {currentView === "pipeline" && (
