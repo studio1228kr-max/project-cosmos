@@ -637,30 +637,29 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
   const C = { surface: "#11161D", border: "#1E2630", text: "#E4E7EB", textMid: "#8B95A3", textDim: "#525C6B", amber: "#F0A93B", red: "#E5484D", green: "#2BC48A" };
 
   return (
-    <div style={{ width: "100%", display: "flex", padding: "28px 0", boxSizing: "border-box" as const }}>
+    <div style={{ width: "100%", display: "flex", padding: "10px 0", boxSizing: "border-box" as const }}>
 
       {/* 좌측 — 항상 보이는 고정 패널 */}
       <div style={{ width: expanded ? 360 : "50%", flexShrink: 0, padding: "0 32px", boxSizing: "border-box" as const }}>
-        <div style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
           <div style={{ fontSize: 11, color: C.textDim }}>COSMOS / TODAY — {dateStr}</div>
+          {repDeal && (
+            <div style={{ fontSize: 11, color: C.textDim, fontFamily: "'IBM Plex Mono', monospace" }}>
+              {repDeal.deal_name}
+              {expAmt ? ` · 익스포저 ${(expAmt / 100000000).toFixed(1)}억` : ""}
+              {dday !== null ? ` · 만기 D-${dday}` : ""}
+            </div>
+          )}
         </div>
 
-        {repDeal && (
-          <div style={{ fontSize: 11, color: C.textDim, marginBottom: 18, fontFamily: "'IBM Plex Mono', monospace" }}>
-            {repDeal.deal_name}
-            {expAmt ? ` · 익스포저 ${(expAmt / 100000000).toFixed(1)}억` : ""}
-            {dday !== null ? ` · 만기 D-${dday}` : ""}
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: 24, marginBottom: 14, justifyContent: "center" }}>
+        <div style={{ display: "flex", gap: 20, marginBottom: 6, justifyContent: "center" }}>
           <ScoreGauge label="활동 점수" value={scores.activity_score} max={50} color={C.green} />
           <ScoreGauge label="진행 건강도" value={scores.health_score} max={100} color={scores.health_score < 60 ? C.red : scores.health_score < 80 ? C.amber : C.green} />
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}>
           <button onClick={() => onNavigateDeal("sourcing", "sourcing")}
-            style={{ padding: "8px 18px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, color: "#6FA8FF", fontSize: 12, cursor: "pointer" }}>
+            style={{ padding: "5px 14px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, color: "#6FA8FF", fontSize: 11, cursor: "pointer" }}>
             Signal Room에서 신호 처리하기
           </button>
         </div>
@@ -818,19 +817,19 @@ function topDealColor(holdCount: number, C: any) {
 
 function ScoreGauge({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
   const pct = Math.min(1, Math.max(0, value / max));
-  const r = 42, circ = 2 * Math.PI * r;
+  const r = 30, circ = 2 * Math.PI * r;
   const offset = circ * (1 - pct);
   return (
     <div style={{ textAlign: "center" }}>
-      <svg width={100} height={100} viewBox="0 0 100 100">
-        <circle cx={50} cy={50} r={r} fill="none" stroke="#1E2630" strokeWidth={8} />
-        <circle cx={50} cy={50} r={r} fill="none" stroke={color} strokeWidth={8}
+      <svg width={76} height={76} viewBox="0 0 76 76">
+        <circle cx={38} cy={38} r={r} fill="none" stroke="#1E2630" strokeWidth={6} />
+        <circle cx={38} cy={38} r={r} fill="none" stroke={color} strokeWidth={6}
           strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-          transform="rotate(-90 50 50)" style={{ transition: "stroke-dashoffset 0.4s ease" }} />
-        <text x={50} y={47} textAnchor="middle" fontSize={20} fontWeight={700} fill="#E4E7EB">{value}</text>
-        <text x={50} y={62} textAnchor="middle" fontSize={9} fill="#525C6B">점</text>
+          transform="rotate(-90 38 38)" style={{ transition: "stroke-dashoffset 0.4s ease" }} />
+        <text x={38} y={35} textAnchor="middle" fontSize={16} fontWeight={700} fill="#E4E7EB">{value}</text>
+        <text x={38} y={47} textAnchor="middle" fontSize={7} fill="#525C6B">점</text>
       </svg>
-      <div style={{ fontSize: 11, color: "#8B95A3", marginTop: 2 }}>{label}</div>
+      <div style={{ fontSize: 9, color: "#8B95A3", marginTop: 1 }}>{label}</div>
     </div>
   );
 }
