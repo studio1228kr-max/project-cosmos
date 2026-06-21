@@ -101,3 +101,46 @@ def assemble_cecl_inputs(
         "ead_basis": "DRAWN_ONLY",
         "effective_ltv": effective_ltv,
     }
+
+
+HOUSE_DEFAULT_TAIL_BALANCE_RATIO = None  # reverse_debt_engine 없으면 None → cox_hazard에서 1.0 fallback
+
+
+def assemble_cox_hazard_inputs(
+    deal_master: dict,
+    deal_financials: dict,
+    merton_result: dict,
+) -> dict | None:
+    """
+    cox_hazard_engine 입력 조립.
+    merton_kmv 결과에서 pd_12m을 받고,
+    maturity_date에서 days_to_maturity를 계산하고,
+    tail_balance_ratio는 reverse_debt_engine 연동 전까지 None (cox_hazard에서 1.0 fallback).
+
+    merton 실패했으면 None 반환 → check_quant에서 cox_hazard 스킵.
+    """
+    if merton_result is None or "metrics" not in merton_result:
+        return None
+
+    pd_value = merton_result["metrics"].get("pd_structural_raw")
+    if pd_value is None:
+        return None
+
+    maturity_date = deal_master.get("maturity_date")
+    if maturity_date is None:
+        return None
+
+    if isinstance(maturity_date, str):
+        from datetime import date
+        maturity_date = date.fromisoformat(maturity_date)
+
+    from datetime import date
+    days_to_maturity = (maturity_date - date.today()).days
+
+    return {
+        "pd_12m": pd_value,
+        "days_to_maturity": days_to_maturity,
+        "tail_balance_ratio": HOUSE_DEFAULT_TAIL_BALANCE_RATIO,  # None → cox_hazard에서 MATERIAL 워닝 + 1.0 fallback
+        "pd_type": "structural_raw",
+        "house_rule_version": "COSMOS_PIECEWISE_HAZARD_v0.2",
+    }

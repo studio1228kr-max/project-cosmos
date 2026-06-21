@@ -15,17 +15,18 @@ from core.quant_client import evaluate_deal, QuantClientError
 STAGE_ENGINE_MAP: dict[str, list[str]] = {
     "PRE": [
         "merton_kmv",
+        "cox_hazard_engine",
         "cecl_engine",
     ],
     "SOFT": [
         "merton_kmv",
+        "cox_hazard_engine",
         "cecl_engine",
-        # "cox_hazard_engine",   # TODO: Cox Hazard 완성되면 등록 (lifetime PD flat approximation 해소)
     ],
     "FULL": [
         "merton_kmv",
+        "cox_hazard_engine",
         "cecl_engine",          # cecl_engine 내부에서 dd_stage=FULL이면 pd_accounting=1.0 강제
-        # "cox_hazard_engine",
     ],
 }
 

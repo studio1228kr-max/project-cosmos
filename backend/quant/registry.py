@@ -44,3 +44,6 @@ register_engine("merton_kmv", MertonKMVEngine())
 
 from quant.engines.cecl_engine import CECLEngine
 register_engine("cecl_engine", CECLEngine())
+
+from quant.engines.cox_hazard_engine import CoxHazardEngine
+register_engine("cox_hazard_engine", CoxHazardEngine())
