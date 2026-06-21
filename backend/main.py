@@ -1820,12 +1820,13 @@ def trigger_irr(deal_code: str, scenario: str = "BASE", payload: dict = Depends(
         cur.close()
         conn.close()
     try:
-        from irr_engine import run_irr_for_deal, CashflowEngineError
+        from irr_engine import run_irr_for_deal
+        from irr_engine import CashflowEngineError as _CashflowEngineError
         result = run_irr_for_deal(deal_id, scenario_label=scenario)
         if "error" in result:
             raise HTTPException(status_code=422, detail=result)
         return {"status": "ok", "deal_code": deal_code, "result": result}
-    except CashflowEngineError as e:
+    except _CashflowEngineError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
