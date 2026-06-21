@@ -1338,3 +1338,72 @@ def api_gate_check(body: GateCheckRequest, payload: dict = Depends(verify_token)
         cur.close()
         conn.close()
 
+
+
+@app.get("/api/risk-book/deals/{deal_code}/risk-card")
+def api_risk_card(deal_code: str, payload: dict = Depends(verify_token)):
+    """
+    Risk Card API — 딜 화면 우측 패널용.
+    failure_engine.run_failure_diagnostic() 결과를 IC-grade 카드 형태로 반환.
+    """
+    try:
+        from failure_engine import run_failure_diagnostic
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM deal_master WHERE deal_code = %s", (deal_code,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not row:
+            raise HTTPException(status_code=404, detail="deal not found")
+
+        result = run_failure_diagnostic(row["id"])
+
+        # quant 섹션에서 PD / lifetime PD / EL 추출
+        quant_checks = [c for c in result.get("checks", []) if c.get("category") == "QUANT"]
+        pd_structural = None
+        lifetime_pd = None
+        el_12m = None
+        el_ratio = None
+
+        for c in quant_checks:
+            mn = c.get("metric_name", "")
+            if mn == "pd_structural_raw":
+                pd_structural = c.get("metric_value")
+            elif mn == "lifetime_pd_hazard":
+                lifetime_pd = c.get("metric_value")
+            elif mn == "expected_loss_12m":
+                el_12m = c.get("metric_value")
+            elif mn == "el_to_exposure_ratio":
+                el_ratio = c.get("metric_value")
+
+        # gate 결과
+        gate_result = result.get("gate_result", "UNKNOWN")
+        gate_reasons = [
+            {
+                "severity": c.get("severity"),
+                "label": c.get("label"),
+                "category": c.get("category"),
+            }
+            for c in result.get("checks", [])
+            if c.get("severity") == "CRITICAL"
+        ]
+
+        return {
+            "deal_code": deal_code,
+            "gate_result": gate_result,
+            "gate_reasons": gate_reasons,
+            "quant": {
+                "pd_structural": pd_structural,
+                "lifetime_pd_hazard": lifetime_pd,
+                "el_12m": el_12m,
+                "el_ratio": el_ratio,
+            },
+            "diagnostic_summary": result.get("summary", {}),
+            "calculated_at": result.get("run_at"),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
