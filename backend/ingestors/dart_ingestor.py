@@ -129,9 +129,9 @@ def map_to_deal(conn, corp_name: str) -> Optional[int]:
     cur = conn.cursor()
     cur.execute("""
         SELECT id FROM deal_master
-        WHERE borrower_name ILIKE %s OR deal_name ILIKE %s
+        WHERE deal_name ILIKE %s
         LIMIT 1
-    """, (f"%{corp_name}%", f"%{corp_name}%"))
+    """, (f"%{corp_name}%",))
     row = cur.fetchone()
     cur.close()
     return row["id"] if row else None
