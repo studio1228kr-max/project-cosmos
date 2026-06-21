@@ -1491,3 +1491,49 @@ def dart_events(
     finally:
         cur.close()
         conn.close()
+
+
+@app.post("/api/infra/migrate/deal-collateral")
+def migrate_deal_collateral(payload: dict = Depends(verify_token)):
+    """deal_collateral 테이블 생성 + ANH 딜 초기 데이터 삽입."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS deal_collateral (
+                id                  SERIAL PRIMARY KEY,
+                deal_master_id      INTEGER REFERENCES deal_master(id),
+                asset_address       TEXT,
+                sido_cd             TEXT,
+                sgg_cd              TEXT,
+                bjdong_cd           TEXT,
+                bun                 TEXT,
+                ji                  TEXT,
+                asset_type          TEXT DEFAULT 'COMMERCIAL_RE',
+                address_confidence  TEXT DEFAULT 'MANUAL',
+                molit_last_synced   DATE,
+                created_at          TIMESTAMPTZ DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_collateral_deal ON deal_collateral(deal_master_id);
+            CREATE INDEX IF NOT EXISTS idx_collateral_bjdong ON deal_collateral(bjdong_cd);
+        """)
+        cur.execute("""
+            INSERT INTO deal_collateral
+                (deal_master_id, asset_address, sido_cd, sgg_cd, bjdong_cd, bun, ji, address_confidence)
+            SELECT dm.id,
+                '서울시 강남구 봉은사로 455',
+                '11', '11680', '1168010800', '455', '0', 'MANUAL'
+            FROM deal_master dm
+            WHERE dm.deal_code = 'LSK-2026-7003EE'
+              AND NOT EXISTS (
+                SELECT 1 FROM deal_collateral dc WHERE dc.deal_master_id = dm.id
+              )
+        """)
+        conn.commit()
+        return {"status": "ok", "message": "deal_collateral 테이블 생성 + ANH 초기 데이터 삽입 완료"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
