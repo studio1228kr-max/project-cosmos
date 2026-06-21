@@ -1620,3 +1620,22 @@ def trigger_diagnostic(deal_code: str, payload: dict = Depends(verify_token)):
         return {"status": "ok", "deal_code": deal_code, "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/infra/migrate/add-collateral-area")
+def migrate_collateral_area(payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            ALTER TABLE deal_collateral
+            ADD COLUMN IF NOT EXISTS area_sqm NUMERIC(12,2)
+        """)
+        cur.execute("""
+            UPDATE deal_collateral SET area_sqm = 2917.0
+            WHERE bjdong_cd = '1168010800' AND bun = '455'
+        """)
+        conn.commit()
+        return {"status": "ok", "message": "area_sqm 컬럼 추가 + ANH 면적 2917㎡ 세팅"}
+    finally:
+        cur.close()
+        conn.close()
