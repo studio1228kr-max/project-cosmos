@@ -1426,10 +1426,26 @@ def api_risk_card(deal_code: str, payload: dict = Depends(verify_token)):
             if item["severity"] == "CRITICAL"
         ]
 
+        # MOLIT collateral 항목 (severity 무관하게 항상 포함)
+        collateral_item = next(
+            (item for item in items if item.get("failure_code", "").startswith("MARKET_COLLATERAL_MOLIT")),
+            None
+        )
+        collateral = None
+        if collateral_item:
+            collateral = {
+                "flag": collateral_item["failure_code"].replace("MARKET_COLLATERAL_MOLIT_", ""),
+                "label": collateral_item["failure_label"],
+                "molit_ltv": float(collateral_item["metric_value"]) if collateral_item.get("metric_value") else None,
+                "description": collateral_item.get("description"),
+                "severity": collateral_item["severity"],
+            }
+
         return {
             "deal_code": deal_code,
             "gate_result": analysis["gate_derived"],
             "gate_reasons": gate_reasons,
+            "collateral": collateral,
             "quant": {
                 "pd_structural": pd_structural,
                 "lifetime_pd_hazard": lifetime_pd,
