@@ -17,7 +17,15 @@ from typing import Any
 
 from dateutil.relativedelta import relativedelta
 
-from db import get_conn
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+def get_conn():
+    return psycopg2.connect(
+        os.getenv("DATABASE_URL", "postgresql://localhost/cosmos"),
+        cursor_factory=RealDictCursor
+    )
 
 
 getcontext().prec = 28
