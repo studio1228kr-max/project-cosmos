@@ -198,7 +198,7 @@ def _fetch_assumption(cur: Any, deal_id: int, scenario_label: str) -> dict[str, 
     cols = [
         "id", "deal_master_id", "scenario_label", "assumption_version",
         "instrument_type", "notional_eok", "rate_type", "spread_bps",
-        "origination_date", "maturity_date", "amortization_type",
+        "origination_date", "maturity_date",
         "interest_payment_frequency_months", "upfront_fee_bps",
     ]
     if _column_exists(cur, "deal_cashflow_assumptions", "fixed_rate_bps"):
@@ -375,7 +375,7 @@ def run_irr_for_deal(deal_id: int, scenario_label: str = "BASE") -> dict[str, An
             all_in_rate=all_in,
             origination_date=a["origination_date"],
             maturity_date=a["maturity_date"],
-            amort_type=a.get("amortization_type") or "BULLET",
+            amort_type="BULLET",
             freq_months=freq_months,
             upfront_fee_bps=upfront_fee_bps,
             noi_annual_eok=noi,
