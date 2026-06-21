@@ -1582,3 +1582,25 @@ def molit_trades(
     finally:
         cur.close()
         conn.close()
+
+
+@app.post("/api/risk-book/deals/{deal_code}/run-diagnostic")
+def trigger_diagnostic(deal_code: str, payload: dict = Depends(verify_token)):
+    """failure_engine 수동 재실행."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM deal_master WHERE deal_code = %s", (deal_code,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="딜 없음")
+        deal_id = row["id"]
+    finally:
+        cur.close()
+        conn.close()
+    try:
+        from failure_engine import run_failure_diagnostic
+        result = run_failure_diagnostic(deal_id)
+        return {"status": "ok", "deal_code": deal_code, "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
