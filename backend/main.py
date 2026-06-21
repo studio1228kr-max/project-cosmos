@@ -1537,3 +1537,48 @@ def migrate_deal_collateral(payload: dict = Depends(verify_token)):
     finally:
         cur.close()
         conn.close()
+
+
+@app.post("/api/infra/molit/ingest")
+def molit_ingest(months: int = 3, payload: dict = Depends(verify_token)):
+    """MOLIT 실거래가 수집 트리거."""
+    try:
+        from ingestors.molit_ingestor import run_ingestion
+        result = run_ingestion(months_back=months)
+        return {"status": "ok", "stats": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/infra/molit/trades")
+def molit_trades(
+    lawd_cd: str = "",
+    deal_ym: str = "",
+    limit: int = 20,
+    payload: dict = Depends(verify_token)
+):
+    """MOLIT 정규화 거래 조회."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        where = []
+        args = []
+        if lawd_cd:
+            where.append("lawd_cd = %s")
+            args.append(lawd_cd)
+        if deal_ym:
+            where.append("deal_ym = %s")
+            args.append(deal_ym)
+        where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+        args.append(limit)
+        cur.execute(f"""
+            SELECT lawd_cd, sgg_nm, deal_ym, deal_date, deal_amount_eok,
+                   building_use, area_sqm, price_per_sqm, buyer_type
+            FROM molit_trade_normalized
+            {where_sql}
+            ORDER BY deal_date DESC LIMIT %s
+        """, args)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
