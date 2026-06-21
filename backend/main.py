@@ -1808,6 +1808,7 @@ def migrate_irr_schema(payload: dict = Depends(verify_token)):
 @app.post("/api/risk-book/deals/{deal_code}/run-irr")
 def trigger_irr(deal_code: str, scenario: str = "BASE", payload: dict = Depends(verify_token)):
     """IRR waterfall 엔진 수동 실행."""
+    from irr_engine import run_irr_for_deal, CashflowEngineError as _IRREngineError
     conn = get_conn()
     cur = conn.cursor()
     try:
@@ -1820,13 +1821,11 @@ def trigger_irr(deal_code: str, scenario: str = "BASE", payload: dict = Depends(
         cur.close()
         conn.close()
     try:
-        from irr_engine import run_irr_for_deal
-        from irr_engine import CashflowEngineError as _CashflowEngineError
         result = run_irr_for_deal(deal_id, scenario_label=scenario)
         if "error" in result:
             raise HTTPException(status_code=422, detail=result)
         return {"status": "ok", "deal_code": deal_code, "result": result}
-    except _CashflowEngineError as e:
+    except _IRREngineError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
