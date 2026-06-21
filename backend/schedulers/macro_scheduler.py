@@ -106,6 +106,14 @@ def start_scheduler() -> None:
     except Exception as e:
         logger.warning("DART scheduler 등록 실패: %s", e)
 
+    # MOLIT 실거래가 — 매월 1일 08:00 KST
+    try:
+        from ingestors.molit_ingestor import run_ingestion as molit_run
+        scheduler.add_job(lambda: molit_run(months_back=2), CronTrigger(day=1, hour=8, minute=0, timezone=KST), id="molit_monthly_0800_kst", name="MOLIT trade ingest", max_instances=1, coalesce=True, misfire_grace_time=86400, replace_existing=True)
+        logger.info("MOLIT scheduler added. Job: monthly day-1 08:00 Asia/Seoul.")
+    except Exception as e:
+        logger.warning("MOLIT scheduler 등록 실패: %s", e)
+
     logger.info("Macro scheduler started. Job: daily 06:00 Asia/Seoul.")
     scheduler.start()
 
