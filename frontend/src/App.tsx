@@ -858,7 +858,7 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
 
   const activePage = nav === "intake" ? "intake" : nav === "sourcing" ? "market" : nav === "diagnostic" ? "diagnostic" : nav === "evidence" ? "evidence" : currentView;
   return (
-    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("sourcing");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="evidence"){setNav("evidence");}else if (p==="today"){setNav("pipeline");setCurrentView("today");}else if (p==="pipeline"){setNav("pipeline");setCurrentView("pipeline");}else{setNav("pipeline");setCurrentView("today");} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr" onCollapsedChange={setSidebarCollapsed}>
+    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("sourcing");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="riskbook"){setNav("diagnostic");}else if (p==="evidence"){setNav("evidence");}else if (p==="today"){setNav("pipeline");setCurrentView("today");}else if (p==="pipeline"){setNav("pipeline");setCurrentView("pipeline");}else{setNav("pipeline");setCurrentView("today");} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr" onCollapsedChange={setSidebarCollapsed}>
       <div style={{ display:"flex", height:"100%", overflow:"hidden" }}>
         {nav === "evidence" ? (
             <EvidenceChecklist />
