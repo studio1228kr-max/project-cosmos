@@ -1639,3 +1639,101 @@ def migrate_collateral_area(payload: dict = Depends(verify_token)):
     finally:
         cur.close()
         conn.close()
+
+@app.post("/api/infra/migrate/cashflow-schema")
+def migrate_cashflow_schema(payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS deal_cashflow_assumptions (
+            id SERIAL PRIMARY KEY,
+            deal_master_id INTEGER NOT NULL REFERENCES deal_master(id),
+            instrument_type VARCHAR(40) NOT NULL,
+            scenario_label VARCHAR(20) NOT NULL DEFAULT 'BASE',
+            assumption_version INTEGER NOT NULL DEFAULT 1,
+            notional_eok NUMERIC(14,4),
+            currency VARCHAR(10) DEFAULT 'KRW',
+            origination_date DATE,
+            maturity_date DATE,
+            rate_type VARCHAR(20),
+            base_index VARCHAR(20),
+            spread_bps NUMERIC(8,2),
+            floor_rate NUMERIC(8,4),
+            cap_rate NUMERIC(8,4),
+            reset_frequency_months INTEGER,
+            interest_payment_frequency_months INTEGER DEFAULT 3,
+            day_count_convention VARCHAR(20) DEFAULT 'ACT/365',
+            upfront_fee_bps NUMERIC(8,2),
+            commitment_fee_bps NUMERIC(8,2),
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(deal_master_id, scenario_label, assumption_version)
+        )""")
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS deal_cashflow_cre (
+            id SERIAL PRIMARY KEY,
+            deal_master_id INTEGER NOT NULL REFERENCES deal_master(id),
+            scenario_label VARCHAR(20) NOT NULL DEFAULT 'BASE',
+            cre_collateral_type VARCHAR(30),
+            loan_purpose VARCHAR(20),
+            ltv_at_closing NUMERIC(6,4),
+            ltc_at_closing NUMERIC(6,4),
+            dscr_covenant_min NUMERIC(6,4),
+            amortization_type VARCHAR(20) DEFAULT 'BULLET',
+            interest_reserve_months INTEGER,
+            dsra_months INTEGER,
+            assumed_refi_date DATE,
+            prepayment_assumption VARCHAR(20) DEFAULT 'NONE',
+            extension_option_months INTEGER,
+            UNIQUE(deal_master_id, scenario_label)
+        )""")
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS deal_cashflow_pf (
+            id SERIAL PRIMARY KEY,
+            deal_master_id INTEGER NOT NULL REFERENCES deal_master(id),
+            scenario_label VARCHAR(20) NOT NULL DEFAULT 'BASE',
+            project_type VARCHAR(30),
+            total_project_cost_eok NUMERIC(14,4),
+            equity_contribution_eok NUMERIC(14,4),
+            ltc_at_closing NUMERIC(6,4),
+            construction_start_date DATE,
+            construction_end_date DATE,
+            expected_completion_date DATE,
+            draw_schedule_type VARCHAR(20) DEFAULT 'PRO_RATA',
+            interest_reserve_months INTEGER,
+            dsra_months INTEGER,
+            stabilized_noi_eok NUMERIC(14,4),
+            exit_cap_rate NUMERIC(6,4),
+            assumed_exit_date DATE,
+            UNIQUE(deal_master_id, scenario_label)
+        )""")
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS deal_cashflow_leveraged (
+            id SERIAL PRIMARY KEY,
+            deal_master_id INTEGER NOT NULL REFERENCES deal_master(id),
+            scenario_label VARCHAR(20) NOT NULL DEFAULT 'BASE',
+            tranche_type VARCHAR(20),
+            has_pik_toggle BOOLEAN DEFAULT FALSE,
+            pik_toggle_style VARCHAR(30),
+            cash_coupon_rate NUMERIC(8,4),
+            pik_coupon_rate NUMERIC(8,4),
+            pik_compounding_frequency_months INTEGER DEFAULT 3,
+            oid_bps NUMERIC(8,2),
+            exit_fee_bps NUMERIC(8,2),
+            call_protection_style VARCHAR(30),
+            equity_kicker_flag BOOLEAN DEFAULT FALSE,
+            amortization_type VARCHAR(20) DEFAULT 'BULLET',
+            UNIQUE(deal_master_id, scenario_label)
+        )""")
+
+        conn.commit()
+        return {"status": "ok", "message": "cashflow schema v1 생성 완료 (4 테이블)"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
