@@ -361,11 +361,11 @@ def run_irr_for_deal(deal_id: int, scenario_label: str = "BASE") -> dict[str, An
         warnings.extend(rate_warnings)
 
         cur.execute(
-            "SELECT noi_annual FROM deal_financials WHERE deal_master_id=%s AND is_current=TRUE LIMIT 1",
+            "SELECT noi FROM deal_financials WHERE deal_master_id=%s AND is_current=TRUE LIMIT 1",
             (deal_id,),
         )
         fin = cur.fetchone()
-        noi = _dec(_row_get(fin, "noi_annual"), "noi_annual", allow_none=True)
+        noi = _dec(_row_get(fin, "noi"), "noi", allow_none=True)
         if noi is None:
             warnings.append("NOI_MISSING_DSCR_NOT_COMPUTED")
 
