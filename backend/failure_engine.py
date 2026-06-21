@@ -6,7 +6,7 @@ Core — asset-class agnostic
 import os, psycopg2, psycopg2.extras, json
 from datetime import datetime
 from core.quant_client import evaluate_deal, QuantClientError
-from core.quant_inputs import assemble_merton_inputs, assemble_cecl_inputs
+from core.quant_inputs import assemble_merton_inputs, assemble_cecl_inputs, assemble_cox_hazard_inputs
 
 # ── 정량엔진(Merton/KMV + CECL) House 임계값 ──────────────────
 # House 가정(avm_sigma, LGD) 의존 — avm_engine/recovery_strategy_engine_kr
@@ -474,7 +474,20 @@ def check_quant(cur, deal_id: int, asset_class: str, deal_stage: str, deal_maste
                 "asset_class": asset_class,
             })
 
+    # cox_hazard — merton PD → lifetime PD (flat approximation 해소)
+    cox_hazard_lifetime_pd = None
+    cox_inputs = assemble_cox_hazard_inputs(deal_master, fin, merton_result)
+    if cox_inputs is not None:
+        try:
+            cox_result = evaluate_deal("cox_hazard_engine", deal_id, cox_inputs)
+            cox_hazard_lifetime_pd = cox_result.get("metrics", {}).get("lifetime_pd_hazard")
+        except QuantClientError:
+            cox_hazard_lifetime_pd = None  # cox 실패해도 cecl은 계속
+
     cecl_inputs = assemble_cecl_inputs(deal_master, fin, merton_result)
+    if cecl_inputs is not None and cox_hazard_lifetime_pd is not None:
+        cecl_inputs["hazard_lifetime_pd"] = cox_hazard_lifetime_pd
+
     if cecl_inputs is None:
         return failures
 
