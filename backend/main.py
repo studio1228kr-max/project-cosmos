@@ -1344,54 +1344,91 @@ def api_gate_check(body: GateCheckRequest, payload: dict = Depends(verify_token)
 def api_risk_card(deal_code: str, payload: dict = Depends(verify_token)):
     """
     Risk Card API — 딜 화면 우측 패널용.
-    failure_engine.run_failure_diagnostic() 결과를 IC-grade 카드 형태로 반환.
+    failure_analysis + failure_items 테이블에서 최신 진단 결과를 IC-grade 카드 형태로 반환.
     """
     try:
-        from failure_engine import run_failure_diagnostic
         conn = get_conn()
         cur = conn.cursor()
+
         cur.execute("SELECT id FROM deal_master WHERE deal_code = %s", (deal_code,))
         row = cur.fetchone()
-        cur.close()
-        conn.close()
         if not row:
+            cur.close()
+            conn.close()
             raise HTTPException(status_code=404, detail="deal not found")
 
-        result = run_failure_diagnostic(row["id"])
+        deal_id = row["id"]
 
-        # quant 섹션에서 PD / lifetime PD / EL 추출
-        quant_checks = [c for c in result.get("checks", []) if c.get("category") == "QUANT"]
+        # 최신 failure_analysis
+        cur.execute("""
+            SELECT id, gate_derived, overall_severity, critical_count, moderate_count,
+                   created_at
+            FROM failure_analysis
+            WHERE deal_master_id = %s
+            ORDER BY id DESC LIMIT 1
+        """, (deal_id,))
+        analysis = cur.fetchone()
+
+        if not analysis:
+            cur.close()
+            conn.close()
+            return {
+                "deal_code": deal_code,
+                "gate_result": "NO_ANALYSIS",
+                "gate_reasons": [],
+                "quant": {"pd_structural": None, "lifetime_pd_hazard": None, "el_12m": None, "el_ratio": None},
+                "diagnostic_summary": {},
+                "calculated_at": None,
+            }
+
+        analysis_id = analysis["id"]
+
+        # failure_items에서 quant 지표 추출
+        cur.execute("""
+            SELECT failure_dimension, failure_code, failure_label, severity,
+                   metric_name, metric_value, threshold_value, breach_amount
+            FROM failure_items
+            WHERE failure_analysis_id = %s
+            ORDER BY severity DESC, failure_dimension
+        """, (analysis_id,))
+        items = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        # quant 값 추출
         pd_structural = None
         lifetime_pd = None
         el_12m = None
         el_ratio = None
-
-        for c in quant_checks:
-            mn = c.get("metric_name", "")
+        for item in items:
+            mn = item.get("metric_name") or ""
+            mv = item.get("metric_value")
             if mn == "pd_structural_raw":
-                pd_structural = c.get("metric_value")
+                pd_structural = mv
             elif mn == "lifetime_pd_hazard":
-                lifetime_pd = c.get("metric_value")
+                lifetime_pd = mv
             elif mn == "expected_loss_12m":
-                el_12m = c.get("metric_value")
+                el_12m = mv
             elif mn == "el_to_exposure_ratio":
-                el_ratio = c.get("metric_value")
+                el_ratio = mv
 
-        # gate 결과
-        gate_result = result.get("gate_result", "UNKNOWN")
+        # CRITICAL 게이트 이유
         gate_reasons = [
             {
-                "severity": c.get("severity"),
-                "label": c.get("label"),
-                "category": c.get("category"),
+                "severity": item["severity"],
+                "label": item["failure_label"],
+                "dimension": item["failure_dimension"],
+                "metric_name": item.get("metric_name"),
+                "metric_value": item.get("metric_value"),
             }
-            for c in result.get("checks", [])
-            if c.get("severity") == "CRITICAL"
+            for item in items
+            if item["severity"] == "CRITICAL"
         ]
 
         return {
             "deal_code": deal_code,
-            "gate_result": gate_result,
+            "gate_result": analysis["gate_derived"],
             "gate_reasons": gate_reasons,
             "quant": {
                 "pd_structural": pd_structural,
@@ -1399,8 +1436,12 @@ def api_risk_card(deal_code: str, payload: dict = Depends(verify_token)):
                 "el_12m": el_12m,
                 "el_ratio": el_ratio,
             },
-            "diagnostic_summary": result.get("summary", {}),
-            "calculated_at": result.get("run_at"),
+            "diagnostic_summary": {
+                "overall_severity": analysis["overall_severity"],
+                "critical_count": analysis["critical_count"],
+                "moderate_count": analysis["moderate_count"],
+            },
+            "calculated_at": str(analysis["created_at"]) if analysis.get("created_at") else None,
         }
 
     except HTTPException:
