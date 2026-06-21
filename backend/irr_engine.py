@@ -340,10 +340,14 @@ def run_irr_for_deal(deal_id: int, scenario_label: str = "BASE") -> dict[str, An
         if not a:
             return {"error": "deal_cashflow_assumptions 없음", "warnings": ["NO_CASHFLOW_ASSUMPTION"]}
 
-        cur.execute(
-            "SELECT value FROM ecos_macro_normalized WHERE stat_code='CD_91' AND is_latest=TRUE LIMIT 1"
-        )
-        ecos = cur.fetchone()
+        try:
+            cur.execute(
+                "SELECT value FROM ecos_macro_normalized WHERE stat_code='CD_91' AND is_latest=TRUE LIMIT 1"
+            )
+            ecos = cur.fetchone()
+        except Exception:
+            conn.rollback()
+            ecos = None
         if ecos:
             base_rate = _dec(_row_get(ecos, "value"), "CD_91") / Decimal("100")
         else:
