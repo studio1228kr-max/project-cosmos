@@ -402,6 +402,61 @@ def check_market(cur, deal_id: int, asset_class: str) -> list[dict]:
             "asset_class": asset_class,
         })
 
+    # MOLIT 실거래가 기반 담보 현재가 추정 + LTV 재계산
+    try:
+        cur.execute("""
+            SELECT dc.bjdong_cd, dc.area_sqm, df.loan_amount, df.collateral_value_base
+            FROM deal_collateral dc
+            JOIN deal_financials df ON df.deal_master_id = dc.deal_master_id AND df.is_current = TRUE
+            WHERE dc.deal_master_id = %s
+            LIMIT 1
+        """, (deal_id,))
+        col = cur.fetchone()
+        if col and col["bjdong_cd"]:
+            cur.execute("""
+                SELECT AVG(price_per_sqm) AS avg_price, COUNT(*) AS trade_count,
+                       MAX(deal_date) AS latest_trade
+                FROM molit_trade_normalized
+                WHERE lawd_cd = LEFT(%s, 5)
+                  AND deal_date >= CURRENT_DATE - INTERVAL '3 months'
+                  AND building_use NOT IN ('주거')
+                  AND price_per_sqm IS NOT NULL
+            """, (col["bjdong_cd"],))
+            mkt = cur.fetchone()
+            if mkt and mkt["avg_price"] and col["area_sqm"]:
+                molit_value_man = int(float(mkt["avg_price"]) * float(col["area_sqm"]) / 10000)
+                molit_value_eok = round(molit_value_man / 10000, 1)
+                loan_amount = float(col["loan_amount"]) if col["loan_amount"] else 0
+                molit_ltv = round(loan_amount / molit_value_man, 4) if molit_value_man > 0 else None
+                base_value = float(col["collateral_value_base"]) if col["collateral_value_base"] else None
+                price_change = round((molit_value_man - base_value) / base_value, 4) if base_value else None
+
+                # collateral_risk_flag
+                if molit_ltv is not None:
+                    if molit_ltv > 0.75:
+                        flag, sev = "WEAKENING", "CRITICAL"
+                    elif molit_ltv > 0.65:
+                        flag, sev = "WATCH", "MODERATE"
+                    else:
+                        flag, sev = "STABLE", "DEFERRED"
+                else:
+                    flag, sev = "UNKNOWN", "DEFERRED"
+
+                failures.append({
+                    "dimension": "MARKET",
+                    "code": f"MARKET_COLLATERAL_MOLIT_{flag}",
+                    "label": f"MOLIT 실거래 기반 담보가 {molit_value_eok}억 추정 | LTV {molit_ltv*100:.1f}% | {flag}",
+                    "severity": sev,
+                    "asset_class": asset_class,
+                    "metric_name": "molit_ltv",
+                    "metric_value": molit_ltv,
+                    "threshold_value": 0.65,
+                    "breach_amount": round(molit_ltv - 0.65, 4) if molit_ltv else None,
+                    "description": f"실거래 {mkt['trade_count']}건 평균단가 기준 | 최근거래 {mkt['latest_trade']} | 가격변동 {price_change*100:+.1f}%" if price_change is not None else f"실거래 {mkt['trade_count']}건 평균단가 기준 | 최근거래 {mkt['latest_trade']}",
+                })
+    except Exception as e:
+        pass  # MOLIT 데이터 없으면 skip
+
     return failures
 
 
