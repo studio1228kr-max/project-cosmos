@@ -206,6 +206,15 @@ def run_ingestion(lookback_days: int = 90) -> Dict[str, int]:
                 )
                 if upsert_event(conn, event, deal_id):
                     stats["inserted"] += 1
+                    if deal_id:
+                        try:
+                            from failure_engine import run_failure_diagnostic
+                            run_failure_diagnostic(deal_id)
+                            stats.setdefault("retriggered", 0)
+                            stats["retriggered"] += 1
+                            logger.info("DART 이벤트 → failure_engine 재실행: deal_id=%s corp=%s event=%s", deal_id, corp_name, event_type)
+                        except Exception as e:
+                            logger.warning("failure_engine 재실행 실패: %s", e)
 
             if len(items) < 100:
                 break
