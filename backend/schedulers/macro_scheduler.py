@@ -97,6 +97,15 @@ def run_macro_pipeline() -> Dict[str, Any]:
 def start_scheduler() -> None:
     scheduler = BlockingScheduler(timezone=KST)
     scheduler.add_job(run_macro_pipeline, CronTrigger(hour=6, minute=0, timezone=KST), id="ecos_macro_daily_0600_kst", name="ECOS macro ingest and normalize", max_instances=1, coalesce=True, misfire_grace_time=3600, replace_existing=True)
+
+    # DART 공시 수집 — 매일 07:00 KST
+    try:
+        from ingestors.dart_ingestor import run_ingestion as dart_run
+        scheduler.add_job(lambda: dart_run(lookback_days=2), CronTrigger(hour=7, minute=0, timezone=KST), id="dart_daily_0700_kst", name="DART disclosure ingest", max_instances=1, coalesce=True, misfire_grace_time=3600, replace_existing=True)
+        logger.info("DART scheduler added. Job: daily 07:00 Asia/Seoul.")
+    except Exception as e:
+        logger.warning("DART scheduler 등록 실패: %s", e)
+
     logger.info("Macro scheduler started. Job: daily 06:00 Asia/Seoul.")
     scheduler.start()
 
