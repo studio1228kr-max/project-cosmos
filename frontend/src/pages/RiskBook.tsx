@@ -58,6 +58,16 @@ export default function RiskBook() {
       .catch(() => setLoading(false));
   }, [selected]);
 
+  const [riskCard, setRiskCard] = useState<any>(null);
+
+  useEffect(() => {
+    if (!selected) return;
+    const token = localStorage.getItem("token") || "";
+    axios.get(`${API}/api/risk-book/deals/${selected}/risk-card`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => setRiskCard(r.data))
+      .catch(() => setRiskCard(null));
+  }, [selected]);
+
   const deal = data?.deal;
   const gate = data?.gate;
   const scenarios = data?.scenarios || [];
@@ -112,6 +122,34 @@ export default function RiskBook() {
           </div>
 
           {/* DECISION STRIP */}
+          {riskCard && (
+            <div style={{ margin: "20px 0 4px", border: `1px solid ${riskCard.gate_result === "HOLD" ? C.critical : C.border}`, background: C.surface }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 9, color: C.textS, letterSpacing: "0.15em" }}>COSMOS GATE ENGINE</div>
+                <div style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", padding: "2px 10px",
+                  color: riskCard.gate_result === "HOLD" ? C.critical : C.clear,
+                  border: `1px solid ${riskCard.gate_result === "HOLD" ? C.critical : C.clear}30`,
+                  background: riskCard.gate_result === "HOLD" ? "#c0392b18" : "#27ae6018",
+                }}>{riskCard.gate_result}</div>
+              </div>
+              <div style={{ padding: "10px 16px" }}>
+                {(riskCard.gate_reasons || []).map((r: any, i: number) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 9, color: SEV_COLOR[r.severity] || C.textS, letterSpacing: "0.1em", minWidth: 60 }}>{r.severity}</span>
+                    <span style={{ fontSize: 10, color: C.text, letterSpacing: "0.05em" }}>{r.label}</span>
+                  </div>
+                ))}
+                {riskCard.diagnostic_summary && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}`, display: "flex", gap: 16 }}>
+                    <span style={{ fontSize: 9, color: C.textS }}>CRITICAL <span style={{ color: C.critical }}>{riskCard.diagnostic_summary.critical_count}</span></span>
+                    <span style={{ fontSize: 9, color: C.textS }}>MODERATE <span style={{ color: C.moderate }}>{riskCard.diagnostic_summary.moderate_count}</span></span>
+                    {riskCard.calculated_at && <span style={{ fontSize: 9, color: C.textSS }}>{riskCard.calculated_at.slice(0,16)}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 1, margin: "1px 0", background: C.border }}>
             {[
               { label: "DECISION", value: gate?.final_gate, color: GATE_COLOR[gate?.final_gate] || C.gold },
