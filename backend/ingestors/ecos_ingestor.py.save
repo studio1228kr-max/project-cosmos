@@ -1,0 +1,75 @@
+# 1. ecos_ingestor.py — GPT 문서에서 코드 복사 후
+pbpaste > ingestors/ecos_ingestor.py
+
+# 2. ecos_normalizer.py — GPT 문서에서 코드 복사 후
+pbpaste > ingestors/ecos_normalizer.py
+
+# 3. macro_scheduler.py — 방금 받은 코드 복사 후
+pbpaste > schedulers/macro_scheduler.py
+BEGIN;
+
+ALTER TABLE raw_macro_data
+    ADD COLUMN IF NOT EXISTS normalization_status TEXT NOT NULL DEFAULT 'PENDING',
+    ADD COLUMN IF NOT EXISTS normalization_run_id TEXT NULL,
+    ADD COLUMN IF NOT EXISTS normalization_started_at TIMESTAMPTZ NULL;
+
+-- legacy backfill
+UPDATE raw_macro_data
+SET normalization_status =
+    CASE
+        WHEN is_normalized = TRUE AND normalize_error IS NULL THEN 'SUCCESS'
+        WHEN is_normalized = TRUE AND normalize_error IS NOT NULL THEN 'SKIPPED'
+        WHEN is_normalized = FALSE AND normalize_error IS NOT NULL THEN 'FAILED_RETRY'
+        ELSE 'PENDING'
+    END
+WHERE normalization_status IS NULL
+   OR normalization_status = 'PENDING';
+
+CREATE INDEX IF NOT EXISTS idx_raw_macro_data_normalization_claim
+    ON raw_macro_data (
+        source,
+        is_normalized,
+        normalization_status,
+        fetched_at
+    )
+    WHERE is_normalized = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_raw_macro_data_normalization_run_id
+    ON raw_macro_data (normalization_run_id)
+    WHERE normalization_run_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_raw_macro_data_normalization_started_at
+    ON raw_macro_data (normalization_started_at)
+    WHERE normalization_status = 'PROCESSING';
+
+COMfrom __future__ import annotations
+
+import hashlib
+import json
+import logging
+import os
+import sys
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+from urllib.parse import quote
+from zoneinfo import ZoneInfo
+
+import requests
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+logger = logging.getLogger(__name__)
+SOURCE = "ECOS"
+PIPELINE_STAGE = "INGEST"
+KST = ZoneInfo("Asia/Seoul")
+ECOS_API_BASE_URL = os.getenv("ECOS_API_BASE_URL", "https://ecos.bok.or.kr/api")
+DEFAULT_LOOKBACK_MONTHS = int(os.getenv("ECOS_LOOKBACK_MONTHS", "36"))
+ECOS_PAGE_SIZE = int(os.getenv("ECOS_PAGE_SIZE", "1000"))
+ECOS_MAX_PAGES = int(os.getenv("ECOS_MAX_PAGES", "50"))
+REQUEST_TIMEOUT_SECONDS = int(os.getenv("ECOS_REQUEST_TIMEOUT_SECONDS", "30"))
