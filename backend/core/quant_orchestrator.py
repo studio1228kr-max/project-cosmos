@@ -14,16 +14,17 @@ from core.quant_client import evaluate_deal, QuantClientError
 # dd_stage별로 호출할 엔진 목록 (필요해지는 순서대로 채워나감)
 STAGE_ENGINE_MAP: dict[str, list[str]] = {
     "PRE": [
-        # "avm_engine",      # TODO: avm_engine.py 완성되면 등록
+        "merton_kmv",
+        "cecl_engine",
     ],
     "SOFT": [
-        # "avm_engine",
-        # "merton_kmv",      # TODO: merton_kmv.py 완성되면 등록
+        "merton_kmv",
+        "cecl_engine",
+        # "cox_hazard_engine",   # TODO: Cox Hazard 완성되면 등록 (lifetime PD flat approximation 해소)
     ],
     "FULL": [
-        # "avm_engine",
-        # "merton_kmv",
-        # "cecl_engine",     # TODO: cecl_engine.py 완성되면 등록
+        "merton_kmv",
+        "cecl_engine",          # cecl_engine 내부에서 dd_stage=FULL이면 pd_accounting=1.0 강제
         # "cox_hazard_engine",
     ],
 }

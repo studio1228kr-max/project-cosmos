@@ -5,6 +5,16 @@ Core — asset-class agnostic
 """
 import os, psycopg2, psycopg2.extras, json
 from datetime import datetime
+from core.quant_client import evaluate_deal, QuantClientError
+from core.quant_inputs import assemble_merton_inputs, assemble_cecl_inputs
+
+# ── 정량엔진(Merton/KMV + CECL) House 임계값 ──────────────────
+# House 가정(avm_sigma, LGD) 의존 — avm_engine/recovery_strategy_engine_kr
+# 완성되면 이 임계값들의 입력 신뢰도가 올라간다. 임계값 자체는 House Canon 기준.
+PD_CRITICAL_THRESHOLD = 0.50
+PD_MODERATE_THRESHOLD = 0.15
+EL_RATIO_CRITICAL_THRESHOLD = 0.10
+EL_RATIO_MODERATE_THRESHOLD = 0.03
 
 
 def get_conn():
@@ -38,14 +48,43 @@ def derive_overall_severity(critical: int, moderate: int) -> str:
     return "CLEAR"
 
 
+# ── Stage-aware evidence 평가 ────────────────────────────────
+# PRE 단계 딜에 Full-DD급 증빙을 CRITICAL로 요구하지 않기 위한 게이트.
+# required_stage / status 는 deal_evidence 테이블 컬럼에서 직접 읽는다 (DB가 정답, 코드에 하드코딩 안 함).
+STAGE_RANK = {"PRE": 0, "SOFT": 1, "FULL": 2}
+
+
+def stage_satisfied(deal_stage: str, required_stage: str) -> bool:
+    """딜이 아직 그 단계에 도달하지 않았으면 해당 항목은 평가 대상에서 제외한다."""
+    return STAGE_RANK.get(deal_stage, 0) >= STAGE_RANK.get(required_stage, 0)
+
+
+def evidence_status_severity(status: str, required_stage: str, deal_stage: str):
+    """
+    이 항목이 deal_stage 기준 아직 필요한 단계가 아니면 None(평가 안 함).
+    필요한 단계가 됐으면 status로 심각도 결정:
+      verified      -> None (문제 없음)
+      approx        -> MODERATE (역추론 엔진이 추정 완료, 리스크는 줄었으나 검증 전)
+      not_attempted -> CRITICAL
+    """
+    if not stage_satisfied(deal_stage, required_stage):
+        return None
+    if status == "verified":
+        return None
+    if status == "approx":
+        return "MODERATE"
+    return "CRITICAL"
+
+
 # ── 5개 차원 진단 함수 ──────────────────────────────────────
 
-def check_evidence(cur, deal_id: int, asset_class: str) -> list[dict]:
+def check_evidence(cur, deal_id: int, asset_class: str, deal_stage: str = "PRE") -> list[dict]:
     """EVIDENCE 차원: 증거 미비 / 신뢰도 부족"""
     failures = []
 
     cur.execute("""
-        SELECT evidence_type, verification_status, confidence_level, distribution_level
+        SELECT evidence_type, verification_status, confidence_level, distribution_level,
+               required_stage, status
         FROM deal_evidence WHERE deal_master_id = %s
     """, (deal_id,))
     evidences = cur.fetchall()
@@ -60,40 +99,57 @@ def check_evidence(cur, deal_id: int, asset_class: str) -> list[dict]:
         })
         return failures
 
-    # 미검증 CRITICAL 필드 체크
-    critical_fields = {
+    # 라벨용 — 알려진 evidence_type은 구체적 설명, 그 외는 일반 라벨 (화이트리스트로 평가 자체를 막지 않음)
+    known_labels = {
         "AUDIT_REPORT": "NOI / 재무수치 미검증",
         "LOAN_AGREEMENT": "대출조건 미검증",
     }
-    unverified = [e for e in evidences
-                  if e["verification_status"] in ("UNVERIFIED",)
-                  and e["evidence_type"] in critical_fields]
 
-    for ev in unverified:
+    for ev in evidences:
+        sev = evidence_status_severity(
+            status=ev.get("status", "not_attempted"),
+            required_stage=ev.get("required_stage", "PRE"),
+            deal_stage=deal_stage,
+        )
+        if sev is None:
+            continue
+
+        label_detail = known_labels.get(ev["evidence_type"], "증빙 미비")
         failures.append({
             "dimension": "EVIDENCE",
-            "code": f"EVIDENCE_{ev['evidence_type']}_UNVERIFIED",
-            "label": f"{ev['evidence_type']} 미검증 — {critical_fields.get(ev['evidence_type'],'')}",
-            "severity": "CRITICAL",
+            "code": f"EVIDENCE_{ev['evidence_type']}_{ev.get('status','not_attempted').upper()}",
+            "label": f"{ev['evidence_type']} {ev.get('status','not_attempted')} 상태 — {label_detail}",
+            "severity": sev,
             "asset_class": asset_class,
         })
 
-    # 담보가치 미검증 (CRE 전용이지만 Core에서도 collateral 없으면 CRITICAL)
+    # 담보가치 — Pre/Soft 단계는 AVM approx로 충분, FULL 단계부터 감정평가급 요구
     cur.execute("""
         SELECT collateral_value_base, valuation_confidence
         FROM deal_financials WHERE deal_master_id = %s AND is_current = TRUE LIMIT 1
     """, (deal_id,))
     fin = cur.fetchone()
     if fin and fin["valuation_confidence"] in ("LOW", None):
-        failures.append({
-            "dimension": "EVIDENCE",
-            "code": "EVIDENCE_COLLATERAL_UNVERIFIED",
-            "label": "담보가치 미검증 — 감정평가서 또는 실거래 comps 필요",
-            "severity": "CRITICAL",
-            "asset_class": asset_class,
-            "metric_name": "valuation_confidence",
-            "metric_value": None,
-        })
+        if stage_satisfied(deal_stage, "FULL"):
+            failures.append({
+                "dimension": "EVIDENCE",
+                "code": "EVIDENCE_COLLATERAL_UNVERIFIED",
+                "label": "담보가치 미검증 — 감정평가서 또는 실거래 comps 필요",
+                "severity": "CRITICAL",
+                "asset_class": asset_class,
+                "metric_name": "valuation_confidence",
+                "metric_value": None,
+            })
+        else:
+            failures.append({
+                "dimension": "EVIDENCE",
+                "code": "EVIDENCE_COLLATERAL_APPROX_ONLY",
+                "label": "담보가치 Approx 단계 — AVM 추정치, Full-DD 시 감정평가로 검증 필요",
+                "severity": "DEFERRED",
+                "asset_class": asset_class,
+                "metric_name": "valuation_confidence",
+                "metric_value": None,
+            })
 
     # evidence completeness PARTIAL/INSUFFICIENT
     if fin and fin.get("data_gate_status") in ("INSUFFICIENT",):
@@ -230,7 +286,7 @@ def check_financial(cur, deal_id: int, asset_class: str) -> list[dict]:
     return failures
 
 
-def check_structural(cur, deal_id: int, asset_class: str) -> list[dict]:
+def check_structural(cur, deal_id: int, asset_class: str, deal_stage: str = "PRE") -> list[dict]:
     """STRUCTURAL 차원: 거래 구조 닫히지 않음"""
     failures = []
 
@@ -250,19 +306,37 @@ def check_structural(cur, deal_id: int, asset_class: str) -> list[dict]:
             "asset_class": None,
         })
 
-    # 1순위 담보권 관련 증거 없으면
+    # 1순위 담보권 관련 증거
     cur.execute("""
-        SELECT verification_status FROM deal_evidence
+        SELECT verification_status, required_stage, status FROM deal_evidence
         WHERE deal_master_id = %s AND evidence_type = 'LOAN_AGREEMENT'
         LIMIT 1
     """, (deal_id,))
     lien_ev = cur.fetchone()
-    if not lien_ev or lien_ev["verification_status"] in ("UNVERIFIED", "ESTIMATED"):
+
+    if not lien_ev:
+        sev = evidence_status_severity("not_attempted", "SOFT", deal_stage)
+    else:
+        sev = evidence_status_severity(
+            lien_ev.get("status", "not_attempted"),
+            lien_ev.get("required_stage", "SOFT"),
+            deal_stage,
+        )
+
+    if sev is not None:
         failures.append({
             "dimension": "STRUCTURAL",
             "code": "STRUCTURAL_SENIOR_LIEN_UNCLEAR",
             "label": "신규 1순위 담보권 진입 가능 여부 미확인 — 등기부 및 Payoff 절차 미검증",
-            "severity": "CRITICAL",
+            "severity": sev,
+            "asset_class": asset_class,
+        })
+    elif lien_ev is None or lien_ev.get("status") != "verified":
+        failures.append({
+            "dimension": "STRUCTURAL",
+            "code": "STRUCTURAL_SENIOR_LIEN_PENDING_SOFT_DD",
+            "label": "1순위 담보권 확인은 Soft-DD(LOI/NDA) 단계 이후 진행 예정",
+            "severity": "DEFERRED",
             "asset_class": asset_class,
         })
 
@@ -331,86 +405,225 @@ def check_market(cur, deal_id: int, asset_class: str) -> list[dict]:
     return failures
 
 
+def check_quant(cur, deal_id: int, asset_class: str, deal_stage: str, deal_master: dict) -> list[dict]:
+    """
+    정량엔진 차원(FINANCIAL에 합산): merton_kmv(PD) → cecl_engine(EL/Stage) 체이닝.
+    House 가정(avm_sigma, LGD) 기반이므로 라벨에 명시 — avm_engine,
+    recovery_strategy_engine_kr 완성되면 이 가정을 실측값으로 교체한다.
+    """
+    failures = []
+
+    cur.execute("""
+        SELECT * FROM deal_financials
+        WHERE deal_master_id = %s AND is_current = TRUE LIMIT 1
+    """, (deal_id,))
+    fin = cur.fetchone()
+    if not fin:
+        return failures
+    fin = dict(fin)
+
+    merton_inputs = assemble_merton_inputs(deal_master, fin)
+    if merton_inputs is None:
+        failures.append({
+            "dimension": "FINANCIAL",
+            "code": "FINANCIAL_QUANT_INPUT_INSUFFICIENT",
+            "label": "정량엔진(Merton/KMV) 입력 부족 — 담보가치/부채잔액/만기일 중 누락",
+            "severity": "DEFERRED",
+            "asset_class": asset_class,
+        })
+        return failures
+
+    try:
+        merton_result = evaluate_deal("merton_kmv", deal_id, merton_inputs)
+    except QuantClientError as e:
+        failures.append({
+            "dimension": "FINANCIAL",
+            "code": "FINANCIAL_QUANT_MERTON_FAILED",
+            "label": f"Merton/KMV 계산 실패 — {e}",
+            "severity": "DEFERRED",
+            "asset_class": asset_class,
+        })
+        return failures
+
+    merton_metrics = merton_result.get("metrics", {})
+    pd_value = merton_metrics.get("pd_structural_raw")
+
+    if pd_value is not None:
+        if pd_value >= PD_CRITICAL_THRESHOLD:
+            failures.append({
+                "dimension": "FINANCIAL",
+                "code": "FINANCIAL_QUANT_PD_CRITICAL",
+                "label": f"Merton/KMV 구조적 부도확률 {pd_value*100:.1f}% — Critical 기준 {PD_CRITICAL_THRESHOLD*100:.0f}% 초과 (House 가정 sigma 적용)",
+                "severity": "CRITICAL",
+                "metric_name": "pd_structural_raw",
+                "metric_value": pd_value,
+                "threshold_value": PD_CRITICAL_THRESHOLD,
+                "breach_amount": pd_value - PD_CRITICAL_THRESHOLD,
+                "asset_class": asset_class,
+            })
+        elif pd_value >= PD_MODERATE_THRESHOLD:
+            failures.append({
+                "dimension": "FINANCIAL",
+                "code": "FINANCIAL_QUANT_PD_MODERATE",
+                "label": f"Merton/KMV 구조적 부도확률 {pd_value*100:.1f}% — Moderate 기준 {PD_MODERATE_THRESHOLD*100:.0f}% 초과 (House 가정 sigma 적용)",
+                "severity": "MODERATE",
+                "metric_name": "pd_structural_raw",
+                "metric_value": pd_value,
+                "threshold_value": PD_MODERATE_THRESHOLD,
+                "breach_amount": pd_value - PD_MODERATE_THRESHOLD,
+                "asset_class": asset_class,
+            })
+
+    cecl_inputs = assemble_cecl_inputs(deal_master, fin, merton_result)
+    if cecl_inputs is None:
+        return failures
+
+    try:
+        cecl_result = evaluate_deal("cecl_engine", deal_id, cecl_inputs)
+    except QuantClientError as e:
+        failures.append({
+            "dimension": "FINANCIAL",
+            "code": "FINANCIAL_QUANT_CECL_FAILED",
+            "label": f"CECL/IFRS9 ECL 계산 실패 — {e}",
+            "severity": "DEFERRED",
+            "asset_class": asset_class,
+        })
+        return failures
+
+    cecl_metrics = cecl_result.get("metrics", {})
+    expected_loss = cecl_metrics.get("expected_loss")
+    ifrs9_stage = cecl_metrics.get("ifrs9_stage_effective")
+    current_balance = cecl_inputs.get("current_balance") or 0
+
+    if expected_loss is not None and current_balance:
+        el_ratio = expected_loss / current_balance
+        if el_ratio >= EL_RATIO_CRITICAL_THRESHOLD:
+            failures.append({
+                "dimension": "FINANCIAL",
+                "code": "FINANCIAL_QUANT_EL_CRITICAL",
+                "label": f"예상손실(EL) {expected_loss:,.0f}원 — 대출잔액 대비 {el_ratio*100:.1f}%, Critical 기준 {EL_RATIO_CRITICAL_THRESHOLD*100:.0f}% 초과 (House 가정 LGD 적용)",
+                "severity": "CRITICAL",
+                "metric_name": "expected_loss_ratio",
+                "metric_value": el_ratio,
+                "threshold_value": EL_RATIO_CRITICAL_THRESHOLD,
+                "breach_amount": el_ratio - EL_RATIO_CRITICAL_THRESHOLD,
+                "asset_class": asset_class,
+            })
+        elif el_ratio >= EL_RATIO_MODERATE_THRESHOLD:
+            failures.append({
+                "dimension": "FINANCIAL",
+                "code": "FINANCIAL_QUANT_EL_MODERATE",
+                "label": f"예상손실(EL) {expected_loss:,.0f}원 — 대출잔액 대비 {el_ratio*100:.1f}%, Moderate 기준 {EL_RATIO_MODERATE_THRESHOLD*100:.0f}% 초과 (House 가정 LGD 적용)",
+                "severity": "MODERATE",
+                "metric_name": "expected_loss_ratio",
+                "metric_value": el_ratio,
+                "threshold_value": EL_RATIO_MODERATE_THRESHOLD,
+                "breach_amount": el_ratio - EL_RATIO_MODERATE_THRESHOLD,
+                "asset_class": asset_class,
+            })
+
+    if ifrs9_stage == "STAGE_3":
+        failures.append({
+            "dimension": "FINANCIAL",
+            "code": "FINANCIAL_QUANT_IFRS9_STAGE3",
+            "label": "IFRS9 Stage 3(Credit-Impaired) 진입 — 회계상 부도 상태로 분류됨",
+            "severity": "CRITICAL",
+            "metric_name": "ifrs9_stage_effective",
+            "metric_value": None,
+            "asset_class": asset_class,
+        })
+
+    return failures
+
+
 # ── 메인 진단 함수 ──────────────────────────────────────────
 
 def run_failure_diagnostic(deal_id: int) -> dict:
     conn = get_conn()
     cur = conn.cursor()
 
-    # 딜 기본 정보
-    cur.execute("SELECT * FROM deal_master WHERE id = %s", (deal_id,))
-    deal = dict(cur.fetchone())
-    asset_class = deal.get("asset_class", "CRE")
+    try:
+        # 딜 기본 정보
+        cur.execute("SELECT * FROM deal_master WHERE id = %s", (deal_id,))
+        deal = dict(cur.fetchone())
+        asset_class = deal.get("asset_class", "CRE")
+        deal_stage = deal.get("dd_stage", "PRE")
 
-    # 5개 차원 진단
-    all_failures = []
-    all_failures += check_evidence(cur, deal_id, asset_class)
-    all_failures += check_financial(cur, deal_id, asset_class)
-    all_failures += check_structural(cur, deal_id, asset_class)
-    all_failures += check_legal(cur, deal_id, asset_class)
-    all_failures += check_market(cur, deal_id, asset_class)
+        # 5개 차원 진단
+        all_failures = []
+        all_failures += check_evidence(cur, deal_id, asset_class, deal_stage)
+        all_failures += check_financial(cur, deal_id, asset_class)
+        all_failures += check_structural(cur, deal_id, asset_class, deal_stage)
+        all_failures += check_legal(cur, deal_id, asset_class)
+        all_failures += check_market(cur, deal_id, asset_class)
+        all_failures += check_quant(cur, deal_id, asset_class, deal_stage, deal)
 
-    # 집계
-    critical = sum(1 for f in all_failures if f["severity"] == "CRITICAL")
-    moderate = sum(1 for f in all_failures if f["severity"] == "MODERATE")
-    deferred = sum(1 for f in all_failures if f["severity"] == "DEFERRED")
+        # 집계
+        critical = sum(1 for f in all_failures if f["severity"] == "CRITICAL")
+        moderate = sum(1 for f in all_failures if f["severity"] == "MODERATE")
+        deferred = sum(1 for f in all_failures if f["severity"] == "DEFERRED")
 
-    overall = derive_overall_severity(critical, moderate)
-    gate, provisional = derive_gate(critical, moderate)
+        overall = derive_overall_severity(critical, moderate)
+        gate, provisional = derive_gate(critical, moderate)
 
-    # failure_analysis 저장
-    cur.execute("""
-        INSERT INTO failure_analysis
-            (deal_master_id, asset_class, module_code, overall_severity,
-             gate_derived, provisional_gate, critical_count, moderate_count,
-             deferred_count, total_failures, policy_version)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        RETURNING id
-    """, (deal_id, asset_class, deal.get("module_code","CRE_SECURED_CREDIT"),
-          overall, gate, provisional, critical, moderate, deferred,
-          len(all_failures), "LUSKA_GATE_V0_1"))
-    analysis_id = cur.fetchone()["id"]
-
-    # failure_items 저장
-    for f in all_failures:
+        # failure_analysis 저장
         cur.execute("""
-            INSERT INTO failure_items
-                (failure_analysis_id, deal_master_id, failure_dimension,
-                 failure_code, failure_label, severity, description,
-                 metric_name, metric_value, threshold_value, breach_amount, asset_class)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        """, (analysis_id, deal_id,
-              f["dimension"], f["code"], f["label"], f["severity"],
-              f.get("description"), f.get("metric_name"),
-              f.get("metric_value"), f.get("threshold_value"),
-              f.get("breach_amount"), f.get("asset_class")))
+            INSERT INTO failure_analysis
+                (deal_master_id, asset_class, module_code, overall_severity,
+                 gate_derived, provisional_gate, critical_count, moderate_count,
+                 deferred_count, total_failures, policy_version)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (deal_id, asset_class, deal.get("module_code","CRE_SECURED_CREDIT"),
+              overall, gate, provisional, critical, moderate, deferred,
+              len(all_failures), "LUSKA_GATE_V0_1"))
+        analysis_id = cur.fetchone()["id"]
 
-    conn.commit()
+        # failure_items 저장
+        for f in all_failures:
+            cur.execute("""
+                INSERT INTO failure_items
+                    (failure_analysis_id, deal_master_id, failure_dimension,
+                     failure_code, failure_label, severity, description,
+                     metric_name, metric_value, threshold_value, breach_amount, asset_class)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (analysis_id, deal_id,
+                  f["dimension"], f["code"], f["label"], f["severity"],
+                  f.get("description"), f.get("metric_name"),
+                  f.get("metric_value"), f.get("threshold_value"),
+                  f.get("breach_amount"), f.get("asset_class")))
 
-    # 결과 출력
-    print(f"\n{'='*60}")
-    print(f"COSMOS Failure Diagnostic — Deal {deal['deal_code']}")
-    print(f"{'='*60}")
-    print(f"  Asset Class:      {asset_class}")
-    print(f"  Overall Severity: {overall}")
-    print(f"  Gate Derived:     {gate}")
-    if provisional:
-        print(f"  Provisional:      {provisional}")
-    print(f"  Failures: CRITICAL={critical} MODERATE={moderate} DEFERRED={deferred}")
+        conn.commit()
 
-    dims = ["EVIDENCE","FINANCIAL","STRUCTURAL","LEGAL","MARKET"]
-    for dim in dims:
-        dim_failures = [f for f in all_failures if f["dimension"] == dim]
-        if dim_failures:
-            print(f"\n  [{dim}]")
-            for f in dim_failures:
-                icon = "🔴" if f["severity"]=="CRITICAL" else "🟡" if f["severity"]=="MODERATE" else "⚪"
-                print(f"    {icon} [{f['severity']}] {f['label']}")
+        # 결과 출력
+        print(f"\n{'='*60}")
+        print(f"COSMOS Failure Diagnostic — Deal {deal['deal_code']}")
+        print(f"{'='*60}")
+        print(f"  Asset Class:      {asset_class}")
+        print(f"  Overall Severity: {overall}")
+        print(f"  Gate Derived:     {gate}")
+        if provisional:
+            print(f"  Provisional:      {provisional}")
+        print(f"  Failures: CRITICAL={critical} MODERATE={moderate} DEFERRED={deferred}")
 
-    print(f"\n  analysis_id: {analysis_id}")
-    cur.close()
-    conn.close()
-    return {"analysis_id": analysis_id, "gate": gate, "severity": overall}
+        dims = ["EVIDENCE","FINANCIAL","STRUCTURAL","LEGAL","MARKET"]
+        for dim in dims:
+            dim_failures = [f for f in all_failures if f["dimension"] == dim]
+            if dim_failures:
+                print(f"\n  [{dim}]")
+                for f in dim_failures:
+                    icon = "🔴" if f["severity"]=="CRITICAL" else "🟡" if f["severity"]=="MODERATE" else "⚪"
+                    print(f"    {icon} [{f['severity']}] {f['label']}")
+
+        print(f"\n  analysis_id: {analysis_id}")
+        return {"analysis_id": analysis_id, "gate": gate, "severity": overall}
+
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
 
 
 if __name__ == "__main__":
