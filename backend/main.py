@@ -1737,3 +1737,70 @@ def migrate_cashflow_schema(payload: dict = Depends(verify_token)):
     finally:
         cur.close()
         conn.close()
+
+@app.post("/api/infra/migrate/irr-schema")
+def migrate_irr_schema(payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS irr_results (
+            id SERIAL PRIMARY KEY,
+            deal_master_id INTEGER NOT NULL REFERENCES deal_master(id),
+            scenario_label VARCHAR(20) NOT NULL DEFAULT 'BASE',
+            instrument_type VARCHAR(40),
+            -- 핵심 수익 지표
+            lender_irr NUMERIC(8,6),
+            lender_moic NUMERIC(8,4),
+            npv_eok NUMERIC(14,4),
+            -- DSCR
+            dscr_avg NUMERIC(8,4),
+            dscr_min NUMERIC(8,4),
+            dscr_min_period INTEGER,
+            -- Breakeven
+            breakeven_occupancy NUMERIC(6,4),
+            breakeven_rate NUMERIC(8,6),
+            -- Refi
+            refi_feasibility VARCHAR(20),
+            refi_ltv_at_exit NUMERIC(6,4),
+            -- 캐시플로우 요약
+            total_interest_eok NUMERIC(14,4),
+            total_principal_eok NUMERIC(14,4),
+            total_fees_eok NUMERIC(14,4),
+            total_cashflow_eok NUMERIC(14,4),
+            -- 기간
+            loan_term_months INTEGER,
+            effective_date DATE,
+            maturity_date DATE,
+            -- 메타
+            base_rate_used NUMERIC(8,6),
+            spread_bps_used NUMERIC(8,2),
+            all_in_rate NUMERIC(8,6),
+            assumption_version INTEGER DEFAULT 1,
+            computed_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(deal_master_id, scenario_label, assumption_version)
+        )""")
+
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS irr_cashflow_schedule (
+            id SERIAL PRIMARY KEY,
+            irr_result_id INTEGER NOT NULL REFERENCES irr_results(id),
+            period_seq INTEGER NOT NULL,
+            period_date DATE NOT NULL,
+            beginning_balance_eok NUMERIC(14,4),
+            scheduled_interest_eok NUMERIC(14,4),
+            scheduled_principal_eok NUMERIC(14,4),
+            total_payment_eok NUMERIC(14,4),
+            ending_balance_eok NUMERIC(14,4),
+            dscr_period NUMERIC(8,4),
+            is_default_period BOOLEAN DEFAULT FALSE
+        )""")
+
+        conn.commit()
+        return {"status": "ok", "message": "irr_results + irr_cashflow_schedule 테이블 생성"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
