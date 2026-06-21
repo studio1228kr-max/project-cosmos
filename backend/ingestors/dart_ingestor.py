@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
+import psycopg2
+import psycopg2.extras
 import requests
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
@@ -57,14 +57,16 @@ class DartEvent:
     raw_json: dict
 
 
-def get_engine() -> Engine:
+def get_conn():
     url = os.environ["DATABASE_URL"]
-    return create_engine(url, pool_pre_ping=True)
+    conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+    return conn
 
 
-def ensure_table(engine: Engine) -> None:
+def ensure_table(conn) -> None:
     """dart_disclosure_events 테이블 없으면 생성."""
-    ddl = """
+    cur = conn.cursor()
+    cur.execute("""
     CREATE TABLE IF NOT EXISTS dart_disclosure_events (
         id              SERIAL PRIMARY KEY,
         corp_code       TEXT NOT NULL,
@@ -80,9 +82,9 @@ def ensure_table(engine: Engine) -> None:
     CREATE INDEX IF NOT EXISTS idx_dart_corp_code ON dart_disclosure_events(corp_code);
     CREATE INDEX IF NOT EXISTS idx_dart_event_type ON dart_disclosure_events(event_type);
     CREATE INDEX IF NOT EXISTS idx_dart_deal ON dart_disclosure_events(deal_master_id);
-    """
-    with engine.begin() as conn:
-        conn.execute(text(ddl))
+    """)
+    conn.commit()
+    cur.close()
     logger.info("dart_disclosure_events 테이블 확인 완료")
 
 
@@ -122,46 +124,38 @@ def classify_event(report_nm: str) -> Optional[str]:
     return None
 
 
-def map_to_deal(engine: Engine, corp_name: str) -> Optional[int]:
-    """차주명으로 deal_master 매핑 시도 (fuzzy 없이 exact match 우선)."""
-    with engine.connect() as conn:
-        row = conn.execute(
-            text("""
-                SELECT id FROM deal_master
-                WHERE borrower_name ILIKE :name
-                   OR deal_name ILIKE :name
-                LIMIT 1
-            """),
-            {"name": f"%{corp_name}%"},
-        ).fetchone()
-    return row[0] if row else None
+def map_to_deal(conn, corp_name: str) -> Optional[int]:
+    """차주명으로 deal_master 매핑 시도."""
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id FROM deal_master
+        WHERE borrower_name ILIKE %s OR deal_name ILIKE %s
+        LIMIT 1
+    """, (f"%{corp_name}%", f"%{corp_name}%"))
+    row = cur.fetchone()
+    cur.close()
+    return row["id"] if row else None
 
 
-def upsert_event(engine: Engine, event: DartEvent, deal_id: Optional[int]) -> bool:
+def upsert_event(conn, event: DartEvent, deal_id: Optional[int]) -> bool:
     """이미 있으면 skip, 없으면 insert. True=신규."""
-    sql = """
+    cur = conn.cursor()
+    cur.execute("""
     INSERT INTO dart_disclosure_events
         (corp_code, corp_name, rcept_no, report_nm, rcept_dt,
          event_type, raw_json, deal_master_id)
-    VALUES
-        (:corp_code, :corp_name, :rcept_no, :report_nm,
-         TO_DATE(:rcept_dt, 'YYYYMMDD'),
-         :event_type, :raw_json, :deal_id)
+    VALUES (%s, %s, %s, %s, TO_DATE(%s, 'YYYYMMDD'), %s, %s, %s)
     ON CONFLICT (rcept_no) DO NOTHING
     RETURNING id
-    """
-    with engine.begin() as conn:
-        result = conn.execute(text(sql), {
-            "corp_code": event.corp_code,
-            "corp_name": event.corp_name,
-            "rcept_no": event.rcept_no,
-            "report_nm": event.report_nm,
-            "rcept_dt": event.rcept_dt,
-            "event_type": event.event_type,
-            "raw_json": json.dumps(event.raw_json, ensure_ascii=False),
-            "deal_id": deal_id,
-        })
-        return result.fetchone() is not None
+    """, (
+        event.corp_code, event.corp_name, event.rcept_no, event.report_nm,
+        event.rcept_dt, event.event_type,
+        json.dumps(event.raw_json, ensure_ascii=False), deal_id,
+    ))
+    row = cur.fetchone()
+    conn.commit()
+    cur.close()
+    return row is not None
 
 
 def run_ingestion(lookback_days: int = 90) -> Dict[str, int]:
@@ -169,8 +163,8 @@ def run_ingestion(lookback_days: int = 90) -> Dict[str, int]:
     if not DART_API_KEY:
         raise ValueError("DART_API_KEY 환경변수 없음")
 
-    engine = get_engine()
-    ensure_table(engine)
+    conn = get_conn()
+    ensure_table(conn)
 
     end_de = date.today().strftime("%Y%m%d")
     bgn_de = (date.today() - timedelta(days=lookback_days)).strftime("%Y%m%d")
@@ -197,7 +191,7 @@ def run_ingestion(lookback_days: int = 90) -> Dict[str, int]:
 
                 stats["classified"] += 1
                 corp_name = item.get("corp_name", "")
-                deal_id = map_to_deal(engine, corp_name)
+                deal_id = map_to_deal(conn, corp_name)
                 if deal_id:
                     stats["mapped_to_deal"] += 1
 
@@ -210,7 +204,7 @@ def run_ingestion(lookback_days: int = 90) -> Dict[str, int]:
                     event_type=event_type,
                     raw_json=item,
                 )
-                if upsert_event(engine, event, deal_id):
+                if upsert_event(conn, event, deal_id):
                     stats["inserted"] += 1
 
             if len(items) < 100:
