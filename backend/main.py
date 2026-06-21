@@ -1448,3 +1448,46 @@ def api_risk_card(deal_code: str, payload: dict = Depends(verify_token)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/infra/dart/ingest")
+def dart_ingest(days: int = 90, payload: dict = Depends(verify_token)):
+    """DART 공시 이벤트 수집 트리거 — lookback_days 기본 90일."""
+    try:
+        import sys
+        sys.path.insert(0, "/app/ingestors")
+        from ingestors.dart_ingestor import run_ingestion
+        result = run_ingestion(lookback_days=days)
+        return {"status": "ok", "stats": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/infra/dart/events")
+def dart_events(
+    limit: int = 50,
+    event_type: str = "",
+    payload: dict = Depends(verify_token)
+):
+    """최근 DART 이벤트 조회."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        if event_type:
+            cur.execute("""
+                SELECT corp_name, report_nm, rcept_dt, event_type, deal_master_id, ingested_at
+                FROM dart_disclosure_events
+                WHERE event_type = %s
+                ORDER BY rcept_dt DESC LIMIT %s
+            """, (event_type, limit))
+        else:
+            cur.execute("""
+                SELECT corp_name, report_nm, rcept_dt, event_type, deal_master_id, ingested_at
+                FROM dart_disclosure_events
+                ORDER BY rcept_dt DESC LIMIT %s
+            """, (limit,))
+        rows = cur.fetchall()
+        return rows
+    finally:
+        cur.close()
+        conn.close()
