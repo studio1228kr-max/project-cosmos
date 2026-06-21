@@ -38,3 +38,6 @@ def list_engines() -> list[str]:
 #
 # from quant.engines.cecl_engine import CECLEngine
 # register_engine("cecl", CECLEngine())
+
+from quant.engines.merton_kmv import MertonKMVEngine
+register_engine("merton_kmv", MertonKMVEngine())

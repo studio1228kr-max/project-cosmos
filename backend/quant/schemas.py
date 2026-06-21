@@ -61,7 +61,7 @@ class EngineResult(BaseModel):
     """
     deal_master_id: int
     engine_name: str
-    metrics: dict[str, float]              # {"pd": 0.083, "lgd": 0.27, ...}
+    metrics: dict[str, Any]                # 풍부한 메타데이터 허용 (str/list/dict/None 등)
     confidence: ConfidenceInfo
     provenance: Provenance
     warnings: list[str] = Field(default_factory=list)   # 비치명적 이슈 (fallback 사용 등)
