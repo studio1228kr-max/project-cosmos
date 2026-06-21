@@ -1804,3 +1804,64 @@ def migrate_irr_schema(payload: dict = Depends(verify_token)):
     finally:
         cur.close()
         conn.close()
+
+@app.post("/api/risk-book/deals/{deal_code}/run-irr")
+def trigger_irr(deal_code: str, scenario: str = "BASE", payload: dict = Depends(verify_token)):
+    """IRR waterfall 엔진 수동 실행."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM deal_master WHERE deal_code = %s", (deal_code,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="딜 없음")
+        deal_id = row["id"]
+    finally:
+        cur.close()
+        conn.close()
+    try:
+        from irr_engine import run_irr_for_deal, CashflowEngineError
+        result = run_irr_for_deal(deal_id, scenario_label=scenario)
+        if "error" in result:
+            raise HTTPException(status_code=422, detail=result)
+        return {"status": "ok", "deal_code": deal_code, "result": result}
+    except CashflowEngineError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/risk-book/deals/{deal_code}/irr")
+def get_irr(deal_code: str, scenario: str = "BASE", payload: dict = Depends(verify_token)):
+    """최신 IRR 결과 조회."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM deal_master WHERE deal_code = %s", (deal_code,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="딜 없음")
+        deal_id = row["id"]
+        cur.execute("""
+            SELECT r.*, array_agg(
+                json_build_object(
+                    'seq', s.period_seq, 'date', s.period_date,
+                    'interest', s.scheduled_interest_eok,
+                    'principal', s.scheduled_principal_eok,
+                    'total', s.total_payment_eok,
+                    'balance', s.ending_balance_eok,
+                    'dscr', s.dscr_period
+                ) ORDER BY s.period_seq
+            ) AS schedule
+            FROM irr_results r
+            LEFT JOIN irr_cashflow_schedule s ON s.irr_result_id = r.id
+            WHERE r.deal_master_id = %s AND r.scenario_label = %s
+            GROUP BY r.id
+            ORDER BY r.computed_at DESC LIMIT 1
+        """, (deal_id, scenario))
+        irr = cur.fetchone()
+        if not irr:
+            raise HTTPException(status_code=404, detail="IRR 결과 없음 — run-irr 먼저 실행")
+        return dict(irr)
+    finally:
+        cur.close()
+        conn.close()
