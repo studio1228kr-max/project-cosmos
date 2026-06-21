@@ -428,7 +428,7 @@ def check_market(cur, deal_id: int, asset_class: str) -> list[dict]:
                 molit_value_man = int(float(mkt["avg_price"]) * float(col["area_sqm"]) / 10000)
                 molit_value_eok = round(molit_value_man / 10000, 1)
                 loan_amount = float(col["loan_amount"]) if col["loan_amount"] else 0
-                molit_ltv = round(loan_amount / molit_value_man, 4) if molit_value_man > 0 else None
+                molit_ltv = round(loan_amount / molit_value_eok, 4) if molit_value_eok > 0 else None
                 base_value = float(col["collateral_value_base"]) if col["collateral_value_base"] else None
                 price_change = round((molit_value_man - base_value) / base_value, 4) if base_value else None
 
