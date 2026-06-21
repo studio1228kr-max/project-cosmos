@@ -608,6 +608,7 @@ def check_quant(cur, deal_id: int, asset_class: str, deal_stage: str, deal_maste
 
 def run_failure_diagnostic(deal_id: int) -> dict:
     conn = get_conn()
+    conn.rollback()  # 이전 abort 트랜잭션 클린업
     cur = conn.cursor()
 
     try:
