@@ -28,6 +28,9 @@ def get_conn():
 
 app = FastAPI(title="COSMOS Deal OS API")
 
+from quant.api import router as quant_router
+app.include_router(quant_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
