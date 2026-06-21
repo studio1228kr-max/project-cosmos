@@ -404,6 +404,7 @@ def check_market(cur, deal_id: int, asset_class: str) -> list[dict]:
 
     # MOLIT 실거래가 기반 담보 현재가 추정 + LTV 재계산
     try:
+        cur.execute("SAVEPOINT molit_check")
         cur.execute("""
             SELECT dc.bjdong_cd, dc.area_sqm, df.loan_amount, df.collateral_value_base
             FROM deal_collateral dc
@@ -454,8 +455,9 @@ def check_market(cur, deal_id: int, asset_class: str) -> list[dict]:
                     "breach_amount": round(molit_ltv - 0.65, 4) if molit_ltv else None,
                     "description": f"실거래 {mkt['trade_count']}건 평균단가 기준 | 최근거래 {mkt['latest_trade']} | 가격변동 {price_change*100:+.1f}%" if price_change is not None else f"실거래 {mkt['trade_count']}건 평균단가 기준 | 최근거래 {mkt['latest_trade']}",
                 })
+        cur.execute("RELEASE SAVEPOINT molit_check")
     except Exception as e:
-        pass  # MOLIT 데이터 없으면 skip
+        cur.execute("ROLLBACK TO SAVEPOINT molit_check")
 
     return failures
 
