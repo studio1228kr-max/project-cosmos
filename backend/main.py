@@ -1963,8 +1963,16 @@ def patch_ic_pack(deal_code: str, body: dict, payload: dict = Depends(verify_tok
             raise HTTPException(status_code=404, detail="딜 없음")
         deal_id = row["id"]
 
-        set_clause = ", ".join(f"{k} = %s" for k in updates if k != "_auto_downgrade")
-        values = [v for k, v in updates.items() if k != "_auto_downgrade"]
+        JSONB_FIELDS = {"top3_failure_modes", "behavioral_flags", "exit_scenarios", "key_risks", "conditions", "irr_result_ids", "scenario_narratives"}
+        set_clause = ", ".join(
+            f"{k} = %s::jsonb" if k in JSONB_FIELDS else f"{k} = %s"
+            for k in updates if k != "_auto_downgrade"
+        )
+        import json as _json
+        values = [
+            _json.dumps(v) if k in JSONB_FIELDS else v
+            for k, v in updates.items() if k != "_auto_downgrade"
+        ]
         values.append(deal_id)
 
         cur.execute(f"""
