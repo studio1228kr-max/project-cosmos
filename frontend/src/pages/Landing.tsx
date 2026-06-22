@@ -243,6 +243,43 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         </div>
       </div>
 
+      {/* ACCESS STRIP */}
+      <div style={{ background: "#0E1E2E", borderTop: "1px solid #1e3a52", borderBottom: "1px solid #1e3a52", padding: isMobile ? "20px 24px" : "20px 80px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+        <span style={{ fontSize: 12, color: "#8FA3BB", letterSpacing: "0.05em", fontFamily: "'IBM Plex Mono', monospace" }}>
+          COSMOS is available to institutional investors by invitation only.
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <button onClick={onLogin} style={{ padding: "8px 20px", fontSize: 10, letterSpacing: "0.15em", background: "#1D4F77", color: "#fff", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>
+            INVESTOR LOGIN
+          </button>
+          <span style={{ fontSize: 10, color: "#4A7FA5", letterSpacing: "0.1em", cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }} onClick={() => setModalOpen(true)}>
+            Request Access
+          </span>
+        </div>
+      </div>
+
+      {/* POSITIONING BADGES */}
+      <div style={{ background: "#F4F8FC", borderBottom: "1px solid #D9E4EF", padding: isMobile ? "20px 24px" : "20px 80px", display: "flex", alignItems: "center", gap: isMobile ? 16 : 40, flexWrap: "wrap" }}>
+        {["Institutional Only", "Korea-Focused", "Private Credit Native"].map(badge => (
+          <div key={badge} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 4, height: 4, background: "#1D4F77", borderRadius: "50%" }} />
+            <span style={{ fontSize: 11, color: "#1D4F77", letterSpacing: "0.12em", fontWeight: 700, fontFamily: "'IBM Plex Mono', monospace" }}>{badge}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* PHILOSOPHY */}
+      <div style={{ background: "#FFFFFF", borderBottom: "1px solid #D9E4EF", padding: isMobile ? "48px 24px" : "64px 80px", textAlign: "center" }}>
+        <div style={{ maxWidth: 720, margin: "0 auto" }}>
+          <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#15213D", lineHeight: 1.5, marginBottom: 16, fontFamily: "Georgia, serif", letterSpacing: "-0.01em" }}>
+            We believe private credit requires disciplined evidence, not optimism.
+          </p>
+          <p style={{ fontSize: 12, color: "#5A6B85", lineHeight: 1.9, fontFamily: "'IBM Plex Mono', monospace" }}>
+            Built for downside-first underwriting, structured diligence, and active risk monitoring.
+          </p>
+        </div>
+      </div>
+
       {/* DISCLAIMER + FOOTER */}
       <div style={{ borderTop: `1px solid ${C.border}`, padding: isMobile ? "24px 20px 16px" : "32px 80px 24px", background: C.surface }}>
         <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 20, fontWeight: 700 }}>DISCLAIMER</div>
