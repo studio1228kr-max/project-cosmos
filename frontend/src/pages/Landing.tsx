@@ -268,7 +268,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             © 2025 Cosmos by LuskaCapitalManagement. All Rights Reserved.
             <span style={{ margin: "0 12px", color: C.border }}>|</span>
             <span style={{ cursor: "pointer", textDecoration: "underline" }}
-              onClick={() => alert("개인정보 처리방침\n\n루스카캐피탈매니지먼트(이하 \'회사\')는 이용자의 개인정보를 중요시하며, 개인정보 보호법에 따라 이용자의 개인정보를 안전하게 처리합니다.\n\n수집 항목: 이메일, 성명\n수집 목적: 내부 업무 시스템 접근 인증\n보유 기간: 이용 종료 시 즉시 파기\n\n문의: compliance@luskacapital.com")}>
+              onClick={() => setPrivacyOpen(true)}>
               개인정보 처리방침
             </span>
           </div>
