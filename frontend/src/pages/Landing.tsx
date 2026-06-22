@@ -26,6 +26,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   const [modalOpen, setModalOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [form, setForm] = useState({ name: "", company: "", email: "", role: "", message: "", interests: [] as string[] });
 
   const INTERESTS = [
@@ -273,6 +274,61 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
       </div>
+
+      {privacyOpen && (
+        <div style={{ position:"fixed", inset:0, zIndex:600, background:"rgba(0,0,0,0.85)", backdropFilter:"blur(4px)", display:"flex", alignItems:"flex-start", justifyContent:"center", overflowY:"auto", padding: isMobile ? "16px 8px" : "40px 24px" }} onClick={e => { if(e.target===e.currentTarget) setPrivacyOpen(false); }}>
+          <div style={{ background:"#fff", maxWidth:720, width:"100%", padding: isMobile ? "28px 20px" : "48px 56px", fontFamily:"'IBM Plex Mono', monospace" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:32 }}>
+              <div>
+                <div style={{ fontSize:10, color:"#1D4F77", letterSpacing:"0.2em", fontWeight:700, marginBottom:8 }}>LUSKA CAPITAL MANAGEMENT</div>
+                <div style={{ fontSize:20, fontWeight:700, color:"#15213D" }}>개인정보 처리방침</div>
+              </div>
+              <button onClick={() => setPrivacyOpen(false)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}>✕</button>
+            </div>
+            {[
+              { title:"1. 개인정보 수집·이용 목적", body:`· COSMOS 플랫폼 회원 가입, 본인 확인 및 계정 관리
+· 플랫폼 서비스 제공, 딜 파이프라인·리포트·알림 등 핵심 기능 운영
+· 문의·상담 응대 및 서비스 관련 공지사항 전달
+· 서비스 품질 개선을 위한 이용 통계 분석 (익명·가명 정보 기준)
+목적 변경 시 사전 동의 후 처리합니다.` },
+              { title:"2. 수집 항목", body:`[필수] 이름, 직함, 소속(회사명), 직장 이메일, 비밀번호, 로그인 기록(IP, 접속 일시)
+[선택] 직통 전화번호, 모바일 번호, 관심 투자 분야, 문의 내용
+쿠키·유사 기술 사용 시 별도 쿠키 안내/동의 배너에서 고지합니다.` },
+              { title:"3. 보유·이용 기간", body:`· 회원 탈퇴 시 또는 서비스 종료 시까지 보유·이용
+· 관련 법령에 따른 별도 보관:
+  - 계약·거래 관련 기록: 5년
+  - 소비자 불만·분쟁 처리 기록: 3년
+  - 전자금융 거래 기록: 5년
+  - 접속 기록: 3개월
+보유 기간 만료 또는 처리 목적 달성 시 지체 없이 파기합니다.` },
+              { title:"4. 제3자 제공 여부", body:`원칙적으로 이용자의 개인정보를 제3자에게 제공하지 않습니다.
+예외: 이용자 사전 동의 / 법령에 특별한 규정 / 생명·신체·재산의 급박한 위험 방지 / 특정 개인을 식별할 수 없는 형태의 통계·연구 목적
+제공이 필요한 경우 제공받는 자·목적·항목·보유 기간을 별도 안내 후 동의를 받습니다.` },
+              { title:"5. 처리 위탁", body:`현재 회사는 개인정보 처리 업무를 외부에 위탁하고 있지 않습니다.
+위탁이 발생하는 경우 수탁자·위탁 업무 내용을 본 방침에 공개하고, 위탁계약 시 기술적·관리적 보호조치를 의무화합니다.` },
+              { title:"6. 정보주체의 권리·의무", body:`이용자는 언제든지 다음 권리를 행사할 수 있습니다.
+· 개인정보 열람(조회) 요구
+· 개인정보 정정·삭제 요구
+· 개인정보 처리 정지 요구
+계정 설정 또는 이메일(privacy@luskacapital.com)을 통해 요청하시면 지체 없이 처리합니다.
+이용자는 자신의 개인정보를 최신 상태로 유지할 책임이 있으며, 타인의 개인정보를 무단 수집·이용·제공하여서는 안 됩니다.` },
+              { title:"7. 개인정보 보호책임자", body:`성명: (미지정)
+직책: Managing Partner
+이메일: privacy@luskacapital.com
+주소: 서울특별시 성동구, Luska Capital Management
+개인정보 보호 관련 문의·불만·피해 구제는 위 연락처로 문의하시면 지체 없이 답변드립니다.` },
+            ].map(({ title, body }) => (
+              <div key={title} style={{ marginBottom:28 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:"#1D4F77", marginBottom:10, letterSpacing:"0.05em" }}>{title}</div>
+                <div style={{ fontSize:12, color:"#444", lineHeight:2, whiteSpace:"pre-line" }}>{body}</div>
+              </div>
+            ))}
+            <div style={{ borderTop:"1px solid #e5e5e5", paddingTop:20, fontSize:11, color:"#999", marginTop:8 }}>
+              본 방침은 2025년 1월 1일부터 시행됩니다. 변경 시 웹사이트 공지사항을 통해 안내합니다.
+            </div>
+          </div>
+        </div>
+      )}
 
       {scamAlert && (
         <div style={{
