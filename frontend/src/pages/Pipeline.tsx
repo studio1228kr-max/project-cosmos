@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import DealDetail from './DealDetail';
 import API from "../api";
 
 const C = {
@@ -39,6 +40,7 @@ export default function Pipeline({ onSelectDeal, initialDealCode }: { onSelectDe
   const [deals, setDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);
+  const [detailCode, setDetailCode] = useState<string|null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ code: string; name: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -95,7 +97,7 @@ export default function Pipeline({ onSelectDeal, initialDealCode }: { onSelectDe
               deals.map((d: any) => {
                 const isSel = selected?.deal_code === d.deal_code;
                 return (
-                  <div key={d.deal_code} onClick={() => { setSelected(d); onSelectDeal?.(d.deal_code); }}
+                  <div key={d.deal_code} onClick={() => { setSelected(d); onSelectDeal?.(d.deal_code); setDetailCode(d.deal_code); }}
                     style={{
                       padding: "11px 16px", borderBottom: `1px solid ${C.border}`, cursor: "pointer",
                       background: isSel ? C.surface2 : "transparent",
