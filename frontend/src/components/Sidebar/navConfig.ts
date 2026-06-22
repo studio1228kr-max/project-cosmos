@@ -46,10 +46,10 @@ export const navConfig: NavSection[] = [
     items: [
       { type: "leaf", id: "sourcing", label: "딜 소싱", path: "market", icon: "◎" },
       { type: "leaf", id: "pipeline", label: "딜 파이프라인", path: "pipeline", icon: "▦" },
+      { type: "leaf", id: "intake", label: "딜 등록", path: "intake", icon: "✦" },
       {
         type: "group", id: "dd", label: "실사", icon: "◈",
         children: [
-          { id: "intake", label: "딜 등록", path: "intake" },
           { id: "evidence", label: "증빙 체크리스트", path: "evidence" },
           { id: "diagnostic", label: "진단", path: "diagnostic" },
         ],
