@@ -45,13 +45,13 @@ export const navConfig: NavSection[] = [
     label: "딜 진행 단계",
     items: [
       { type: "leaf", id: "sourcing", label: "딜 소싱", path: "market", icon: "◎" },
-      { type: "leaf", id: "pipeline", label: "딜 목록", path: "pipeline", icon: "▦" },
+      { type: "leaf", id: "pipeline", label: "딜 파이프라인", path: "pipeline", icon: "▦" },
       {
         type: "group", id: "dd", label: "실사", icon: "◈",
         children: [
           { id: "intake", label: "딜 등록", path: "intake" },
-          { id: "diagnostic", label: "진단", path: "diagnostic" },
           { id: "evidence", label: "증빙 체크리스트", path: "evidence" },
+          { id: "diagnostic", label: "진단", path: "diagnostic" },
         ],
       },
       {
