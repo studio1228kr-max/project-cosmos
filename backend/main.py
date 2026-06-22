@@ -817,6 +817,20 @@ def token(username: str = Form(...), password: str = Form(...)):
     return {"access_token": access_token, "token_type": "bearer", "role": user["role"], "email": user["email"]}
 
 
+@app.get("/deals/{deal_code}")
+def get_deal_by_code(deal_code: str, payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM deals WHERE id = %s", (deal_code,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="딜 없음")
+        return dict(row)
+    finally:
+        cur.close()
+        conn.close()
+
 @app.get("/deals")
 def get_deals(payload: dict = Depends(verify_token)):
     conn = get_conn()
