@@ -312,10 +312,10 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 · 개인정보 처리 정지 요구
 계정 설정 또는 이메일(privacy@luskacapital.com)을 통해 요청하시면 지체 없이 처리합니다.
 이용자는 자신의 개인정보를 최신 상태로 유지할 책임이 있으며, 타인의 개인정보를 무단 수집·이용·제공하여서는 안 됩니다.` },
-              { title:"7. 개인정보 보호책임자", body:`성명: (미지정)
-직책: Managing Partner
+              { title:"7. 개인정보 보호책임자", body:`성명: 루스카캐피탈매니지먼트 유한책임회사
+직책: 개인정보 보호책임자
 이메일: privacy@luskacapital.com
-주소: 서울특별시 성동구, Luska Capital Management
+주소: 서울특별시 강남구 테헤란로 521, 파르나스 타워 29층
 개인정보 보호 관련 문의·불만·피해 구제는 위 연락처로 문의하시면 지체 없이 답변드립니다.` },
             ].map(({ title, body }) => (
               <div key={title} style={{ marginBottom:28 }}>
