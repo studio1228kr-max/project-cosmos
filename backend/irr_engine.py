@@ -304,9 +304,10 @@ def build_schedule(notional_eok, all_in_rate, origination_date, maturity_date,
         if abs(ending) < Decimal("0.0000000001"):
             ending = Decimal("0")
         dscr = None
-        if noi_annual is not None and total > 0:
+        if noi_annual is not None and interest > 0:
             noi_period = noi_annual * days / Decimal("365")
-            dscr = noi_period / total
+            # BULLET 만기 원금 상환 period 제외: 이자 기준으로만 DSCR 계산
+            dscr = noi_period / interest
         periods.append({
             "period_seq": i + 1,
             "period_date": pdate,
