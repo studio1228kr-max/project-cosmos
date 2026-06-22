@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import API from '../api';
 import { DealDetail as DD } from '../types';
+import ICPackPanel from '../components/ICPackPanel';
 
 const STATUS_COLOR: any = { INTAKE: '#888', SCREENED: '#185FA5', WATCHLIST: '#854F0B', ADVANCE: '#3B6D11', REJECT: '#A32D2D' };
 const STATUS_BG: any = { INTAKE: '#F1EFE8', SCREENED: '#E6F1FB', WATCHLIST: '#FAEEDA', ADVANCE: '#EAF3DE', REJECT: '#FCEBEB' };
@@ -102,7 +103,7 @@ export default function DealDetail({ dealId, onBack }: { dealId: string; onBack:
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '0.5px solid #e5e5e5', marginBottom: 24 }}>
-        {[['overview','딜 레코드'],['hardkill','Hard Kill'],['recovery','Recovery'],['status','상태 변경'],['history','이력']].map(([t,label]) => (
+        {[['overview','딜 레코드'],['hardkill','Hard Kill'],['recovery','Recovery'],['status','상태 변경'],['history','이력'],['icpack','IC Pack']].map(([t,label]) => (
           <div key={t} onClick={() => setTab(t)}
             style={{ padding: '8px 16px', fontSize: 13, cursor: 'pointer', borderBottom: tab===t ? '2px solid #000' : '2px solid transparent', fontWeight: tab===t ? 600 : 400, color: tab===t ? '#000' : '#888' }}>
             {label}
@@ -216,6 +217,11 @@ export default function DealDetail({ dealId, onBack }: { dealId: string; onBack:
             {saving ? '저장 중...' : '상태 변경 저장'}
           </button>
         </div>
+      )}
+
+      {/* Tab: IC Pack */}
+      {tab === 'icpack' && (
+        <ICPackPanel dealCode={deal.id} />
       )}
 
       {/* Tab: 이력 */}
