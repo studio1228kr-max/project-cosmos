@@ -2,17 +2,17 @@ import React, { useEffect, useState, useCallback } from 'react';
 import API from '../api';
 
 const REC_COLOR: any = {
-  APPROVE: { bg: '#EAF3DE', color: '#3B6D11' },
-  CONDITIONAL_APPROVE: { bg: '#FFF8E6', color: '#854F0B' },
-  HOLD: { bg: '#F1EFE8', color: '#888' },
-  REJECT: { bg: '#FCEBEB', color: '#A32D2D' },
-  TABLE: { bg: '#E6F1FB', color: '#185FA5' },
+  승인: { bg: '#EAF3DE', color: '#3B6D11' },
+  CONDITIONAL_승인: { bg: '#FFF8E6', color: '#854F0B' },
+  보류: { bg: '#F1EFE8', color: '#888' },
+  부결: { bg: '#FCEBEB', color: '#A32D2D' },
+  상정: { bg: '#E6F1FB', color: '#185FA5' },
 };
 const REC_LABEL: any = {
-  APPROVE: 'APPROVE', CONDITIONAL_APPROVE: 'CONDITIONAL APPROVE',
-  HOLD: 'HOLD', REJECT: 'REJECT', TABLE: 'TABLE',
+  승인: '승인', CONDITIONAL_승인: 'CONDITIONAL 승인',
+  보류: '보류', 부결: '부결', 상정: '상정',
 };
-const REC_OPTIONS = ['APPROVE','CONDITIONAL_APPROVE','HOLD','REJECT','TABLE'];
+const REC_OPTIONS = ['승인','CONDITIONAL_승인','보류','부결','상정'];
 
 export default function ICPackPanel({ dealCode }: { dealCode: string }) {
   const [pack, setPack] = useState<any>(null);
@@ -40,14 +40,14 @@ export default function ICPackPanel({ dealCode }: { dealCode: string }) {
         key_risks: r.data.key_risks || [],
       });
       const ids = r.data.irr_result_ids || {};
-      const irrData: any = {};
+      const irr데이터: any = {};
       for (const scenario of Object.keys(ids)) {
         try {
           const ir = await API.get(`/risk-book/deals/${dealCode}/irr?scenario=${scenario}`);
-          irrData[scenario] = ir.data;
+          irr데이터[scenario] = ir.data;
         } catch {}
       }
-      setIrr(irrData);
+      setIrr(irr데이터);
     } catch (e: any) {
       if (e?.response?.status === 404) setPack(null);
     } finally { setLoading(false); }
@@ -99,17 +99,17 @@ export default function ICPackPanel({ dealCode }: { dealCode: string }) {
   return (
     <div style={{maxWidth:860}}>
       {card(<>
-        {S('SECTION 0 — IC COVER / GATE STATUS')}
+        {S('섹션 0 — IC 커버 / 게이트 현황')}
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
-          {[['Status',pack.status],['Gate',pack.gate_status||'—'],['Data',pack.data_status||'—'],['Model',pack.model_status||'—']].map(([l,v])=>(
+          {[['상태',pack.status],['게이트',pack.gate_status||'—'],['데이터',pack.data_status||'—'],['모델',pack.model_status||'—']].map(([l,v])=>(
             <div key={l}><div style={{fontSize:10,color:'#bbb',marginBottom:3}}>{l}</div><div style={{fontSize:13,fontWeight:500}}>{v}</div></div>
           ))}
         </div>
-        <div style={{marginTop:10,fontSize:11,color:'#bbb'}}>Updated: {pack.updated_at?.slice(0,16).replace('T',' ')}</div>
+        <div style={{marginTop:10,fontSize:11,color:'#bbb'}}>업데이트: {pack.updated_at?.slice(0,16).replace('T',' ')}</div>
       </>)}
 
       {card(<>
-        {S('SECTION 1 — IC RECOMMENDATION')}
+        {S('섹션 1 — IC 권고안')}
         <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
           <select value={rec} onChange={e=>upd('recommendation',e.target.value)}
             style={{padding:'8px 12px',border:'0.5px solid #ddd',borderRadius:8,fontSize:13,outline:'none'}}>
@@ -118,15 +118,15 @@ export default function ICPackPanel({ dealCode }: { dealCode: string }) {
           </select>
           {rec && <span style={{background:recStyle.bg,color:recStyle.color,padding:'4px 14px',borderRadius:20,fontSize:12,fontWeight:600}}>{REC_LABEL[rec]}</span>}
         </div>
-        <div style={{fontSize:11,color:'#bbb',marginBottom:6}}>Preliminary View</div>
+        <div style={{fontSize:11,color:'#bbb',marginBottom:6}}>초기 검토 의견</div>
         {ta(form.preliminary_view,'preliminary_view','본건은 선순위 담보부 크레딧으로서...')}
       </>)}
 
       {card(<>
-        {S('SECTION 3 — IRR SCENARIO TABLE')}
+        {S('섹션 3 — IRR 시나리오')}
         <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
           <thead><tr style={{borderBottom:'0.5px solid #e5e5e5'}}>
-            {['Scenario','IRR','MOIC','NPV(억)','DSCR avg','DSCR min','이자합계(억)'].map(h=>(
+            {['시나리오','IRR','MOIC','NPV(억)','DSCR avg','DSCR min','이자합계(억)'].map(h=>(
               <th key={h} style={{padding:'6px 8px',textAlign:'left',color:'#bbb',fontWeight:500}}>{h}</th>
             ))}
           </tr></thead>
@@ -146,26 +146,26 @@ export default function ICPackPanel({ dealCode }: { dealCode: string }) {
             })}
           </tbody>
         </table>
-        <div style={{marginTop:8,fontSize:10,color:'#bbb',fontStyle:'italic'}}>Note: Scheduled lender cashflows only. Default waterfall not embedded.</div>
+        <div style={{marginTop:8,fontSize:10,color:'#bbb',fontStyle:'italic'}}>※ 약정 현금흐름 기준. 디폴트 워터폴 미반영.</div>
       </>)}
 
-      {card(<>{S('SECTION 4 — FAILURE DIAGNOSTICS  ⚠ INTERNAL')}{ta(form.failure_summary,'failure_summary','NOI가 15% 하락하고 금리가 100bp 상승할 경우...',100)}</>)}
-      {card(<>{S('SECTION 5 — COUNTERPARTY CONDUCT  ⚠ INTERNAL')}{ta(form.counterparty_summary,'counterparty_summary','차주 자료 제공 태도, 협상 레버리지...')}</>)}
+      {card(<>{S('섹션 4 — 실패 진단  ⚠ INTERNAL')}{ta(form.failure_summary,'failure_summary','NOI가 15% 하락하고 금리가 100bp 상승할 경우...',100)}</>)}
+      {card(<>{S('섹션 5 — COUNTERPARTY CONDUCT  ⚠ INTERNAL')}{ta(form.counterparty_summary,'counterparty_summary','차주 자료 제공 태도, 협상 레버리지...')}</>)}
       {card(<>
-        {S('SECTION 6 — VALUATION & COLLATERAL CUSHION')}
+        {S('섹션 6 — VALUATION & COLLATERAL CUSHION')}
         {ta(form.valuation_notes,'valuation_notes','감정가 근거, AVM haircut, 밸류업 시나리오...')}
       </>)}
       {card(<>
-        {S('SECTION 7 — EXIT & RECOVERY')}
-        <div style={{fontSize:11,color:'#bbb',marginBottom:6}}>Principal Loss Band</div>
+        {S('섹션 7 — EXIT & RECOVERY')}
+        <div style={{fontSize:11,color:'#bbb',marginBottom:6}}>원금 손실 범위</div>
         <input value={form.principal_loss_band} onChange={e=>upd('principal_loss_band',e.target.value)}
           placeholder='예: refi 불가 + 20% price drop 시 원금 손실 10–20% 구간'
           style={{width:'100%',padding:'9px 12px',border:'0.5px solid #ddd',borderRadius:8,fontSize:13,outline:'none',boxSizing:'border-box'}} />
       </>)}
 
       {card(<>
-        {S('SECTION 9 — CONDITIONS')}
-        {condOver && <div style={{background:'#FAEEDA',border:'0.5px solid #FAC775',borderRadius:6,padding:'8px 12px',fontSize:12,color:'#854F0B',marginBottom:10}}>⚠ 조건 5개 초과 — 저장 시 HOLD로 자동 격하</div>}
+        {S('섹션 9 — CONDITIONS')}
+        {condOver && <div style={{background:'#FAEEDA',border:'0.5px solid #FAC775',borderRadius:6,padding:'8px 12px',fontSize:12,color:'#854F0B',marginBottom:10}}>⚠ 조건 5개 초과 — 저장 시 보류로 자동 격하</div>}
         {(form.conditions||[]).map((c: string,i: number)=>(
           <div key={i} style={{display:'flex',gap:8,marginBottom:8}}>
             <input value={c} onChange={e=>{const a=[...(form.conditions||[])];a[i]=e.target.value;upd('conditions',a);}}

@@ -11,7 +11,7 @@ const RED = "#A32D2D";
 const GREEN = "#00C87A";
 
 const STATUS_COLOR: Record<string, string> = {
-  MISSING: RED, RECEIVED: "#F59E0B", VERIFIED: GREEN, WAIVED: "#4499FF",
+  미확보: RED, 수령: "#F59E0B", 검증완료: GREEN, 면제: "#4499FF",
 };
 
 export default function EvidenceChecklist() {
@@ -80,7 +80,7 @@ export default function EvidenceChecklist() {
   };
 
   const updateStatus = (item: any, status: string) => {
-    if (status === "WAIVED") {
+    if (status === "면제") {
       setWaiveModal(item);
       setWaiveForm({ reason: "", approved_by: "", expires: "" });
       return;
@@ -92,7 +92,7 @@ export default function EvidenceChecklist() {
   const confirmWaive = () => {
     if (!waiveModal || !waiveForm.reason || !waiveForm.approved_by || !waiveForm.expires) return;
     API.patch(`/api/risk-book/deals/${dealCode}/checklist/${waiveModal.evidence_item_code}`, {
-      status: "WAIVED", waiver_reason: waiveForm.reason, waived_by: waiveForm.approved_by, waiver_expires_at: waiveForm.expires,
+      status: "면제", waiver_reason: waiveForm.reason, waived_by: waiveForm.approved_by, waiver_expires_at: waiveForm.expires,
     }).then(() => { setWaiveModal(null); loadChecklist(dealCode); });
   };
 
@@ -112,13 +112,13 @@ export default function EvidenceChecklist() {
 
   return (
     <div style={{ flex: 1, overflow: "auto", background: BG, color: TEXT, padding: 24, fontFamily: "'ZenSerif', 'Inter', sans-serif" }}>
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Evidence Checklist & Gate Preflight</div>
-      <div style={{ fontSize: 11, color: TEXT_DIM, marginBottom: 20 }}>딜 코드 입력 → 체크리스트 확인 → 외부행동 전 게이트 체크</div>
+      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>증빙 체크리스트 & 게이트 점검</div>
+      <div style={{ fontSize: 11, color: TEXT_DIM, marginBottom: 20 }}>딜 코드 입력 후 조회 → 체크리스트 확인 → 게이트 점검</div>
 
       {/* 딜 조회 / 신규등록 */}
       <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
         <div style={{ background: PANEL, border: `1px solid ${BORDER}`, padding: 16, flex: 1 }}>
-          <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 8, letterSpacing: "0.1em" }}>기존 딜 조회</div>
+          <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 8, letterSpacing: "0.1em" }}>딜 조회</div>
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ flex: 1, position: "relative" }}>
               <input
@@ -166,7 +166,7 @@ export default function EvidenceChecklist() {
               style={{ flex: 1, minWidth: 100, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
             <select value={newDeal.deal_type} onChange={e => setNewDeal({ ...newDeal, deal_type: e.target.value })} onFocus={loadDealTypes}
               style={{ background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }}>
-              <option value="">deal_type 선택</option>
+              <option value="">딜 유형 선택</option>
               {dealTypes.map((dt: any) => <option key={dt.deal_type_code} value={dt.deal_type_code}>{dt.deal_type_code}</option>)}
             </select>
             <button onClick={createDeal} style={{ background: "transparent", border: `1px solid ${GREEN}`, color: GREEN, padding: "6px 14px", fontSize: 11, cursor: "pointer" }}>등록</button>
@@ -180,7 +180,7 @@ export default function EvidenceChecklist() {
       {checklist.length > 0 && (
         <div style={{ background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 20 }}>
           <div style={{ padding: "10px 16px", borderBottom: `1px solid ${BORDER}`, fontSize: 11, letterSpacing: "0.1em", color: TEXT_DIM }}>
-            {dealCode} — CHECKLIST ({checklist.length})
+            {dealCode} — 체크리스트 ({checklist.length})
           </div>
           {checklist.map((item: any) => (
             <div key={item.evidence_item_code} style={{ padding: "8px 16px", borderBottom: `1px solid #161616` }}>
@@ -190,13 +190,13 @@ export default function EvidenceChecklist() {
                 <span style={{ fontSize: 10, color: TEXT_DIM }}>{item.requirement_level}</span>
                 <select value={item.status} onChange={e => updateStatus(item, e.target.value)}
                   style={{ background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, padding: "3px 6px" }}>
-                  <option value="MISSING">MISSING</option>
-                  <option value="RECEIVED">RECEIVED</option>
-                  <option value="VERIFIED">VERIFIED</option>
-                  <option value="WAIVED">WAIVED</option>
+                  <option value="미확보">미확보</option>
+                  <option value="수령">수령</option>
+                  <option value="검증완료">검증완료</option>
+                  <option value="면제">면제</option>
                 </select>
               </div>
-              {item.status === "WAIVED" && (
+              {item.status === "면제" && (
                 <div style={{ fontSize: 10, color: TEXT_DIM, marginTop: 4, paddingLeft: 18 }}>
                   승인: {item.waived_by || "-"} · 처리: {item.performed_by || "-"} · 만료: {item.waiver_expires_at || "-"}
                 </div>
@@ -209,7 +209,7 @@ export default function EvidenceChecklist() {
       {waiveModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
           <div style={{ background: PANEL, border: `1px solid ${BORDER}`, padding: 20, width: 360 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>WAIVED — {waiveModal.evidence_item_label || waiveModal.evidence_item_code}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>면제 — {waiveModal.evidence_item_label || waiveModal.evidence_item_code}</div>
             <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 4 }}>Waiver 사유</div>
             <input value={waiveForm.reason} onChange={e => setWaiveForm({ ...waiveForm, reason: e.target.value })}
               style={{ width: "100%", boxSizing: "border-box", background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12, marginBottom: 10 }} />
@@ -232,41 +232,41 @@ export default function EvidenceChecklist() {
 
       {dealCode && (
         <div style={{ background: PANEL, border: `1px solid ${BORDER}`, padding: 16 }}>
-          <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 10, letterSpacing: "0.1em" }}>GATE PREFLIGHT — {dealCode}</div>
+          <div style={{ fontSize: 10, color: TEXT_DIM, marginBottom: 10, letterSpacing: "0.1em" }}>게이트 점검 — {dealCode}</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
             <select value={gc.action_type} onChange={e => setGc({ ...gc, action_type: e.target.value })} onFocus={loadActionTypes}
               style={{ flex: 1, minWidth: 160, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }}>
-              <option value="">action_type 선택</option>
+              <option value="">액션 유형 선택</option>
               {actionTypes.map((a: string) => <option key={a} value={a}>{a}</option>)}
             </select>
             <select value={gc.audience} onChange={e => setGc({ ...gc, audience: e.target.value })}
               style={{ flex: 1, minWidth: 100, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }}>
-              <option value="">audience 선택</option>
-              <option value="INTERNAL">INTERNAL</option>
+              <option value="">대상 선택</option>
+              <option value="내부">내부</option>
               <option value="SECURITIES_PI">SECURITIES_PI</option>
               <option value="BANK">BANK</option>
               <option value="LEGAL">LEGAL</option>
             </select>
             <select value={gc.confidence} onChange={e => setGc({ ...gc, confidence: e.target.value })}
               style={{ flex: 1, minWidth: 100, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }}>
-              <option value="">confidence 선택</option>
-              <option value="LOW">LOW</option>
-              <option value="MED">MED</option>
-              <option value="HIGH">HIGH</option>
+              <option value="">신뢰도 선택</option>
+              <option value="낮음">낮음</option>
+              <option value="중간">중간</option>
+              <option value="높음">높음</option>
             </select>
             <select value={gc.holder} onChange={e => setGc({ ...gc, holder: e.target.value })}
               style={{ flex: 1, minWidth: 120, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }}>
-              <option value="">holder 선택</option>
-              <option value="THIRD_PARTY">THIRD_PARTY</option>
+              <option value="">보유자 선택</option>
+              <option value="제3자">제3자</option>
               <option value="LUSKA_SPC">LUSKA_SPC</option>
             </select>
             <input value={gc.text} onChange={e => setGc({ ...gc, text: e.target.value })} placeholder="검증할 문장"
               style={{ flex: 2, minWidth: 200, background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, padding: "6px 10px", fontSize: 12 }} />
-            <button onClick={runGateCheck} style={{ background: "transparent", border: `1px solid ${GOLD}`, color: GOLD, padding: "6px 14px", fontSize: 11, cursor: "pointer" }}>체크 실행</button>
+            <button onClick={runGateCheck} style={{ background: "transparent", border: `1px solid ${GOLD}`, color: GOLD, padding: "6px 14px", fontSize: 11, cursor: "pointer" }}>게이트 체크 실행</button>
           </div>
           {gcResult && (
             <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 10, fontSize: 12 }}>
-              <div style={{ fontWeight: 700, color: gcResult.result === "BLOCK" ? RED : gcResult.result === "ALLOW" ? GREEN : "#F59E0B", marginBottom: 6 }}>
+              <div style={{ fontWeight: 700, color: gcResult.result === "BLOCK" ? RED : gcResult.result === "허용" ? GREEN : "#F59E0B", marginBottom: 6 }}>
                 {gcResult.result}
               </div>
               {gcResult.gate && <div style={{ color: TEXT_DIM }}>GATE: {gcResult.gate.status} — {gcResult.gate.note}</div>}
