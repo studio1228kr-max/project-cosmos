@@ -180,6 +180,67 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
 
 
+      {/* 3-CARD CAPABILITIES SECTION */}
+      <div style={{ background: "#080C14", padding: isMobile ? "60px 24px" : "100px 80px", borderTop: "1px solid #1a2535" }}>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 48 : 72 }}>
+          <div style={{ fontSize: 10, color: "#4A7FA5", letterSpacing: "0.3em", marginBottom: 16, fontWeight: 700 }}>PLATFORM CAPABILITIES</div>
+          <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, color: "#FFFFFF", margin: 0, fontFamily: "Georgia, serif", letterSpacing: "-0.01em" }}>
+            Built for the Full Deal Lifecycle
+          </h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 24, maxWidth: 1100, margin: "0 auto" }}>
+          {[
+            {
+              icon: (
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                  <circle cx="14" cy="14" r="9" stroke="#4A7FA5" strokeWidth="1.5"/>
+                  <line x1="21" y1="21" x2="32" y2="32" stroke="#4A7FA5" strokeWidth="1.5" strokeLinecap="round"/>
+                  <circle cx="14" cy="14" r="4" stroke="#4A7FA5" strokeWidth="1"/>
+                </svg>
+              ),
+              title: "Origination",
+              sub: "Surface off-market opportunities and track pipeline momentum.",
+            },
+            {
+              icon: (
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                  <rect x="4" y="16" width="28" height="1.5" fill="#4A7FA5"/>
+                  <rect x="10" y="8" width="1.5" height="20" fill="#4A7FA5"/>
+                  <rect x="24.5" y="8" width="1.5" height="20" fill="#4A7FA5"/>
+                  <rect x="7" y="24" width="6" height="1.5" fill="#4A7FA5"/>
+                  <rect x="23" y="10" width="6" height="1.5" fill="#4A7FA5"/>
+                </svg>
+              ),
+              title: "Underwriting",
+              sub: "Turn fragmented evidence into structured credit judgment.",
+            },
+            {
+              icon: (
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                  <polyline points="4,24 10,16 16,20 22,10 28,14 34,8" stroke="#4A7FA5" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  <line x1="4" y1="28" x2="34" y2="28" stroke="#1a2535" strokeWidth="1"/>
+                </svg>
+              ),
+              title: "Monitoring",
+              sub: "Follow portfolio risk, covenants, and execution drift over time.",
+            },
+          ].map(({ icon, title, sub }) => (
+            <div key={title} style={{
+              border: "1px solid #1e3048",
+              padding: isMobile ? "32px 24px" : "40px 36px",
+              background: "rgba(255,255,255,0.02)",
+              transition: "border-color 0.2s",
+            }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = "#4A7FA5")}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = "#1e3048")}>
+              <div style={{ marginBottom: 24 }}>{icon}</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#FFFFFF", marginBottom: 12, fontFamily: "Georgia, serif", letterSpacing: "0.02em" }}>{title}</div>
+              <div style={{ fontSize: 12, color: "#5A7A9A", lineHeight: 1.8, fontFamily: "'IBM Plex Mono', monospace" }}>{sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* DISCLAIMER + FOOTER */}
       <div style={{ borderTop: `1px solid ${C.border}`, padding: isMobile ? "24px 20px 16px" : "32px 80px 24px", background: C.surface }}>
         <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 20, fontWeight: 700 }}>DISCLAIMER</div>
@@ -203,6 +264,11 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20 }}>
           <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.08em" }}>
             © 2025 Cosmos by LuskaCapitalManagement. All Rights Reserved.
+            <span style={{ margin: "0 12px", color: C.border }}>|</span>
+            <span style={{ cursor: "pointer", textDecoration: "underline" }}
+              onClick={() => alert("개인정보 처리방침\n\n루스카캐피탈매니지먼트(이하 \'회사\')는 이용자의 개인정보를 중요시하며, 개인정보 보호법에 따라 이용자의 개인정보를 안전하게 처리합니다.\n\n수집 항목: 이메일, 성명\n수집 목적: 내부 업무 시스템 접근 인증\n보유 기간: 이용 종료 시 즉시 파기\n\n문의: compliance@luskacapital.com")}>
+              개인정보 처리방침
+            </span>
           </div>
         </div>
       </div>
