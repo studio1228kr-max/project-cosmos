@@ -80,6 +80,10 @@ export default function Pipeline({ onSelectDeal, initialDealCode }: { onSelectDe
 
   const gateColor = (g: string) => GATE_COLOR[g] || C.textDim;
 
+  if (detailCode) {
+    return <DealDetail dealId={detailCode} onBack={() => setDetailCode(null)} />;
+  }
+
   return (
     <>
       {deleteTarget && <DeleteModal dealName={deleteTarget.name} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />}
