@@ -823,20 +823,12 @@ def get_deal_by_code(deal_code: str, payload: dict = Depends(verify_token)):
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT dm.deal_code as id, dm.deal_name, dm.status, dm.deal_type,
-                   dm.stage, dm.origination_posture, dm.is_test,
-                   dm.deal_record, dm.created_at, dm.updated_at,
-                   COALESCE(
-                     json_agg(json_build_object(
-                       'status', sh.status, 'reason', sh.reason,
-                       'timestamp', sh.changed_at, 'changed_by', sh.changed_by
-                     ) ORDER BY sh.changed_at DESC) FILTER (WHERE sh.id IS NOT NULL),
-                     '[]'::json
-                   ) as status_history
-            FROM deal_master dm
-            LEFT JOIN status_history sh ON sh.deal_master_id = dm.id
-            WHERE dm.deal_code = %s
-            GROUP BY dm.id
+            SELECT deal_code as id, deal_name, status, deal_type,
+                   stage, origination_posture, is_test,
+                   deal_record, created_at, updated_at,
+                   '[]'::json as status_history
+            FROM deal_master
+            WHERE deal_code = %s
         """, (deal_code,))
         row = cur.fetchone()
         if not row:
