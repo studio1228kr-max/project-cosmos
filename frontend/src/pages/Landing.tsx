@@ -192,18 +192,18 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           {[
             {
               icon: (
-                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <svg width="40" height="40" viewBox="0 0 36 36" fill="none">
                   <circle cx="14" cy="14" r="9" stroke="#4A7FA5" strokeWidth="1.5"/>
                   <line x1="21" y1="21" x2="32" y2="32" stroke="#4A7FA5" strokeWidth="1.5" strokeLinecap="round"/>
                   <circle cx="14" cy="14" r="4" stroke="#4A7FA5" strokeWidth="1"/>
                 </svg>
               ),
               title: "Origination",
-              sub: "Surface off-market opportunities and track pipeline momentum.",
+              sub: "Surface relevant opportunities and track pipeline momentum.",
             },
             {
               icon: (
-                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <svg width="40" height="40" viewBox="0 0 36 36" fill="none">
                   <rect x="4" y="16" width="28" height="1.5" fill="#4A7FA5"/>
                   <rect x="10" y="8" width="1.5" height="20" fill="#4A7FA5"/>
                   <rect x="24.5" y="8" width="1.5" height="20" fill="#4A7FA5"/>
@@ -212,30 +212,31 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
                 </svg>
               ),
               title: "Underwriting",
-              sub: "Turn fragmented evidence into structured credit judgment.",
+              sub: "Transform raw deal evidence into structured underwriting judgment.",
             },
             {
               icon: (
-                <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <svg width="40" height="40" viewBox="0 0 36 36" fill="none">
                   <polyline points="4,24 10,16 16,20 22,10 28,14 34,8" stroke="#4A7FA5" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
                   <line x1="4" y1="28" x2="34" y2="28" stroke="#1a2535" strokeWidth="1"/>
                 </svg>
               ),
               title: "Monitoring",
-              sub: "Follow portfolio risk, covenants, and execution drift over time.",
+              sub: "Track portfolio risk, covenant signals, and execution drift over time.",
             },
           ].map(({ icon, title, sub }) => (
             <div key={title} style={{
               border: "1px solid #1e3048",
-              padding: isMobile ? "32px 24px" : "40px 36px",
+              padding: isMobile ? "40px 28px" : "52px 44px",
               background: "rgba(255,255,255,0.02)",
               transition: "border-color 0.2s",
+              display: "flex", flexDirection: "column",
             }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = "#4A7FA5")}
               onMouseLeave={e => (e.currentTarget.style.borderColor = "#1e3048")}>
-              <div style={{ marginBottom: 24 }}>{icon}</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#FFFFFF", marginBottom: 12, fontFamily: "Georgia, serif", letterSpacing: "0.02em" }}>{title}</div>
-              <div style={{ fontSize: 12, color: "#5A7A9A", lineHeight: 1.8, fontFamily: "'IBM Plex Mono', monospace" }}>{sub}</div>
+              <div style={{ marginBottom: 32 }}>{icon}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#FFFFFF", marginBottom: 16, fontFamily: "Georgia, serif", letterSpacing: "0.01em" }}>{title}</div>
+              <div style={{ fontSize: 13, color: "#7A9ABF", lineHeight: 1.9, fontFamily: "'IBM Plex Mono', monospace" }}>{sub}</div>
             </div>
           ))}
         </div>
