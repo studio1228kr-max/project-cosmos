@@ -1865,3 +1865,43 @@ def get_irr(deal_code: str, scenario: str = "BASE", payload: dict = Depends(veri
     finally:
         cur.close()
         conn.close()
+
+@app.post("/api/ic-pack/{deal_code}/create")
+def create_ic_pack(deal_code: str, payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM deal_master WHERE deal_code = %s", (deal_code,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="딜 없음")
+        deal_id = row["id"]
+
+        cur.execute("""
+            SELECT id, scenario_label, lender_irr, lender_moic, npv_eok,
+                   dscr_avg, dscr_min, loan_term_months, all_in_rate
+            FROM irr_results
+            WHERE deal_master_id = %s
+            ORDER BY computed_at DESC
+        """, (deal_id,))
+        irr_rows = cur.fetchall()
+        irr_ids = {r["scenario_label"]: r["id"] for r in irr_rows}
+
+        cur.execute("""
+            INSERT INTO ic_pack (deal_master_id, pack_version, status,
+                model_status, irr_result_ids, ic_date)
+            VALUES (%s, 1, 'DRAFT', 'VALID', %s, CURRENT_DATE)
+            ON CONFLICT ON CONSTRAINT ic_pack_deal_version_unique
+            DO UPDATE SET irr_result_ids = EXCLUDED.irr_result_ids,
+                          updated_at = NOW()
+            RETURNING id
+        """, (deal_id, json.dumps(irr_ids)))
+        pack = cur.fetchone()
+        conn.commit()
+        return {"status": "ok", "ic_pack_id": pack["id"], "irr_linked": irr_ids}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
