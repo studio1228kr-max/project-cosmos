@@ -1906,3 +1906,81 @@ def create_ic_pack(deal_code: str, payload: dict = Depends(verify_token)):
     finally:
         cur.close()
         conn.close()
+
+@app.get("/api/ic-pack/{deal_code}")
+def get_ic_pack(deal_code: str, payload: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT p.*, d.deal_code, d.deal_name
+            FROM ic_pack p
+            JOIN deal_master d ON d.id = p.deal_master_id
+            WHERE d.deal_code = %s
+            ORDER BY p.pack_version DESC LIMIT 1
+        """, (deal_code,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="IC Pack 없음 — create 먼저")
+        return dict(row)
+    finally:
+        cur.close()
+        conn.close()
+
+@app.patch("/api/ic-pack/{deal_code}")
+def patch_ic_pack(deal_code: str, body: dict, payload: dict = Depends(verify_token)):
+    EDITABLE_FIELDS = {
+        "gate_status", "data_status", "model_status", "ic_date", "prepared_by",
+        "ic_recommendation", "preliminary_view",
+        "failure_summary", "top3_failure_modes",
+        "counterparty_summary", "behavioral_flags",
+        "valuation_notes", "valueup_status",
+        "exit_scenarios", "principal_loss_band",
+        "key_risks",
+        "recommendation", "conditions",
+        "scenario_narratives",
+    }
+    RECOMMENDATION_ENUM = {"APPROVE", "CONDITIONAL_APPROVE", "HOLD", "REJECT", "TABLE"}
+
+    updates = {k: v for k, v in body.items() if k in EDITABLE_FIELDS}
+    if not updates:
+        raise HTTPException(status_code=400, detail="수정 가능한 필드 없음")
+
+    if "recommendation" in updates and updates["recommendation"] not in RECOMMENDATION_ENUM:
+        raise HTTPException(status_code=400, detail=f"recommendation은 {RECOMMENDATION_ENUM} 중 하나")
+
+    if "conditions" in updates and isinstance(updates["conditions"], list):
+        if len(updates["conditions"]) > 5:
+            updates["recommendation"] = "HOLD"
+            updates["_auto_downgrade"] = True
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM deal_master WHERE deal_code = %s", (deal_code,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="딜 없음")
+        deal_id = row["id"]
+
+        set_clause = ", ".join(f"{k} = %s" for k in updates if k != "_auto_downgrade")
+        values = [v for k, v in updates.items() if k != "_auto_downgrade"]
+        values.append(deal_id)
+
+        cur.execute(f"""
+            UPDATE ic_pack SET {set_clause}, updated_at = NOW()
+            WHERE deal_master_id = %s
+            RETURNING id, recommendation, updated_at
+        """, values)
+        updated = cur.fetchone()
+        conn.commit()
+        result = dict(updated)
+        if updates.get("_auto_downgrade"):
+            result["warning"] = "조건 5개 초과 — recommendation 자동 HOLD 격하"
+        return {"status": "ok", "updated": result}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
