@@ -27,7 +27,7 @@ export default function ICPackPanel({ dealCode }: { dealCode: string }) {
   const fetchPack = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await API.get(`/ic-pack/${dealCode}`);
+      const r = await API.get(`/api/ic-pack/${dealCode}`);
       setPack(r.data);
       setForm({
         preliminary_view: r.data.preliminary_view || '',
@@ -57,7 +57,7 @@ export default function ICPackPanel({ dealCode }: { dealCode: string }) {
 
   const createPack = async () => {
     setCreating(true);
-    try { await API.post(`/ic-pack/${dealCode}/create`, {}); await fetchPack(); }
+    try { await API.post(`/api/ic-pack/${dealCode}/create`, {}); await fetchPack(); }
     catch {} finally { setCreating(false); }
   };
 
@@ -65,7 +65,7 @@ export default function ICPackPanel({ dealCode }: { dealCode: string }) {
 
   const save = async () => {
     setSaving(true);
-    try { await API.patch(`/ic-pack/${dealCode}`, form); setSaveMsg('저장 완료'); setDirty(false); await fetchPack(); }
+    try { await API.patch(`/api/ic-pack/${dealCode}`, form); setSaveMsg('저장 완료'); setDirty(false); await fetchPack(); }
     catch { setSaveMsg('저장 실패'); } finally { setSaving(false); }
   };
 
