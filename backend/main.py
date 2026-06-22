@@ -823,9 +823,10 @@ def get_deal_by_code(deal_code: str, payload: dict = Depends(verify_token)):
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT deal_code as id, deal_name, status, deal_type,
-                   stage, origination_posture, is_test,
-                   deal_record, created_at, updated_at,
+            SELECT deal_code as id, deal_name, deal_type,
+                   stage as status, stage, origination_posture, is_test,
+                   created_at, updated_at,
+                   '{}'::json as deal_record,
                    '[]'::json as status_history
             FROM deal_master
             WHERE deal_code = %s
