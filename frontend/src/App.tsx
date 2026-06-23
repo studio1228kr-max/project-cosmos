@@ -5,6 +5,7 @@ import Intake from "./pages/Intake";
 import API from "./api";
 import Layout from "./Layout";
 import DashboardCharts from "./components/DashboardCharts";
+import Dashboard from "./components/Dashboard";
 import Pipeline from "./pages/Pipeline";
 import MarketScan from "./pages/MarketScan";
 import RiskBook from "./pages/RiskBook";
@@ -874,7 +875,7 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {currentView === "today" && (
               <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
-                <TodayView fullWidth={sidebarCollapsed} onNavigateDeal={(id: string, action?: string) => {
+                <Dashboard onNavigateDeal={(id: string, action?: string) => {
                   if (id === "new" || action === "intake") { setCurrentView("pipeline"); setSelectedId(null); }
                   else if (id === "pipeline") { setCurrentView("pipeline"); setSelectedId(null); }
                   else { setCurrentView("pipeline"); setSelectedId(id); }
