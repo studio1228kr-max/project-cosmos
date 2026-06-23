@@ -4,7 +4,7 @@ DB = "postgresql://postgres:kzHWAwHYzqqtwHGchrdZBDtHSVqQuiYU@thomas.proxy.rlwy.n
 conn = psycopg2.connect(DB, cursor_factory=psycopg2.extras.RealDictCursor)
 cur = conn.cursor()
 
-cur.execute("SELECT dd_level, COUNT(*) as cnt FROM checklist_item_master WHERE deal_type='DIRECT_LENDING' GROUP BY dd_level")
+cur.execute("SELECT email, role FROM users")
 for r in cur.fetchall(): print(r)
 
 cur.close()
