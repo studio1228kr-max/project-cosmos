@@ -2014,3 +2014,158 @@ def patch_ic_pack(deal_code: str, body: dict, payload: dict = Depends(verify_tok
     finally:
         cur.close()
         conn.close()
+
+
+# ── 새 체크리스트 엔드포인트 (checklist_item_master 기반) ──────────────
+@app.get("/api/checklist/items/{deal_type}")
+def get_checklist_items(deal_type: str, dd_level: str = None, payload: dict = Depends(verify_token)):
+    """딜타입별 체크리스트 항목 조회"""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        if dd_level:
+            cur.execute("""
+                SELECT * FROM checklist_item_master
+                WHERE deal_type = %s AND dd_level = %s AND is_active = TRUE
+                ORDER BY section_code, item_code
+            """, (deal_type, dd_level))
+        else:
+            cur.execute("""
+                SELECT * FROM checklist_item_master
+                WHERE deal_type = %s AND is_active = TRUE
+                ORDER BY dd_level, section_code, item_code
+            """, (deal_type,))
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/api/checklist/deal/{deal_code}")
+def get_deal_checklist(deal_code: str, dd_level: str = None, payload: dict = Depends(verify_token)):
+    """딜별 체크리스트 인스턴스 조회 (없으면 자동 생성)"""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, deal_type FROM deal_master WHERE deal_code = %s", (deal_code,))
+        deal = cur.fetchone()
+        if not deal:
+            raise HTTPException(status_code=404, detail="딜 없음")
+        deal_id = deal["id"]
+        deal_type = deal["deal_type"]
+
+        # 인스턴스 없으면 자동 생성
+        cur.execute("SELECT COUNT(*) as cnt FROM deal_checklist_instance WHERE deal_master_id = %s", (deal_id,))
+        if cur.fetchone()["cnt"] == 0:
+            cur.execute("""
+                INSERT INTO deal_checklist_instance (deal_master_id, item_code, dd_phase, dd_level)
+                SELECT %s, item_code, dd_phase, dd_level
+                FROM checklist_item_master
+                WHERE deal_type = %s AND is_active = TRUE
+                ON CONFLICT DO NOTHING
+            """, (deal_id, deal_type))
+            conn.commit()
+
+        query = """
+            SELECT i.*, m.section_code, m.section_name, m.item_label,
+                   m.auto_fillable, m.auto_source, m.kill_switch, m.gate_blocking
+            FROM deal_checklist_instance i
+            JOIN checklist_item_master m ON i.item_code = m.item_code
+            WHERE i.deal_master_id = %s
+        """
+        params = [deal_id]
+        if dd_level:
+            query += " AND i.dd_level = %s"
+            params.append(dd_level)
+        query += " ORDER BY i.dd_level, m.section_code, m.item_code"
+        cur.execute(query, params)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.patch("/api/checklist/deal/{deal_code}/{item_code}")
+def update_checklist_item(deal_code: str, item_code: str, body: dict, payload: dict = Depends(verify_token)):
+    """체크리스트 항목 상태 업데이트"""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM deal_master WHERE deal_code = %s", (deal_code,))
+        deal = cur.fetchone()
+        if not deal:
+            raise HTTPException(status_code=404, detail="딜 없음")
+
+        status = body.get("status")
+        manual_value = body.get("manual_value")
+        override_comment = body.get("override_comment")
+
+        cur.execute("""
+            UPDATE deal_checklist_instance
+            SET status = COALESCE(%s, status),
+                manual_value = COALESCE(%s, manual_value),
+                override_comment = COALESCE(%s, override_comment),
+                reviewer = %s,
+                reviewed_at = NOW(),
+                updated_at = NOW()
+            WHERE deal_master_id = %s AND item_code = %s
+            RETURNING *
+        """, (status, manual_value, override_comment, payload.get("sub"), deal["id"], item_code))
+        updated = cur.fetchone()
+        if not updated:
+            raise HTTPException(status_code=404, detail="항목 없음")
+        conn.commit()
+        return {"status": "ok", "updated": dict(updated)}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/api/checklist/deal/{deal_code}/gate")
+def compute_checklist_gate(deal_code: str, dd_level: str = "SDD", payload: dict = Depends(verify_token)):
+    """체크리스트 게이트 자동 계산"""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, deal_type FROM deal_master WHERE deal_code = %s", (deal_code,))
+        deal = cur.fetchone()
+        if not deal:
+            raise HTTPException(status_code=404, detail="딜 없음")
+
+        cur.execute("""
+            SELECT i.status, m.kill_switch, m.gate_blocking, m.item_label
+            FROM deal_checklist_instance i
+            JOIN checklist_item_master m ON i.item_code = m.item_code
+            WHERE i.deal_master_id = %s AND i.dd_level = %s
+        """, (deal["id"], dd_level))
+        items = cur.fetchall()
+
+        kill_triggered = [r["item_label"] for r in items if r["kill_switch"] and r["status"] == "FAIL"]
+        pending_blocking = [r["item_label"] for r in items if r["gate_blocking"] and r["status"] == "PENDING"]
+        total = len(items)
+        done = len([r for r in items if r["status"] in ("PASS", "WAIVED")])
+        completion = round(done / total * 100, 1) if total > 0 else 0
+
+        if kill_triggered:
+            gate = "FAIL"
+        elif pending_blocking:
+            gate = "INCOMPLETE"
+        else:
+            gate = "PASS"
+
+        return {
+            "deal_code": deal_code,
+            "dd_level": dd_level,
+            "gate": gate,
+            "completion_pct": completion,
+            "kill_triggered": kill_triggered,
+            "pending_blocking": pending_blocking,
+            "total_items": total,
+            "done_items": done,
+        }
+    finally:
+        cur.close()
+        conn.close()
