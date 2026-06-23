@@ -826,6 +826,7 @@ function ScoreGauge({ label, value, max, color }: { label: string; value: number
 function MainApp({ onLogout }: { onLogout: () => void }) {
   const [deals, setDeals] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<string|null>(null);
+  const [selectedTab, setSelectedTab] = useState<string|undefined>(undefined);
   const [currentView, setCurrentView] = useState<"today"|"pipeline">("today");
   const [filter, setFilter] = useState("ALL");
   const [nav, setNav] = useState("today");
@@ -876,15 +877,16 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
             {currentView === "today" && (
               <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
                 <Dashboard onNavigateDeal={(id: string, action?: string) => {
-                  if (id === "new" || action === "intake") { setCurrentView("pipeline"); setSelectedId(null); }
-                  else if (id === "pipeline") { setCurrentView("pipeline"); setSelectedId(null); }
-                  else { setCurrentView("pipeline"); setSelectedId(id); }
+                  if (id === "new" || action === "intake") { setCurrentView("pipeline"); setSelectedId(null); setSelectedTab(undefined); }
+                  else if (id === "pipeline") { setCurrentView("pipeline"); setSelectedId(null); setSelectedTab(undefined); }
+                  else if (action === "checklist" || action === "status" || action === "icpack") { setCurrentView("pipeline"); setSelectedId(id); setSelectedTab(action); }
+                  else { setCurrentView("pipeline"); setSelectedId(id); setSelectedTab(undefined); }
                 }} />
               </div>
             )}
             {currentView === "pipeline" && (
               <div style={{ flex: 1, overflow: "hidden" }}>
-                <Pipeline onSelectDeal={() => {}} initialDealCode={selectedId} />
+                <Pipeline onSelectDeal={() => {}} initialDealCode={selectedId} initialTab={selectedTab} />
               </div>
             )}
           </div>

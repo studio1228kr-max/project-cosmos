@@ -25,9 +25,9 @@ const HK_LABELS: any = {
   building_violation: '건축법 위반'
 };
 
-export default function DealDetail({ dealId, onBack }: { dealId: string; onBack: () => void }) {
+export default function DealDetail({ dealId, onBack, initialTab }: { dealId: string; onBack: () => void; initialTab?: string }) {
   const [deal, setDeal] = useState<DD | null>(null);
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(initialTab || 'overview');
   const [newStatus, setNewStatus] = useState('');
   const [reason, setReason] = useState('');
   const [actionTag, setActionTag] = useState('');

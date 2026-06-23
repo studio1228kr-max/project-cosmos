@@ -36,7 +36,7 @@ function DeleteModal({ dealName, onConfirm, onCancel }: { dealName: string; onCo
   );
 }
 
-export default function Pipeline({ onSelectDeal, initialDealCode }: { onSelectDeal?: (id: string) => void; initialDealCode?: string | null }) {
+export default function Pipeline({ onSelectDeal, initialDealCode, initialTab }: { onSelectDeal?: (id: string) => void; initialDealCode?: string | null; initialTab?: string }) {
   const [deals, setDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);
@@ -81,7 +81,7 @@ export default function Pipeline({ onSelectDeal, initialDealCode }: { onSelectDe
   const gateColor = (g: string) => GATE_COLOR[g] || C.textDim;
 
   if (detailCode) {
-    return <DealDetail dealId={detailCode} onBack={() => setDetailCode(null)} />;
+    return <DealDetail dealId={detailCode} onBack={() => setDetailCode(null)} initialTab={initialTab} />;
   }
 
   return (
