@@ -74,10 +74,10 @@ function DealCard({ deal, onClick }: { deal: any; onClick: () => void }) {
         background: C.surface,
         border: `1px solid ${C.border}`,
         borderRadius: 8,
-        padding: '16px 20px',
+        padding: '12px 16px',
         cursor: 'pointer',
         transition: 'border-color 0.2s',
-        marginBottom: 12,
+        marginBottom: 8,
       }}
       onMouseEnter={e => (e.currentTarget.style.borderColor = '#2E3A4A')}
       onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
@@ -153,10 +153,7 @@ export default function Dashboard({ onNavigateDeal }: { onNavigateDeal: (id: str
         <div>
           <div style={{ fontSize: 11, color: C.textDim, marginBottom: 4 }}>COSMOS / TODAY</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>{dateStr}</div>
-          <div style={{ fontSize: 13, color: C.textMid, marginTop: 6 }}>
-            진행 중 {deals.length}건
-            {urgentDeals.length > 0 && <span style={{ color: C.amber }}> · 주의 필요 {urgentDeals.length}건</span>}
-          </div>
+
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button
@@ -173,7 +170,7 @@ export default function Dashboard({ onNavigateDeal }: { onNavigateDeal: (id: str
       </div>
 
       {/* 2컬럼 레이아웃 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24 }}>
 
         {/* 좌측: 딜 카드 목록 */}
         <div>
