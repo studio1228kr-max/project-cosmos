@@ -1109,29 +1109,79 @@ def api_deal_types(payload: dict = Depends(verify_token)):
 
 
 @app.get("/api/risk-book/deals/{deal_code}/checklist")
-def api_get_checklist(deal_code: str, payload: dict = Depends(verify_token)):
+def api_get_checklist(deal_code: str, dd_tier: str = None, payload: dict = Depends(verify_token)):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT id, dd_tier FROM deal_master WHERE deal_code = %s", (deal_code,))
-    deal = cur.fetchone()
-    if not deal:
+    try:
+        cur.execute("SELECT id, deal_type, dd_tier FROM deal_master WHERE deal_code = %s", (deal_code,))
+        deal = cur.fetchone()
+        if not deal:
+            raise HTTPException(status_code=404, detail="deal not found")
+        deal_id = deal["id"]
+
+        # 대상 티어 결정: 쿼리 파라미터 > 딜의 현재 티어 > CDD
+        target = dd_tier or deal["dd_tier"] or "CDD"
+        cur.execute("SELECT tier_rank FROM dd_tier_registry WHERE dd_tier = %s", (target,))
+        tr = cur.fetchone()
+        if not tr:
+            raise HTTPException(status_code=400, detail=f"unknown dd_tier '{target}'")
+        target_rank = tr["tier_rank"]
+
+        # 레거시 자가치유: dd_tier가 NULL인 기존 체크리스트 행을 템플릿에서 백필
+        cur.execute(
+            """
+            UPDATE deal_evidence_checklist c
+            SET dd_tier = t.dd_tier
+            FROM evidence_gate_template t
+            WHERE c.deal_master_id = %s AND c.dd_tier IS NULL
+              AND t.deal_type_code = c.deal_type_code
+              AND t.evidence_item_code = c.evidence_item_code
+            """,
+            (deal_id,),
+        )
+
+        # 대상 티어(누적) 항목이 없으면 생성 — 멱등(ON CONFLICT DO NOTHING)
+        cur.execute("SELECT fn_create_deal_checklist(%s, %s, %s)", (deal_id, deal["deal_type"], target))
+
+        # 사용자가 명시적으로 티어를 변경한 경우 딜에 반영
+        if dd_tier and dd_tier != deal["dd_tier"]:
+            cur.execute("UPDATE deal_master SET dd_tier = %s, updated_at = now() WHERE id = %s", (dd_tier, deal_id))
+        conn.commit()
+
+        # 대상 티어 이하(누적) 항목만 반환
+        cur.execute(
+            """
+            SELECT c.*, t.tier_rank, t.tier_label
+            FROM deal_evidence_checklist c
+            JOIN dd_tier_registry t ON t.dd_tier = c.dd_tier
+            WHERE c.deal_master_id = %s AND t.tier_rank <= %s
+            ORDER BY t.tier_rank, c.requirement_level, c.evidence_item_code
+            """,
+            (deal_id, target_rank),
+        )
+        items = cur.fetchall()
+
+        DONE = ("VERIFIED", "WAIVED")
+        total = len(items)
+        done = sum(1 for i in items if i["status"] in DONE)
+        mand_total = sum(1 for i in items if i["requirement_level"] == "MANDATORY")
+        mand_done = sum(1 for i in items if i["requirement_level"] == "MANDATORY" and i["status"] in DONE)
+
+        return {
+            "deal_code": deal_code,
+            "dd_tier": target,
+            "counts": {"total": total, "done": done, "mandatory_total": mand_total, "mandatory_done": mand_done},
+            "checklist": items,
+        }
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
         cur.close()
         conn.close()
-        raise HTTPException(status_code=404, detail="deal not found")
-    cur.execute(
-        """
-        SELECT c.*, t.tier_rank, t.tier_label
-        FROM deal_evidence_checklist c
-        LEFT JOIN dd_tier_registry t ON t.dd_tier = c.dd_tier
-        WHERE c.deal_master_id = %s
-        ORDER BY t.tier_rank NULLS LAST, c.requirement_level, c.evidence_item_code
-        """,
-        (deal["id"],),
-    )
-    items = cur.fetchall()
-    cur.close()
-    conn.close()
-    return {"deal_code": deal_code, "dd_tier": deal["dd_tier"], "checklist": items}
 
 
 @app.get("/api/risk-book/deals/search")

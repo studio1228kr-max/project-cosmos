@@ -10,9 +10,14 @@ const GOLD = "#C9A84C";
 const RED = "#A32D2D";
 const GREEN = "#00C87A";
 
+// DB status enum (MISSING/RECEIVED/VERIFIED/WAIVED) → 색상/라벨
 const STATUS_COLOR: Record<string, string> = {
-  미확보: RED, 수령: "#F59E0B", 검증완료: GREEN, 면제: "#4499FF",
+  MISSING: RED, RECEIVED: "#F59E0B", VERIFIED: GREEN, WAIVED: "#4499FF",
 };
+const STATUS_LABEL: Record<string, string> = {
+  MISSING: "미확보", RECEIVED: "수령", VERIFIED: "검증완료", WAIVED: "면제",
+};
+const STATUS_OPTIONS = ["MISSING", "RECEIVED", "VERIFIED", "WAIVED"];
 
 export default function EvidenceChecklist() {
   const [dealCode, setDealCode] = useState("");
@@ -80,7 +85,7 @@ export default function EvidenceChecklist() {
   };
 
   const updateStatus = (item: any, status: string) => {
-    if (status === "면제") {
+    if (status === "WAIVED") {
       setWaiveModal(item);
       setWaiveForm({ reason: "", approved_by: "", expires: "" });
       return;
@@ -92,7 +97,7 @@ export default function EvidenceChecklist() {
   const confirmWaive = () => {
     if (!waiveModal || !waiveForm.reason || !waiveForm.approved_by || !waiveForm.expires) return;
     API.patch(`/api/risk-book/deals/${dealCode}/checklist/${waiveModal.evidence_item_code}`, {
-      status: "면제", waiver_reason: waiveForm.reason, waived_by: waiveForm.approved_by, waiver_expires_at: waiveForm.expires,
+      status: "WAIVED", waiver_reason: waiveForm.reason, waived_by: waiveForm.approved_by, waiver_expires_at: waiveForm.expires,
     }).then(() => { setWaiveModal(null); loadChecklist(dealCode); });
   };
 
@@ -190,13 +195,10 @@ export default function EvidenceChecklist() {
                 <span style={{ fontSize: 10, color: TEXT_DIM }}>{item.requirement_level}</span>
                 <select value={item.status} onChange={e => updateStatus(item, e.target.value)}
                   style={{ background: "#0d0d0d", border: `1px solid ${BORDER}`, color: TEXT, fontSize: 11, padding: "3px 6px" }}>
-                  <option value="미확보">미확보</option>
-                  <option value="수령">수령</option>
-                  <option value="검증완료">검증완료</option>
-                  <option value="면제">면제</option>
+                  {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
               </div>
-              {item.status === "면제" && (
+              {item.status === "WAIVED" && (
                 <div style={{ fontSize: 10, color: TEXT_DIM, marginTop: 4, paddingLeft: 18 }}>
                   승인: {item.waived_by || "-"} · 처리: {item.performed_by || "-"} · 만료: {item.waiver_expires_at || "-"}
                 </div>
