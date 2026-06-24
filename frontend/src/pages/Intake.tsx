@@ -17,6 +17,12 @@ const POSTURES = [
   { code: "COOPERATIVE", label: "COOPERATIVE" },
 ];
 
+const DD_TIERS = [
+  { code: "SDD", label: "SDD · 스크리닝 (최소 증빙)" },
+  { code: "CDD", label: "CDD · 표준 언더라이팅" },
+  { code: "EDD", label: "EDD · 심화 (고위험/Control)" },
+];
+
 const SOURCE_TYPES = [
   { code: "NETWORK", label: "네트워크" },
   { code: "BROKER", label: "브로커" },
@@ -59,6 +65,7 @@ export default function Intake({ onSaved }: { onSaved: () => void }) {
   const [dealName, setDealName] = useState("");
   const [dealType, setDealType] = useState("SECURED_CREDIT_ACQUISITION");
   const [posture, setPosture] = useState("MIXED");
+  const [ddTier, setDdTier] = useState("CDD");
   const [sourceType, setSourceType] = useState("UNKNOWN");
   const [sourceNote, setSourceNote] = useState("");
   const [maturityDate, setMaturityDate] = useState("");
@@ -93,6 +100,7 @@ export default function Intake({ onSaved }: { onSaved: () => void }) {
         asset_class: "CRE",
         module_code: "CRE_SECURED_CREDIT",
         origination_posture: posture,
+        dd_tier: ddTier,
         source_type: sourceType,
         source_replicability: "UNKNOWN",
         source_note: sourceNote.trim() || null,
@@ -129,7 +137,7 @@ export default function Intake({ onSaved }: { onSaved: () => void }) {
         <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.14em", marginBottom: 16 }}>이렇게 대시보드를 생성하시겠습니까?</div>
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.gold}`, borderRadius: 4, padding: "20px 28px", marginBottom: 28, minWidth: 320 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8 }}>{dealName}</div>
-          <div style={{ fontSize: 12, color: C.textMid, marginBottom: 4 }}>{dealTypeLabel}</div>
+          <div style={{ fontSize: 12, color: C.textMid, marginBottom: 4 }}>{dealTypeLabel} · {ddTier}</div>
           <div style={{ fontSize: 11, color: C.textDim, fontFamily: "'IBM Plex Mono', monospace" }}>
             {dealCode}
             {exposureAmount ? ` · 익스포저 ${parseFloat(exposureAmount).toFixed(1)}억` : ""}
@@ -187,6 +195,16 @@ export default function Intake({ onSaved }: { onSaved: () => void }) {
               </select>
             </Field>
           </div>
+
+          <Field label="실사 등급 (DD Tier) *">
+            <select value={ddTier} onChange={e => setDdTier(e.target.value)}
+              style={{ ...inputStyle, cursor: "pointer" }}>
+              {DD_TIERS.map(t => <option key={t.code} value={t.code}>{t.label}</option>)}
+            </select>
+            <div style={{ fontSize: 10, color: C.textDim, marginTop: 6 }}>
+              상위 등급일수록 체크리스트가 누적 확장됩니다 (EDD ⊇ CDD ⊇ SDD)
+            </div>
+          </Field>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <Field label="소싱 채널">

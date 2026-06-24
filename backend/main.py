@@ -1045,6 +1045,7 @@ class NewDealRequest(BaseModel):
     asset_class: str = "CRE"
     module_code: str = "CRE_SECURED_CREDIT"
     origination_posture: str = "MIXED"
+    dd_tier: str = "CDD"
     source_type: str = "UNKNOWN"
     source_replicability: str = "UNKNOWN"
     source_note: Optional[str] = None
@@ -1111,7 +1112,7 @@ def api_deal_types(payload: dict = Depends(verify_token)):
 def api_get_checklist(deal_code: str, payload: dict = Depends(verify_token)):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT id FROM deal_master WHERE deal_code = %s", (deal_code,))
+    cur.execute("SELECT id, dd_tier FROM deal_master WHERE deal_code = %s", (deal_code,))
     deal = cur.fetchone()
     if not deal:
         cur.close()
@@ -1119,16 +1120,18 @@ def api_get_checklist(deal_code: str, payload: dict = Depends(verify_token)):
         raise HTTPException(status_code=404, detail="deal not found")
     cur.execute(
         """
-        SELECT * FROM deal_evidence_checklist
-        WHERE deal_master_id = %s
-        ORDER BY requirement_level, evidence_item_code
+        SELECT c.*, t.tier_rank, t.tier_label
+        FROM deal_evidence_checklist c
+        LEFT JOIN dd_tier_registry t ON t.dd_tier = c.dd_tier
+        WHERE c.deal_master_id = %s
+        ORDER BY t.tier_rank NULLS LAST, c.requirement_level, c.evidence_item_code
         """,
         (deal["id"],),
     )
     items = cur.fetchall()
     cur.close()
     conn.close()
-    return {"deal_code": deal_code, "checklist": items}
+    return {"deal_code": deal_code, "dd_tier": deal["dd_tier"], "checklist": items}
 
 
 @app.get("/api/risk-book/deals/search")
@@ -1187,6 +1190,10 @@ def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token))
         if not cur.fetchone():
             raise HTTPException(status_code=400, detail=f"unknown deal_type '{body.deal_type}'")
 
+        cur.execute("SELECT 1 FROM dd_tier_registry WHERE dd_tier = %s", (body.dd_tier,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=400, detail=f"unknown dd_tier '{body.dd_tier}'")
+
         cur.execute("SELECT 1 FROM deal_master WHERE deal_code = %s", (body.deal_code,))
         if cur.fetchone():
             raise HTTPException(status_code=409, detail=f"deal_code '{body.deal_code}' already exists")
@@ -1195,17 +1202,18 @@ def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token))
             """
             INSERT INTO deal_master
                 (deal_code, deal_name, deal_type, stage, source_type, source_replicability, source_note,
-                 asset_class, module_code, origination_posture, is_test, maturity_date, exposure_amount)
-            VALUES (%s,%s,%s,'INTAKE',%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                 asset_class, module_code, origination_posture, dd_tier, is_test, maturity_date, exposure_amount)
+            VALUES (%s,%s,%s,'INTAKE',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
             """,
             (body.deal_code, body.deal_name, body.deal_type, body.source_type, body.source_replicability,
-             body.source_note, body.asset_class, body.module_code, body.origination_posture, body.is_test,
-             body.maturity_date, body.exposure_amount),
+             body.source_note, body.asset_class, body.module_code, body.origination_posture, body.dd_tier,
+             body.is_test, body.maturity_date, body.exposure_amount),
         )
         deal_id = cur.fetchone()["id"]
 
-        cur.execute("SELECT fn_create_deal_checklist(%s, %s) AS n", (deal_id, body.deal_type))
+        cur.execute("SELECT fn_create_deal_checklist(%s, %s, %s) AS n",
+                    (deal_id, body.deal_type, body.dd_tier))
         n_items = cur.fetchone()["n"]
 
         gate = _recompute_and_insert_gate(cur, deal_id)
