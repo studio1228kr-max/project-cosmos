@@ -2,12 +2,11 @@ import React, { useState } from "react";
 import API from "../api";
 
 const DEAL_TYPES = [
-  { code: "SECURED_CREDIT_ACQUISITION", label: "담보채권 매입" },
-  { code: "SPECIAL_SITUATIONS_CONTROL", label: "특수상황 Control 확보" },
-  { code: "NPL_PURCHASE", label: "부실채권 매입" },
-  { code: "BRIDGE_REFI", label: "브릿지 리파이낸싱" },
-  { code: "CAPEX_BRIDGE_NOTE", label: "케펙스 브릿지 사모채" },
-  { code: "SPONSOR_COOPERATIVE_RECAP", label: "차주 협조형 재구조화/리캡" },
+  { code: "DIRECT_LENDING", label: "직접 신규 여신" },
+  { code: "DEBT_PURCHASE", label: "채권/대출채권 매입" },
+  { code: "STRUCTURED_TRANCHE", label: "구조화 참여/트랜치" },
+  { code: "DISTRESSED_SPECIAL", label: "부실/특수상황" },
+  { code: "EQUITY_LINKED_CREDIT", label: "주식연계 신용" },
 ];
 
 const POSTURES = [
@@ -63,7 +62,7 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 export default function Intake({ onSaved }: { onSaved: () => void }) {
   const [dealCode] = useState(genDealCode());
   const [dealName, setDealName] = useState("");
-  const [dealType, setDealType] = useState("SECURED_CREDIT_ACQUISITION");
+  const [dealType, setDealType] = useState("DIRECT_LENDING");
   const [posture, setPosture] = useState("MIXED");
   const [ddTier, setDdTier] = useState("CDD");
   const [sourceType, setSourceType] = useState("UNKNOWN");

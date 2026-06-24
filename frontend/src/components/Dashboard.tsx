@@ -10,10 +10,8 @@ const C = {
 
 const DEAL_TYPE_LABEL: Record<string, string> = {
   DIRECT_LENDING: 'Direct Lending', DEBT_PURCHASE: 'Debt Purchase',
-  STRUCTURED: 'Structured', DISTRESSED: 'Distressed', EQUITY_LINKED: 'Equity-Linked',
-  NPL_PURCHASE: 'NPL Purchase', SECURED_CREDIT_ACQUISITION: 'Secured Credit',
-  SPECIAL_SITUATIONS_CONTROL: 'Special Situations', BRIDGE_REFI: 'Bridge Refi',
-  CAPEX_BRIDGE_NOTE: 'Capex Bridge',
+  STRUCTURED_TRANCHE: 'Structured Tranche', DISTRESSED_SPECIAL: 'Distressed/Special',
+  EQUITY_LINKED_CREDIT: 'Equity-Linked Credit',
 };
 
 function getDealActions(deal: any, dday: number | null): { action: string; cta: string; color: string; tab: string }[] {
