@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
-import Intake from "./pages/Intake";
+import DealIntake from "./pages/DealIntake";
 import API from "./api";
 import Layout from "./Layout";
 import DashboardCharts from "./components/DashboardCharts";
@@ -869,9 +869,10 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
           ) : nav === "sourcing" ? (
             <MarketScan />
           ) : nav === "intake" ? (
-          <div style={{ flex: 1, overflow: "auto" }}>
-            <Intake onSaved={() => { setNav("pipeline"); loadDeals(); }} />
-          </div>
+          <DealIntake
+            onClose={() => setNav("pipeline")}
+            onRegistered={() => { setNav("pipeline"); loadDeals(); }}
+          />
         ) : (
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {currentView === "today" && (

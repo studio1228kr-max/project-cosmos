@@ -1,7 +1,8 @@
 import os
 import json
+import uuid
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 
 import jwt
 import bcrypt
@@ -1229,6 +1230,120 @@ def api_list_users(payload: dict = Depends(verify_token)):
     cur.close()
     conn.close()
     return {"results": rows}
+
+
+# ── Deal Intake v1.0 (6-step overlay) ──────────────────────────────
+class SourcingDetailIn(BaseModel):
+    channel_key: str
+    discovery_path: Optional[str] = None
+    discovery_note: Optional[str] = None
+    discovery_date: Optional[str] = None
+    broker_name: Optional[str] = None
+    broker_company: Optional[str] = None
+    broker_contact: Optional[str] = None
+    broker_history: Optional[str] = None
+    broker_fee: Optional[str] = None
+    referrer_name: Optional[str] = None
+    referrer_org: Optional[str] = None
+    referrer_type: Optional[str] = None
+    exclusive_share: Optional[bool] = False
+    platform_name: Optional[str] = None
+    platform_type: Optional[str] = None
+    etc_note: Optional[str] = None
+
+
+class DealRegisterIn(BaseModel):
+    deal_name: str
+    deal_type: str
+    sourcing_channel: str
+    sourcing_detail: SourcingDetailIn
+    referrer: Optional[str] = None
+    thesis: str
+    target_irr: Optional[str] = None
+    counterparty_motive: str
+    info_edge: str
+    counterparty_tier: str
+    sector: str
+    complexity: str
+    kill_criteria: List[str] = []
+    ic_memo: Optional[str] = None
+
+
+@app.post("/deals/register")
+def register_deal(payload: DealRegisterIn, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT 1 FROM deal_type_registry WHERE deal_type_code = %s", (payload.deal_type,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=400, detail=f"unknown deal_type '{payload.deal_type}'")
+        if payload.counterparty_tier not in ("T1", "T2", "T3"):
+            raise HTTPException(status_code=400, detail="counterparty_tier must be T1/T2/T3")
+        if payload.complexity not in ("단순", "중간", "복잡"):
+            raise HTTPException(status_code=400, detail="complexity must be 단순/중간/복잡")
+
+        deal_code = f"LSK-{datetime.now().year}-{uuid.uuid4().hex[:4].upper()}"
+        cur.execute(
+            """
+            INSERT INTO deal_master (
+                deal_code, deal_name, deal_type, dd_tier,
+                sourcing_channel, thesis, target_irr,
+                counterparty_motive, info_edge,
+                counterparty_tier, sector, complexity,
+                ic_memo, stage
+            ) VALUES (%s,%s,%s,'SDD',%s,%s,%s,%s,%s,%s,%s,%s,%s,'INTAKE')
+            RETURNING id
+            """,
+            (
+                deal_code, payload.deal_name, payload.deal_type,
+                payload.sourcing_channel, payload.thesis, payload.target_irr,
+                payload.counterparty_motive, payload.info_edge,
+                payload.counterparty_tier, payload.sector, payload.complexity,
+                payload.ic_memo,
+            ),
+        )
+        deal_id = cur.fetchone()["id"]
+
+        sd = payload.sourcing_detail
+        cur.execute(
+            """
+            INSERT INTO deal_sourcing_detail (
+                deal_id, channel_key,
+                discovery_path, discovery_note, discovery_date,
+                broker_name, broker_company, broker_contact,
+                broker_history, broker_fee,
+                referrer_name, referrer_org, referrer_type, exclusive_share,
+                platform_name, platform_type, etc_note
+            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """,
+            (
+                deal_id, sd.channel_key,
+                sd.discovery_path, sd.discovery_note, sd.discovery_date,
+                sd.broker_name, sd.broker_company, sd.broker_contact,
+                sd.broker_history, sd.broker_fee,
+                sd.referrer_name, sd.referrer_org, sd.referrer_type,
+                sd.exclusive_share or False,
+                sd.platform_name, sd.platform_type, sd.etc_note,
+            ),
+        )
+
+        for kc in payload.kill_criteria:
+            cur.execute(
+                "INSERT INTO deal_kill_criteria (deal_id, criteria, is_custom) VALUES (%s,%s,%s)",
+                (deal_id, kc, True),
+            )
+
+        conn.commit()
+        return {"deal_id": deal_id, "deal_code": deal_code, "status": "registered"}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
 
 
 @app.post("/api/risk-book/deals")
