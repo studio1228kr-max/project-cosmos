@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PipelineCard from './DealCard';
 
 const API_BASE = 'https://project-cosmos-production.up.railway.app';
 
@@ -6,12 +7,6 @@ const C = {
   bg: '#0A0E14', surface: '#11161D', border: '#1E2630',
   text: '#E4E7EB', textMid: '#8B95A3', textDim: '#525C6B',
   amber: '#F0A93B', red: '#E5484D', green: '#2BC48A', blue: '#6FA8FF',
-};
-
-const DEAL_TYPE_LABEL: Record<string, string> = {
-  DIRECT_LENDING: 'Direct Lending', DEBT_PURCHASE: 'Debt Purchase',
-  STRUCTURED_TRANCHE: 'Structured Tranche', DISTRESSED_SPECIAL: 'Distressed/Special',
-  EQUITY_LINKED_CREDIT: 'Equity-Linked Credit',
 };
 
 function getDealActions(deal: any, dday: number | null): { action: string; cta: string; color: string; tab: string }[] {
@@ -23,88 +18,25 @@ function getDealActions(deal: any, dday: number | null): { action: string; cta: 
   return actions;
 }
 
-function DealCard({ deal, onClick }: { deal: any; onClick: () => void }) {
-  const maturity = deal.maturity_date ? new Date(deal.maturity_date) : null;
-  const dday = maturity && !isNaN(maturity.getTime()) ? Math.ceil((maturity.getTime() - Date.now()) / 86400000) : null;
-  const exp = deal.exposure_amount;
-  const ddColor = dday !== null && dday < 14 ? C.red : dday !== null && dday < 90 ? C.amber : C.textDim;
-  const typeLabel = DEAL_TYPE_LABEL[deal.deal_type] || deal.deal_type || '—';
-  const done = deal.evidence_completed || 0;
-  const total = deal.evidence_total || 0;
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-  const barColor = pct === 0 ? C.textDim : pct < 50 ? C.amber : pct < 100 ? C.blue : C.green;
-  const actions = getDealActions(deal, dday);
-  const primaryAction = actions[0];
-
-  return (
-    <div onClick={onClick} style={{
-      background: C.surface, border: `1px solid ${primaryAction ? C.amber : C.border}`,
-      borderLeft: `3px solid ${primaryAction?.color || C.border}`,
-      borderRadius: 8, padding: '14px 18px', cursor: 'pointer', marginBottom: 10,
-    }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = '#2E3A4A')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = primaryAction ? C.amber : C.border)}>
-
-      {/* 헤더 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 5 }}>
-            {deal.deal_name || deal.deal_code}
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12, background: '#1A2535', color: C.blue }}>{typeLabel}</span>
-            {deal.final_gate && (
-              <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12, background: deal.final_gate === 'HOLD' ? '#2A1A00' : '#0A1F0A', color: deal.final_gate === 'HOLD' ? C.amber : C.green }}>{deal.final_gate}</span>
-            )}
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          {exp && <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{(exp / 100000000).toFixed(0)}억</div>}
-          {dday !== null && (
-            <div style={{ fontSize: 11, color: ddColor, marginTop: 2 }}>
-              {dday < 0 ? `만기 D+${Math.abs(dday)}` : `만기 D-${dday}`}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 진행바 */}
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 11, color: C.textDim }}>실사 체크리스트</span>
-          <span style={{ fontSize: 11, color: C.textMid }}>{done}/{total} · {pct}%</span>
-        </div>
-        <div style={{ background: C.border, borderRadius: 4, height: 4 }}>
-          <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: 4 }} />
-        </div>
-      </div>
-
-      {/* 막힌 이유 / 다음 액션 */}
-      {primaryAction && (
-        <div style={{ fontSize: 11, color: primaryAction.color, marginTop: 4 }}>
-          → {primaryAction.action}
-        </div>
-      )}
-      {pct === 0 && total === 0 && !primaryAction && (
-        <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>
-          Tip — 아직 체크리스트가 생성되지 않았습니다
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function Dashboard({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: string) => void }) {
   const [deals, setDeals] = useState<any[]>([]);
+  const [pipelineDeals, setPipelineDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('token') || '';
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
+    // 우측 우선순위 액션용 (전체 risk-book 딜)
     fetch(`${API_BASE}/api/risk-book/deals`, { headers })
       .then(r => r.json())
       .then(data => { setDeals(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
+    // 좌측 카드용 (Kill Check PASS 딜)
+    fetch(`${API_BASE}/deals/dashboard`, { headers })
+      .then(r => r.json())
+      .then(data => setPipelineDeals(Array.isArray(data?.deals) ? data.deals : []))
+      .catch(() => {});
   }, []);
 
   const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
@@ -147,7 +79,7 @@ export default function Dashboard({ onNavigateDeal }: { onNavigateDeal: (id: str
         {/* 좌측: 딜 카드 */}
         <div>
           <div style={{ fontSize: 11, color: C.textDim, letterSpacing: '0.08em', marginBottom: 12 }}>딜 현황</div>
-          {deals.length === 0 ? (
+          {pipelineDeals.length === 0 ? (
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '40px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 14, color: C.textDim, marginBottom: 12 }}>등록된 딜 없음</div>
               <button onClick={() => onNavigateDeal('new', 'intake')}
@@ -155,8 +87,16 @@ export default function Dashboard({ onNavigateDeal }: { onNavigateDeal: (id: str
                 첫 딜 등록하기
               </button>
             </div>
-          ) : deals.map(deal => (
-            <DealCard key={deal.deal_code} deal={deal} onClick={() => onNavigateDeal(deal.deal_code, 'pipeline')} />
+          ) : pipelineDeals.map(deal => (
+            <PipelineCard
+              key={deal.deal_code}
+              dealCode={deal.deal_code}
+              dealType={deal.deal_type}
+              thesis={deal.thesis}
+              stage={deal.stage}
+              closingPct={0}
+              onView={() => onNavigateDeal(deal.deal_code, 'pipeline')}
+            />
           ))}
         </div>
 

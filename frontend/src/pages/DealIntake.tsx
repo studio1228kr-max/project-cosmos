@@ -168,12 +168,19 @@ function Choice({ active, onClick, title, sub, right }: { active: boolean; onCli
 }
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────────
-export default function DealIntake({ onClose, onRegistered }: { onClose: () => void; onRegistered: (dealCode: string) => void }) {
+export interface RegisteredDeal {
+  dealId: number;
+  dealCode: string;
+  thesis: string;
+  dealType: string;
+  killCriteria: string[];
+}
+
+export default function DealIntake({ onClose, onRegistered }: { onClose: () => void; onRegistered: (deal: RegisteredDeal) => void }) {
   const [step, setStep] = useState(0);
   const [f, setF] = useState<FormData>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const [done, setDone] = useState<{ deal_code: string } | null>(null);
 
   const set = (patch: Partial<FormData>) => setF(p => ({ ...p, ...patch }));
   const setSD = (patch: Partial<SourcingDetail>) => setF(p => ({ ...p, sourcingDetail: { ...p.sourcingDetail, ...patch } }));
@@ -218,7 +225,13 @@ export default function DealIntake({ onClose, onRegistered }: { onClose: () => v
         kill_criteria: f.killCriteria,
         ic_memo: f.icMemo || null,
       });
-      setDone({ deal_code: r.data.deal_code });
+      onRegistered({
+        dealId: r.data.deal_id,
+        dealCode: r.data.deal_code,
+        thesis: f.thesis,
+        dealType: f.dealType,
+        killCriteria: f.killCriteria,
+      });
     } catch (e: any) {
       setErr(e?.response?.data?.detail || "등록 실패");
     }
@@ -237,10 +250,6 @@ export default function DealIntake({ onClose, onRegistered }: { onClose: () => v
         background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 12,
         color: COLORS.textPrimary, fontFamily: "Inter, 'ZenSerif', sans-serif", overflow: "hidden",
       }}>
-        {done ? (
-          <RegistrationComplete dealCode={done.deal_code} onGo={() => onRegistered(done.deal_code)} />
-        ) : (
-          <>
             {/* Nav */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}` }}>
               <button onClick={() => (step === 0 ? onClose() : setStep(step - 1))}
@@ -445,8 +454,6 @@ export default function DealIntake({ onClose, onRegistered }: { onClose: () => v
                 <button disabled={loading} onClick={submit} style={ctaStyle(!loading)}>{loading ? "등록 중..." : "REGISTER →"}</button>
               )}
             </div>
-          </>
-        )}
       </div>
     </div>
   );
@@ -459,14 +466,3 @@ const ctaStyle = (enabled: boolean): React.CSSProperties => ({
   fontSize: 13, fontWeight: 700, letterSpacing: "0.08em",
   cursor: enabled ? "pointer" : "not-allowed", fontFamily: "inherit",
 });
-
-function RegistrationComplete({ dealCode, onGo }: { dealCode: string; onGo: () => void }) {
-  return (
-    <div style={{ padding: "48px 32px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-      <div style={{ fontSize: 11, color: COLORS.success, letterSpacing: "0.16em", marginBottom: 14 }}>DEAL REGISTERED</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: COLORS.gold, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: "0.05em", marginBottom: 8 }}>{dealCode}</div>
-      <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 28 }}>SDD 단계로 진입했습니다.</div>
-      <button onClick={onGo} style={ctaStyle(true)}>파이프라인으로 →</button>
-    </div>
-  );
-}

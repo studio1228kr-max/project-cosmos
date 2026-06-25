@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
-import DealIntake from "./pages/DealIntake";
+import DealIntake, { RegisteredDeal } from "./pages/DealIntake";
+import KillCheck from "./components/KillCheck";
 import API from "./api";
 import Layout from "./Layout";
 import DashboardCharts from "./components/DashboardCharts";
@@ -832,6 +833,8 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
   const [nav, setNav] = useState("today");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [killCheckDeal, setKillCheckDeal] = useState<RegisteredDeal | null>(null);
+  const [dashKey, setDashKey] = useState(0);
 
   const loadDeals = () => {
     setLoading(true);
@@ -871,13 +874,13 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
           ) : nav === "intake" ? (
           <DealIntake
             onClose={() => setNav("pipeline")}
-            onRegistered={() => { setNav("pipeline"); loadDeals(); }}
+            onRegistered={(deal) => { setKillCheckDeal(deal); setNav("pipeline"); setCurrentView("today"); }}
           />
         ) : (
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {currentView === "today" && (
               <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
-                <Dashboard onNavigateDeal={(id: string, action?: string) => {
+                <Dashboard key={dashKey} onNavigateDeal={(id: string, action?: string) => {
                   if (id === "new" || action === "intake") { setNav("intake"); setSelectedId(null); setSelectedTab(undefined); }
                   else if (id === "pipeline") { setCurrentView("pipeline"); setSelectedId(null); setSelectedTab(undefined); }
                   else if (action === "checklist" || action === "status" || action === "icpack") { setCurrentView("pipeline"); setSelectedId(id); setSelectedTab(action); }
@@ -893,6 +896,19 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
           </div>
         )}
       </div>
+      {killCheckDeal && (
+        <KillCheck
+          dealId={killCheckDeal.dealId}
+          dealCode={killCheckDeal.dealCode}
+          thesis={killCheckDeal.thesis}
+          thesisType={killCheckDeal.dealType}
+          dealType={killCheckDeal.dealType}
+          declaredKillCriteria={killCheckDeal.killCriteria}
+          onPass={() => { setKillCheckDeal(null); setDashKey(k => k + 1); setCurrentView("today"); loadDeals(); }}
+          onDrop={() => setKillCheckDeal(null)}
+          onClose={() => setKillCheckDeal(null)}
+        />
+      )}
     </Layout>
   );
 }

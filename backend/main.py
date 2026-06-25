@@ -1346,6 +1346,76 @@ def register_deal(payload: DealRegisterIn, _auth: dict = Depends(verify_token)):
         conn.close()
 
 
+# ── Kill Check v1.0 ────────────────────────────────────────────
+class KillCheckIn(BaseModel):
+    deal_id: int
+    result: str                       # PASS or DROP
+    drop_reasons: List[str] = []
+
+
+@app.post("/deals/kill-check")
+def submit_kill_check(payload: KillCheckIn, _auth: dict = Depends(verify_token)):
+    if payload.result not in ("PASS", "DROP"):
+        raise HTTPException(status_code=400, detail="result must be PASS or DROP")
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            UPDATE deal_master
+            SET kill_check_status = %s,
+                kill_check_at     = NOW(),
+                kill_check_drops  = %s,
+                stage = CASE WHEN %s = 'PASS' THEN 'SDD' ELSE 'DROPPED' END
+            WHERE id = %s
+            RETURNING id, deal_code, kill_check_status
+            """,
+            (payload.result, json.dumps(payload.drop_reasons), payload.result, payload.deal_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="deal not found")
+
+        cur.execute(
+            "INSERT INTO deal_kill_check_log (deal_id, result, drop_reasons) VALUES (%s, %s, %s)",
+            (payload.deal_id, payload.result, json.dumps(payload.drop_reasons)),
+        )
+        conn.commit()
+        return {"deal_id": row["id"], "deal_code": row["deal_code"], "status": row["kill_check_status"]}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/deals/dashboard")
+def get_dashboard_deals(_auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT id, deal_code, deal_name, deal_type,
+                   kill_check_status, stage, dd_tier,
+                   thesis, counterparty_motive, info_edge,
+                   registered_at
+            FROM deal_master
+            WHERE kill_check_status = 'PASS'
+            ORDER BY registered_at DESC NULLS LAST
+            """
+        )
+        rows = cur.fetchall()
+        return {"deals": [dict(r) for r in rows]}
+    finally:
+        cur.close()
+        conn.close()
+
+
 @app.post("/api/risk-book/deals")
 def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token)):
     conn = get_conn()
