@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import PipelineCard from './DealCard';
+import SddDealDetail from '../pages/SddDealDetail';
 
 const API_BASE = 'https://project-cosmos-production.up.railway.app';
 
@@ -22,6 +23,7 @@ function getDealActions(deal: any, dday: number | null): { action: string; cta: 
 export default function Dashboard({ onNavigateDeal }: { onNavigateDeal: (id: string, action?: string) => void }) {
   const [deals, setDeals] = useState<any[]>([]);
   const [pipelineDeals, setPipelineDeals] = useState<any[]>([]);
+  const [detailDealId, setDetailDealId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('token') || '';
   const headers = { Authorization: `Bearer ${token}` };
@@ -95,7 +97,7 @@ export default function Dashboard({ onNavigateDeal }: { onNavigateDeal: (id: str
               thesis={deal.thesis}
               stage={deal.stage}
               closingPct={0}
-              onView={() => onNavigateDeal(deal.deal_code, 'pipeline')}
+              onView={() => setDetailDealId(deal.id)}
             />
           ))}
         </div>
@@ -133,6 +135,9 @@ export default function Dashboard({ onNavigateDeal }: { onNavigateDeal: (id: str
           </div>
         </div>
       </div>
+      {detailDealId && (
+        <SddDealDetail dealId={detailDealId} onClose={() => setDetailDealId(null)} />
+      )}
     </div>
   );
 }

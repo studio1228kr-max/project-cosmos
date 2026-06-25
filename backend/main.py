@@ -1416,6 +1416,171 @@ def get_dashboard_deals(_auth: dict = Depends(verify_token)):
         conn.close()
 
 
+# ── Deal Detail (1.5단계) v1.0 ─────────────────────────────────
+@app.get("/deals/{deal_id}/detail")
+def get_deal_detail(deal_id: int, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM deal_master WHERE id = %s", (deal_id,))
+        deal_row = cur.fetchone()
+        if not deal_row:
+            raise HTTPException(status_code=404, detail="deal not found")
+        deal = dict(deal_row)
+
+        cur.execute("SELECT * FROM deal_checklist_item WHERE deal_id = %s ORDER BY dd_tier, id", (deal_id,))
+        checklist = [dict(r) for r in cur.fetchall()]
+
+        cur.execute("SELECT * FROM deal_field_observation WHERE deal_id = %s ORDER BY created_at DESC", (deal_id,))
+        observations = [dict(r) for r in cur.fetchall()]
+
+        cur.execute("SELECT * FROM deal_gate_result WHERE deal_id = %s ORDER BY created_at DESC LIMIT 1", (deal_id,))
+        gate = cur.fetchone()
+
+        return {
+            "deal": deal,
+            "checklist": checklist,
+            "observations": observations,
+            "latest_gate": dict(gate) if gate else None,
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+
+class ChecklistUpdateIn(BaseModel):
+    item_id: int
+    status: str
+    value_text: Optional[str] = None
+    file_url: Optional[str] = None
+
+
+@app.patch("/deals/checklist/item")
+def update_detail_checklist_item(payload: ChecklistUpdateIn, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            UPDATE deal_checklist_item
+            SET status = %s, value_text = %s, file_url = %s, updated_at = NOW()
+            WHERE id = %s
+            RETURNING id, status
+            """,
+            (payload.status, payload.value_text, payload.file_url, payload.item_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="checklist item not found")
+        conn.commit()
+        return dict(row)
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+class ObservationIn(BaseModel):
+    deal_id: int
+    obs_type: str
+    severity: str
+    obs_text: str
+    risk_domain: Optional[str] = None
+
+
+@app.post("/deals/observation")
+def add_observation(payload: ObservationIn, _auth: dict = Depends(verify_token)):
+    impact_map = {"INFO": None, "WATCH": "WARNING", "REVIEW": "REVIEW", "CRITICAL": "HOLD", "FATAL": "FAIL"}
+    if payload.severity not in impact_map:
+        raise HTTPException(status_code=400, detail="invalid severity")
+    gate_impact = impact_map.get(payload.severity)
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO deal_field_observation
+            (deal_id, obs_type, severity, obs_text, risk_domain, gate_impact)
+            VALUES (%s,%s,%s,%s,%s,%s)
+            RETURNING id
+            """,
+            (payload.deal_id, payload.obs_type, payload.severity, payload.obs_text, payload.risk_domain, gate_impact),
+        )
+        obs_id = cur.fetchone()["id"]
+        conn.commit()
+        return {"obs_id": obs_id, "gate_impact": gate_impact}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+class GateRequestIn(BaseModel):
+    deal_id: int
+    dd_tier: str
+
+
+@app.post("/deals/gate/request")
+def request_gate(payload: GateRequestIn, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT COUNT(*) AS total,
+                   COUNT(*) FILTER (WHERE status IN ('VERIFIED','RECEIVED')) AS done
+            FROM deal_checklist_item WHERE deal_id = %s AND dd_tier = %s
+            """,
+            (payload.deal_id, payload.dd_tier),
+        )
+        row = cur.fetchone()
+        total = row["total"] or 1
+        done = row["done"] or 0
+        pct = int(done / total * 100)
+
+        cur.execute(
+            "SELECT COUNT(*) AS cnt FROM deal_field_observation WHERE deal_id = %s AND severity IN ('CRITICAL','FATAL')",
+            (payload.deal_id,),
+        )
+        rf_cnt = cur.fetchone()["cnt"]
+
+        checklist_gate = "PASS" if pct >= 80 else "INCOMPLETE" if pct >= 50 else "FAIL"
+        red_flag_gate = "FAIL" if rf_cnt > 0 else "PASS"
+        narrative_gate = "WEAK"  # Phase 2: 엔진 연결 후 자동화
+        rank = {"PASS": 3, "INCOMPLETE": 2, "WEAK": 2, "HOLD": 1, "FAIL": 0}
+        final = min([checklist_gate, red_flag_gate, narrative_gate], key=lambda g: rank.get(g, 0))
+        if final == "WEAK":
+            final = "HOLD"
+
+        cur.execute(
+            """
+            INSERT INTO deal_gate_result
+            (deal_id, dd_tier, checklist_gate, red_flag_gate, narrative_gate, final_gate)
+            VALUES (%s,%s,%s,%s,%s,%s)
+            RETURNING id, final_gate
+            """,
+            (payload.deal_id, payload.dd_tier, checklist_gate, red_flag_gate, narrative_gate, final),
+        )
+        result = dict(cur.fetchone())
+        if final == "PASS" and payload.dd_tier == "SDD":
+            cur.execute("UPDATE deal_master SET stage='CDD' WHERE id=%s", (payload.deal_id,))
+        conn.commit()
+        return {**result, "checklist_pct": pct, "red_flag_count": rf_cnt}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
 @app.post("/api/risk-book/deals")
 def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token)):
     conn = get_conn()
