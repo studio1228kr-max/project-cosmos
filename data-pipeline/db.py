@@ -32,14 +32,17 @@ def save_raw_event(event) -> int:
         """
         INSERT INTO raw_source_events
             (source, source_ref_id, source_url, observed_at, entity_name, entity_id,
-             entity_type, raw_content, dedupe_key, scanner_version)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             entity_type, raw_content, dedupe_key, scanner_version,
+             raw_json, parser_version, parse_success)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (dedupe_key) DO NOTHING
         RETURNING id
         """,
         (event.source, event.source_ref_id, event.source_url, event.observed_at,
          event.entity_name, event.entity_id, event.entity_type, event.raw_content,
-         event.dedupe_key, event.scanner_version),
+         event.dedupe_key, event.scanner_version,
+         json.dumps(event.raw_json, ensure_ascii=False) if event.raw_json else None,
+         event.scanner_version, True),
     )
     row = cur.fetchone()
     if row is None:
@@ -94,7 +97,8 @@ def save_scored(normalized_signal_id, entity_name, entity_id, scores: dict, agg:
          scores.get('collateral_coverage', 0), scores.get('enforcement_pathway', 0),
          scores.get('sector_cycle', 0), agg['aggregate_score'],
          agg['suggested_deal_type'], agg['urgency'],
-         json.dumps(agg['reason_codes'], ensure_ascii=False), agg['thesis_suggestion'], 'v0_rule'),
+         json.dumps(agg['reason_codes'], ensure_ascii=False), agg['thesis_suggestion'],
+         agg.get('scoring_version', 'v0_rule')),
     )
     row = cur.fetchone()   # ON CONFLICT DO NOTHING → 이미 채점됨이면 None
     conn.commit()

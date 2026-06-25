@@ -101,4 +101,90 @@ CREATE TABLE IF NOT EXISTS guardrail_rejections (
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- v2.9 — 금융공학 + 데이터품질 레이어
+-- ============================================================
+
+-- Raw Data Lake: 원문 저장 확장
+ALTER TABLE raw_source_events
+  ADD COLUMN IF NOT EXISTS raw_xml        TEXT,
+  ADD COLUMN IF NOT EXISTS raw_json       JSONB,
+  ADD COLUMN IF NOT EXISTS file_url       TEXT,
+  ADD COLUMN IF NOT EXISTS parser_version TEXT,
+  ADD COLUMN IF NOT EXISTS parse_success  BOOLEAN DEFAULT TRUE;
+
+-- Entity Event Timeline (Negative Sequence Detector 기반)
+CREATE TABLE IF NOT EXISTS entity_event_timeline (
+  id                 SERIAL PRIMARY KEY,
+  entity_id          TEXT NOT NULL,
+  entity_name        TEXT,
+  source             TEXT NOT NULL,
+  signal_type        TEXT NOT NULL,
+  severity           TEXT,
+  confidence         NUMERIC(3,2),
+  event_time         TIMESTAMPTZ,
+  observed_at        TIMESTAMPTZ,
+  ingested_at        TIMESTAMPTZ DEFAULT NOW(),
+  source_ref_id      TEXT,
+  normalized_summary TEXT,
+  raw_event_id       INTEGER REFERENCES raw_source_events(id)
+);
+CREATE INDEX IF NOT EXISTS idx_eet_entity_id ON entity_event_timeline(entity_id, event_time DESC);
+
+-- Financial Features (Altman Z-score + ICR)
+CREATE TABLE IF NOT EXISTS entity_financial_features (
+  id                      SERIAL PRIMARY KEY,
+  entity_id               TEXT NOT NULL,
+  entity_name             TEXT,
+  dart_corp_code          TEXT,
+  period_end              DATE NOT NULL,
+  working_capital_ratio   NUMERIC(10,4),
+  retained_earnings_ratio NUMERIC(10,4),
+  ebit_ratio              NUMERIC(10,4),
+  equity_to_debt_ratio    NUMERIC(10,4),
+  sales_ratio             NUMERIC(10,4),
+  z_score                 NUMERIC(10,4),
+  z_zone                  TEXT CHECK (z_zone IN ('SAFE','GREY','DISTRESS','UNKNOWN')),
+  ebit                    NUMERIC(20,2),
+  interest_expense        NUMERIC(20,2),
+  icr                     NUMERIC(10,4),
+  ocf                     NUMERIC(20,2),
+  short_term_debt         NUMERIC(20,2),
+  icr_prev_q              NUMERIC(10,4),
+  icr_2q_ago              NUMERIC(10,4),
+  icr_3q_ago              NUMERIC(10,4),
+  icr_consecutive_drop    INTEGER DEFAULT 0,
+  z_score_prev_q          NUMERIC(10,4),
+  z_score_trend           TEXT CHECK (z_score_trend IN ('IMPROVING','STABLE','DETERIORATING','FAST_DETERIORATING')),
+  calculated_at           TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(entity_id, period_end)
+);
+
+-- CB/BW Term Extraction
+CREATE TABLE IF NOT EXISTS cb_term_extractions (
+  id                     SERIAL PRIMARY KEY,
+  entity_id              TEXT NOT NULL,
+  entity_name            TEXT,
+  dart_rcept_no          TEXT,
+  source_ref_id          TEXT,
+  security_type          TEXT,
+  issue_amount           NUMERIC(20,2),
+  maturity_date          DATE,
+  coupon_rate            NUMERIC(6,4),
+  conversion_price       NUMERIC(20,2),
+  refixing_present       BOOLEAN DEFAULT FALSE,
+  refixing_floor         NUMERIC(20,2),
+  refixing_period        TEXT,
+  refixing_no_floor      BOOLEAN DEFAULT FALSE,
+  refixing_monthly_reset BOOLEAN DEFAULT FALSE,
+  early_redemption_right BOOLEAN DEFAULT FALSE,
+  call_option            BOOLEAN DEFAULT FALSE,
+  collateral_present     BOOLEAN DEFAULT FALSE,
+  risk_level             TEXT CHECK (risk_level IN ('LOW','MEDIUM','HIGH','CRITICAL')),
+  risk_codes             JSONB DEFAULT '[]',
+  raw_text               TEXT,
+  extracted_at           TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cbte_entity ON cb_term_extractions(entity_id);
+
 COMMIT;

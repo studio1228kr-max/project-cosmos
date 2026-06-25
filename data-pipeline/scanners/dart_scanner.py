@@ -96,6 +96,7 @@ class DartScanner(BaseScanner):
                 raw_content=report_nm,
                 dedupe_key=hashlib.sha1(f"DART:{rcept_no}".encode()).hexdigest(),
                 scanner_version=self.VERSION,
+                raw_json=item,   # Raw Data Lake (v2.9)
             ))
         return events
 

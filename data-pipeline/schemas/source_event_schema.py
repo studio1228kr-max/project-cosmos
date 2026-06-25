@@ -18,6 +18,7 @@ class RawEvent:
     raw_content: str
     dedupe_key: str
     scanner_version: str
+    raw_json: Optional[dict] = None   # Raw Data Lake 원문 (v2.9)
 
 
 @dataclass
