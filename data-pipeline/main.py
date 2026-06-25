@@ -49,6 +49,8 @@ async def score_handler(signal_data: dict) -> None:
         db.save_scored, normalized_id,
         signal_data.get('entity_name'), signal_data.get('entity_id'), scores, agg,
     )
+    if sid is None:
+        return  # 이미 채점됨(멱등) → 재push 생략
     await push_to_cosmos({
         "id": sid,
         "entity_name": signal_data.get('entity_name'),

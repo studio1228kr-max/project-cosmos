@@ -86,6 +86,7 @@ def save_scored(normalized_signal_id, entity_name, entity_id, scores: dict, agg:
              score_enforcement_pathway, score_sector_cycle, aggregate_score,
              suggested_deal_type, urgency, reason_codes, thesis_suggestion, scoring_version)
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (normalized_signal_id) DO NOTHING
         RETURNING id
         """,
         (normalized_signal_id, entity_name, entity_id,
@@ -95,8 +96,8 @@ def save_scored(normalized_signal_id, entity_name, entity_id, scores: dict, agg:
          agg['suggested_deal_type'], agg['urgency'],
          json.dumps(agg['reason_codes'], ensure_ascii=False), agg['thesis_suggestion'], 'v0_rule'),
     )
-    sid = cur.fetchone()["id"]
+    row = cur.fetchone()   # ON CONFLICT DO NOTHING → 이미 채점됨이면 None
     conn.commit()
     cur.close()
     conn.close()
-    return sid
+    return row["id"] if row else None

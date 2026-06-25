@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS scored_signals (
   scored_at                   TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_ss_entity ON scored_signals(entity_name);
+-- 멱등 스코어링: 동일 normalized 신호 중복 채점 방지 (Redis 재전달/재시작 안전)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_scored_norm ON scored_signals(normalized_signal_id);
 
 CREATE TABLE IF NOT EXISTS signal_model_results (
   id                SERIAL PRIMARY KEY,
