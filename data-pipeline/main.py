@@ -76,10 +76,23 @@ async def run_consume() -> None:
     await consume_signals(score_handler)
 
 
+SCAN_INTERVAL_HOURS = float(os.getenv("SCAN_INTERVAL_HOURS", "6"))
+
+
+async def _scan_loop() -> None:
+    """정기 수집: 즉시 1회 → SCAN_INTERVAL_HOURS 마다 반복."""
+    while True:
+        try:
+            await run_scan()
+        except Exception as e:
+            print(json.dumps({"scan_error": str(e)}, ensure_ascii=False))
+        await asyncio.sleep(SCAN_INTERVAL_HOURS * 3600)
+
+
 async def run_worker() -> None:
     db.ensure_schema()
-    await run_scan()
-    await run_consume()
+    # consume 루프(상시) + scan 루프(주기)를 동시 실행
+    await asyncio.gather(run_consume(), _scan_loop())
 
 
 def main() -> None:

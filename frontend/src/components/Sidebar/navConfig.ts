@@ -45,6 +45,7 @@ export const navConfig: NavSection[] = [
     label: "딜 진행 단계",
     items: [
       { type: "leaf", id: "sourcing", label: "딜 소싱", path: "market", icon: "◎" },
+      { type: "leaf", id: "signalroom", label: "시그널 룸", path: "signalroom", icon: "◌" },
       { type: "leaf", id: "pipeline", label: "딜 파이프라인", path: "pipeline", icon: "▦" },
       { type: "leaf", id: "intake", label: "딜 등록", path: "intake", icon: "✦" },
       {

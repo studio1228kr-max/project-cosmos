@@ -176,9 +176,27 @@ export interface RegisteredDeal {
   killCriteria: string[];
 }
 
-export default function DealIntake({ onClose, onRegistered }: { onClose: () => void; onRegistered: (deal: RegisteredDeal) => void }) {
+export interface IntakePrefill {
+  deal_name?: string;
+  deal_type?: string;
+  thesis?: string;
+  sourcing_channel?: string;
+}
+
+export default function DealIntake({ onClose, onRegistered, prefill }: { onClose: () => void; onRegistered: (deal: RegisteredDeal) => void; prefill?: IntakePrefill }) {
   const [step, setStep] = useState(0);
-  const [f, setF] = useState<FormData>(EMPTY);
+  const [f, setF] = useState<FormData>(() => {
+    if (!prefill) return EMPTY;
+    const dt = DEAL_TYPES.some(d => d.code === prefill.deal_type) ? (prefill.deal_type as string) : "";
+    return {
+      ...EMPTY,
+      dealName: prefill.deal_name || "",
+      dealType: dt,
+      thesis: prefill.thesis || "",
+      channel: "기타",  // Signal Room 자동소싱 → 기타 채널 + 출처 메모
+      sourcingDetail: { channel_key: "기타", etc_note: `자동소싱 (Signal Room${prefill.sourcing_channel ? ` · ${prefill.sourcing_channel}` : ""})` },
+    };
+  });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
