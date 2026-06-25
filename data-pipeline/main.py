@@ -13,6 +13,7 @@ import asyncio
 import json
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -76,23 +77,47 @@ async def run_consume() -> None:
     await consume_signals(score_handler)
 
 
-SCAN_INTERVAL_HOURS = float(os.getenv("SCAN_INTERVAL_HOURS", "6"))
+# 정기수집: KST 지정 시각 (스펙 §5: 05:50, 17:50). Railway cron을 쓰면 false로 끄기.
+KST = timezone(timedelta(hours=9))
+SCAN_TIMES_KST = os.getenv("SCAN_TIMES_KST", "05:50,17:50")
+SCAN_SCHEDULE_ENABLED = os.getenv("SCAN_SCHEDULE_ENABLED", "true").lower() != "false"
+
+
+def _seconds_until_next_scan() -> float:
+    now = datetime.now(KST)
+    cands = []
+    for t in SCAN_TIMES_KST.split(","):
+        t = t.strip()
+        if not t:
+            continue
+        hh, mm = t.split(":")
+        c = now.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
+        if c <= now:
+            c += timedelta(days=1)
+        cands.append(c)
+    if not cands:
+        return 6 * 3600
+    return max(1.0, (min(cands) - now).total_seconds())
 
 
 async def _scan_loop() -> None:
-    """정기 수집: 즉시 1회 → SCAN_INTERVAL_HOURS 마다 반복."""
+    """부팅 시 1회 → 이후 SCAN_TIMES_KST 지정 시각마다."""
+    await run_scan()
     while True:
+        await asyncio.sleep(_seconds_until_next_scan())
         try:
             await run_scan()
         except Exception as e:
             print(json.dumps({"scan_error": str(e)}, ensure_ascii=False))
-        await asyncio.sleep(SCAN_INTERVAL_HOURS * 3600)
 
 
 async def run_worker() -> None:
     db.ensure_schema()
-    # consume 루프(상시) + scan 루프(주기)를 동시 실행
-    await asyncio.gather(run_consume(), _scan_loop())
+    # consume 상시 + (옵션) 지정 시각 scan. Railway cron 사용 시 SCAN_SCHEDULE_ENABLED=false
+    if SCAN_SCHEDULE_ENABLED:
+        await asyncio.gather(run_consume(), _scan_loop())
+    else:
+        await run_consume()
 
 
 def main() -> None:

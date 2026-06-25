@@ -9,7 +9,7 @@ import DashboardCharts from "./components/DashboardCharts";
 import Dashboard from "./components/Dashboard";
 import Pipeline from "./pages/Pipeline";
 import MarketScan from "./pages/MarketScan";
-import SignalRoom, { SignalPrefill } from "./pages/SignalRoom";
+import SignalRoom from "./pages/SignalRoom";
 import RiskBook from "./pages/RiskBook";
 import EvidenceChecklist from "./pages/EvidenceChecklist";
 
@@ -836,7 +836,6 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
   const [loading, setLoading] = useState(true);
   const [killCheckDeal, setKillCheckDeal] = useState<RegisteredDeal | null>(null);
   const [dashKey, setDashKey] = useState(0);
-  const [intakePrefill, setIntakePrefill] = useState<SignalPrefill | null>(null);
 
   const loadDeals = () => {
     setLoading(true);
@@ -865,7 +864,7 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
 
   const activePage = nav === "intake" ? "intake" : nav === "sourcing" ? "market" : nav === "signalroom" ? "signalroom" : nav === "diagnostic" ? "diagnostic" : nav === "evidence" ? "evidence" : currentView;
   return (
-    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");setIntakePrefill(null);}else if (p==="market"){setNav("sourcing");}else if (p==="signalroom"){setNav("signalroom");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="riskbook"){setNav("diagnostic");}else if (p==="evidence"){setNav("evidence");}else if (p==="today"){setNav("pipeline");setCurrentView("today");}else if (p==="pipeline"){setNav("pipeline");setCurrentView("pipeline");}else{setNav("pipeline");setCurrentView("today");} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr" onCollapsedChange={setSidebarCollapsed}>
+    <Layout page={activePage} onNav={(p: string) => { if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("sourcing");}else if (p==="signalroom"){setNav("signalroom");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="riskbook"){setNav("diagnostic");}else if (p==="evidence"){setNav("evidence");}else if (p==="today"){setNav("pipeline");setCurrentView("today");}else if (p==="pipeline"){setNav("pipeline");setCurrentView("pipeline");}else{setNav("pipeline");setCurrentView("today");} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr" onCollapsedChange={setSidebarCollapsed}>
       <div style={{ display:"flex", height:"100%", overflow:"hidden" }}>
         {nav === "evidence" ? (
             <EvidenceChecklist />
@@ -874,19 +873,18 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
           ) : nav === "sourcing" ? (
             <MarketScan />
           ) : nav === "signalroom" ? (
-            <SignalRoom onConvert={(p) => { setIntakePrefill(p); setNav("intake"); }} />
+            <SignalRoom onDealRegistered={(deal) => { setKillCheckDeal(deal); setNav("pipeline"); setCurrentView("today"); }} />
           ) : nav === "intake" ? (
           <DealIntake
-            prefill={intakePrefill || undefined}
-            onClose={() => { setIntakePrefill(null); setNav("pipeline"); }}
-            onRegistered={(deal) => { setIntakePrefill(null); setKillCheckDeal(deal); setNav("pipeline"); setCurrentView("today"); }}
+            onClose={() => setNav("pipeline")}
+            onRegistered={(deal) => { setKillCheckDeal(deal); setNav("pipeline"); setCurrentView("today"); }}
           />
         ) : (
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
             {currentView === "today" && (
               <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
                 <Dashboard key={dashKey} onNavigateDeal={(id: string, action?: string) => {
-                  if (id === "new" || action === "intake") { setNav("intake"); setIntakePrefill(null); setSelectedId(null); setSelectedTab(undefined); }
+                  if (id === "new" || action === "intake") { setNav("intake"); setSelectedId(null); setSelectedTab(undefined); }
                   else if (id === "pipeline") { setCurrentView("pipeline"); setSelectedId(null); setSelectedTab(undefined); }
                   else if (action === "checklist" || action === "status" || action === "icpack") { setCurrentView("pipeline"); setSelectedId(id); setSelectedTab(action); }
                   else { setCurrentView("pipeline"); setSelectedId(id); setSelectedTab(undefined); }

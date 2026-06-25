@@ -1665,6 +1665,34 @@ def convert_to_deal(signal_id: int, _auth: dict = Depends(verify_token)):
         conn.close()
 
 
+@app.patch("/api/signals/{signal_id}/status")
+def update_signal_status(signal_id: int, payload: dict, _auth: dict = Depends(verify_token)):
+    status = payload.get("status")
+    if status not in ("NEW", "WATCHING", "CONVERTED", "DISMISSED"):
+        raise HTTPException(status_code=400, detail="invalid status")
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE signal_room SET status = %s, updated_at = NOW() WHERE id = %s RETURNING id, status",
+            (status, signal_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="signal not found")
+        conn.commit()
+        return dict(row)
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
 @app.post("/api/risk-book/deals")
 def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token)):
     conn = get_conn()
