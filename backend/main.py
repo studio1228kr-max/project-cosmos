@@ -1585,6 +1585,86 @@ def request_gate(payload: GateRequestIn, _auth: dict = Depends(verify_token)):
         conn.close()
 
 
+# ── Signal Room (data-pipeline 연동) ───────────────────────────
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
+
+
+@app.post("/api/signals/ingest")
+def ingest_signal(payload: dict, x_internal_key: Optional[str] = Header(None)):
+    # 내부망 공유 시크릿 인증 (data-pipeline → cosmos)
+    if not INTERNAL_API_KEY or x_internal_key != INTERNAL_API_KEY:
+        raise HTTPException(status_code=401, detail="invalid internal key")
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            INSERT INTO signal_room
+                (external_signal_id, entity_name, entity_id, signal_type, aggregate_score,
+                 suggested_deal_type, urgency, thesis_suggestion, reason_summary)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (external_signal_id) DO NOTHING
+            """,
+            (
+                payload.get("id"), payload.get("entity_name"), payload.get("entity_id"),
+                payload.get("signal_type"), payload.get("aggregate_score"),
+                payload.get("suggested_deal_type"), payload.get("urgency"),
+                payload.get("thesis_suggestion"),
+                json.dumps(payload.get("reason_codes", []), ensure_ascii=False),
+            ),
+        )
+        conn.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/api/signals")
+def get_signals(_auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT * FROM signal_room
+            WHERE status = 'NEW'
+            ORDER BY CASE urgency WHEN 'CRITICAL_72H' THEN 1 WHEN 'WATCH_2W' THEN 2 ELSE 3 END,
+                     aggregate_score DESC
+            LIMIT 50
+            """
+        )
+        return {"signals": [dict(r) for r in cur.fetchall()]}
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.post("/api/signals/{signal_id}/convert")
+def convert_to_deal(signal_id: int, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM signal_room WHERE id = %s", (signal_id,))
+        signal = cur.fetchone()
+        if not signal:
+            raise HTTPException(status_code=404, detail="signal not found")
+        return {
+            "prefill": {
+                "deal_name": signal["entity_name"],
+                "deal_type": signal["suggested_deal_type"],
+                "thesis": signal["thesis_suggestion"],
+                "sourcing_channel": "자동소싱",
+            }
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+
 @app.post("/api/risk-book/deals")
 def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token)):
     conn = get_conn()
