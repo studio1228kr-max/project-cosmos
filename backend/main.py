@@ -1333,8 +1333,12 @@ def register_deal(payload: DealRegisterIn, _auth: dict = Depends(verify_token)):
                 (deal_id, kc, True),
             )
 
+        # SDD 체크리스트 자동 생성 (evidence_gate_template → deal_checklist_item)
+        cur.execute("SELECT fn_create_sdd_checklist(%s, %s) AS n", (deal_id, payload.deal_type))
+        sdd_count = cur.fetchone()["n"]
+
         conn.commit()
-        return {"deal_id": deal_id, "deal_code": deal_code, "status": "registered"}
+        return {"deal_id": deal_id, "deal_code": deal_code, "status": "registered", "sdd_items_created": sdd_count}
     except HTTPException:
         conn.rollback()
         raise
@@ -1428,7 +1432,7 @@ def get_deal_detail(deal_id: int, _auth: dict = Depends(verify_token)):
             raise HTTPException(status_code=404, detail="deal not found")
         deal = dict(deal_row)
 
-        cur.execute("SELECT * FROM deal_checklist_item WHERE deal_id = %s ORDER BY dd_tier, id", (deal_id,))
+        cur.execute("SELECT * FROM deal_checklist_item WHERE deal_id = %s ORDER BY dd_tier, display_order, id", (deal_id,))
         checklist = [dict(r) for r in cur.fetchall()]
 
         cur.execute("SELECT * FROM deal_field_observation WHERE deal_id = %s ORDER BY created_at DESC", (deal_id,))
