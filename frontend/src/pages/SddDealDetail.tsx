@@ -147,10 +147,6 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
           <button onClick={onClose} style={{ background: "transparent", border: "none", color: "#555", fontSize: 16, cursor: "pointer" }}>←</button>
           <span style={{ fontSize: 13, fontWeight: 700, color: "#C9A84C", fontFamily: "'IBM Plex Mono', monospace" }}>{deal?.deal_code || "…"}</span>
           <div style={{ flex: 1 }} />
-          <button onClick={autoPopulate} disabled={autoRunning}
-            style={{ background: autoRunning ? "transparent" : "rgba(201,168,76,0.1)", border: "1px solid #C9A84C", color: "#C9A84C", borderRadius: 6, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: autoRunning ? "default" : "pointer", opacity: autoRunning ? 0.6 : 1 }}>
-            {autoRunning ? "채우는 중…" : "⚡ 자동 채움"}
-          </button>
           <button onClick={load} style={{ background: "transparent", border: "1px solid #1e1e1e", color: "#8B95A3", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer" }}>↻ 자동반영</button>
         </div>
 
@@ -257,9 +253,16 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
                   ⚠ 정보 미확인(NOT_AVAILABLE) 항목 {naCount}건 — IC 전 재검토를 권장합니다.
                 </div>
               )}
-              {tier === "SDD" && !autoFilled && (
-                <div style={{ background: "rgba(201,168,76,0.05)", border: "1px dashed rgba(201,168,76,0.3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 11, color: "#8B95A3" }}>
-                  상단 [⚡ 자동 채움]으로 DART 기반 AUTO 항목을 일괄 채울 수 있습니다.
+              {/* SDD 체크리스트 상단 — DART 자동 채움 */}
+              {tier === "SDD" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <button onClick={autoPopulate} disabled={autoRunning}
+                    style={{ background: autoRunning ? "transparent" : "#C9A84C", border: "1px solid #C9A84C", color: autoRunning ? "#C9A84C" : "#0a0a0a", borderRadius: 7, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: autoRunning ? "default" : "pointer", opacity: autoRunning ? 0.7 : 1 }}>
+                    {autoRunning ? "채우는 중…" : "⚡ 자동 채움"}
+                  </button>
+                  <span style={{ fontSize: 11, color: "#8B95A3" }}>
+                    {autoFilled ? "DART 기반 AUTO 항목 반영됨 — 다시 눌러 갱신" : "DART 기반 AUTO 항목을 일괄 채웁니다"}
+                  </span>
                 </div>
               )}
 
