@@ -19,9 +19,13 @@ from engines.financial_engine import FinancialEngine
 from extractors.cb_term_extractor import CBTermExtractor
 from fetchers.dart_financial_fetcher import DartFinancialFetcher
 from normalizers.dart_normalizer import normalize_dart
+from resolvers.entity_resolver import EntityResolver
 from scanners.base_scanner import BaseScanner, NormalizedSignal, RawEvent
 
 CB_KEYWORDS = ["전환사채", "신주인수권부사채", "교환사채", "전환우선주"]
+
+# 모듈 싱글톤 — 한 워커 프로세스 내 entity_id 안정성 확보 (재시작 시 리셋: persist는 다음 단계)
+_entity_resolver = EntityResolver()
 
 DART_API_BASE = "https://opendart.fss.or.kr/api"
 REQUEST_TIMEOUT = 30
@@ -122,6 +126,19 @@ class DartScanner(BaseScanner):
             base = 10
             total = calculate_g1_score(g1c, base)
             signal.signal_subtype = f"G1x{g1c}:{priority_bucket(total)}"
+
+        # Entity Resolution → entity_event_timeline 적재
+        try:
+            res = _entity_resolver.resolve({
+                "source": "DART",
+                "corp_code": raw_event.entity_id,
+                "corp_name": raw_event.entity_name,
+                "as_of_date": raw_event.observed_at,
+            })
+            eid = res.get("entity_id") or raw_event.entity_id or "UNKNOWN"
+            await asyncio.to_thread(db.save_entity_event, eid, raw_event, signal)
+        except Exception as e:
+            print(f"entity resolve error {raw_event.entity_name}: {e}")
 
         # v2.9 ingestion: 분류된 신호에만 재무/CB 데이터 fetch (호출량 제한)
         if self.financial_enabled:

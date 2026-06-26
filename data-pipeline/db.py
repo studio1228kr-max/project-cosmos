@@ -134,6 +134,26 @@ def save_financial_features(features, corp_code: str, z: dict, icr: dict) -> Non
     conn.close()
 
 
+def save_entity_event(entity_id: str, raw_event, signal) -> None:
+    """entity_event_timeline 적재 (Entity Resolution → 시퀀스 추적)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO entity_event_timeline
+            (entity_id, entity_name, source, signal_type, severity, confidence,
+             event_time, observed_at, source_ref_id, normalized_summary, raw_event_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """,
+        (entity_id, raw_event.entity_name, raw_event.source, signal.signal_type,
+         signal.severity, signal.confidence, signal.observed_at, signal.observed_at,
+         raw_event.source_ref_id, signal.normalized_summary, signal.raw_event_id),
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
 def save_cb_extraction(ext: dict) -> None:
     codes = ext.get("risk_codes", [])
     conn = get_conn()
