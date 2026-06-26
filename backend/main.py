@@ -60,9 +60,10 @@ def _client_key(request: Request) -> str:
     return get_remote_address(request)
 
 
+# headers_enabled는 엔드포인트가 dict를 반환하면 _inject_headers에서 예외 → 제거.
+# (rate-limit 자체는 headers와 무관하게 동작)
 limiter = Limiter(key_func=_client_key,
-                  storage_uri=os.getenv("REDIS_URL") or "memory://",
-                  headers_enabled=True)
+                  storage_uri=os.getenv("REDIS_URL") or "memory://")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded,
     lambda request, exc: JSONResponse(status_code=429, content={"detail": "too many requests"}))
