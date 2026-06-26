@@ -6,6 +6,7 @@ calculate_g1_score 사용.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import os
 from datetime import datetime, timezone
@@ -13,8 +14,15 @@ from typing import List, Optional
 
 import httpx
 
+import db
+from engines.financial_engine import FinancialEngine
+from extractors.cb_term_extractor import CBTermExtractor
+from fetchers.dart_financial_fetcher import DartFinancialFetcher
 from normalizers.dart_normalizer import normalize_dart
+from parsers.dart_financial_parser import DartFinancialParser
 from scanners.base_scanner import BaseScanner, NormalizedSignal, RawEvent
+
+CB_KEYWORDS = ["전환사채", "신주인수권부사채", "교환사채", "전환우선주"]
 
 DART_API_BASE = "https://opendart.fss.or.kr/api"
 REQUEST_TIMEOUT = 30
@@ -59,6 +67,12 @@ class DartScanner(BaseScanner):
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("DART_API_KEY", "")
+        self.financial_fetcher = DartFinancialFetcher()
+        self.financial_parser = DartFinancialParser()
+        self.financial_engine = FinancialEngine()
+        self.cb_extractor = CBTermExtractor()
+        # 재무 fetch 비활성 옵션 (DART API 부하/디버그용)
+        self.financial_enabled = os.getenv("FINANCIAL_FETCH_ENABLED", "true").lower() != "false"
 
     async def scan(self, bgn_de: str = None, end_de: str = None, page_count: int = 100, **kwargs) -> List[RawEvent]:
         if not self.api_key:
@@ -110,4 +124,62 @@ class DartScanner(BaseScanner):
             base = 10
             total = calculate_g1_score(g1c, base)
             signal.signal_subtype = f"G1x{g1c}:{priority_bucket(total)}"
+
+        # v2.9 ingestion: 분류된 신호에만 재무/CB 데이터 fetch (호출량 제한)
+        if self.financial_enabled:
+            signal.financial_signals = await self._fetch_and_score_financial(raw_event)
+            if self._is_cb_disclosure(raw_event):
+                signal.cb_signals = await self._extract_cb_terms(raw_event)
         return signal
+
+    async def _fetch_and_score_financial(self, raw_event: RawEvent) -> List[dict]:
+        """corp_code(=entity_id) 재무제표 fetch → Z-score/ICR 신호."""
+        corp_code = raw_event.entity_id or await self.financial_fetcher.get_corp_code(raw_event.entity_name)
+        if not corp_code:
+            return []
+        try:
+            raw_periods = await self.financial_fetcher.fetch_multi_period(corp_code, periods=4)
+            if not raw_periods:
+                return []
+            features = [self.financial_parser.parse(p, raw_event.entity_id or corp_code, raw_event.entity_name, corp_code)
+                        for p in raw_periods]
+            current = features[0]
+            z = self.financial_engine.calculate_altman_z(current)
+            icr = self.financial_engine.calculate_icr(current)
+            await asyncio.to_thread(db.save_financial_features, current, corp_code, z, icr)
+            return self.financial_engine.detect_signals(current, features[1:])
+        except Exception as e:
+            print(f"financial fetch error {raw_event.entity_name}: {e}")
+            return []
+
+    def _is_cb_disclosure(self, raw_event: RawEvent) -> bool:
+        text = raw_event.raw_content or ""
+        return any(kw in text for kw in CB_KEYWORDS)
+
+    async def _extract_cb_terms(self, raw_event: RawEvent) -> List[dict]:
+        """CB 공시 원문 fetch → Claude 추출 → 위험 신호."""
+        try:
+            raw_text = await self._fetch_disclosure_text(raw_event.source_ref_id)
+            if not raw_text:
+                return []
+            ext = await asyncio.to_thread(
+                self.cb_extractor.extract, raw_text,
+                raw_event.entity_id or "", raw_event.entity_name, raw_event.source_ref_id,
+            )
+            if ext.get("error"):
+                return []
+            await asyncio.to_thread(db.save_cb_extraction, {**ext, "raw_text": raw_text})
+            return self.cb_extractor.to_signals(ext)
+        except Exception as e:
+            print(f"cb extraction error {raw_event.entity_name}: {e}")
+            return []
+
+    async def _fetch_disclosure_text(self, rcept_no: str) -> str:
+        """DART 공시 뷰어 텍스트 (근사 — 정식 문서 API는 Phase 3)."""
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                res = await client.get(f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={rcept_no}")
+            from bs4 import BeautifulSoup
+            return BeautifulSoup(res.text, "html.parser").get_text(separator=" ", strip=True)[:10000]
+        except Exception:
+            return ""

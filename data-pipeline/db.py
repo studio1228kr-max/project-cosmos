@@ -105,3 +105,58 @@ def save_scored(normalized_signal_id, entity_name, entity_id, scores: dict, agg:
     cur.close()
     conn.close()
     return row["id"] if row else None
+
+
+def save_financial_features(features, corp_code: str, z: dict, icr: dict) -> None:
+    """entity_financial_features upsert (entity_id, period_end)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO entity_financial_features
+            (entity_id, entity_name, dart_corp_code, period_end,
+             current_assets, total_assets, retained_earnings, ebit, equity,
+             total_debt, sales, interest_expense, operating_cf, short_term_debt,
+             z_score, z_zone, icr, ocf)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (entity_id, period_end) DO UPDATE
+          SET z_score=EXCLUDED.z_score, z_zone=EXCLUDED.z_zone, icr=EXCLUDED.icr,
+              ocf=EXCLUDED.ocf, calculated_at=NOW()
+        """,
+        (features.entity_id, features.entity_name, corp_code, features.period_end,
+         features.current_assets, features.total_assets, features.retained_earnings,
+         features.ebit, features.equity, features.total_debt, features.sales,
+         features.interest_expense, features.operating_cf, features.short_term_debt,
+         z.get("z_score"), z.get("z_zone"), icr.get("icr"), features.operating_cf),
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def save_cb_extraction(ext: dict) -> None:
+    codes = ext.get("risk_codes", [])
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO cb_term_extractions
+            (entity_id, entity_name, source_ref_id, security_type, issue_amount,
+             maturity_date, coupon_rate, conversion_price, refixing_present, refixing_floor,
+             refixing_period, refixing_no_floor, refixing_monthly_reset,
+             early_redemption_right, call_option, collateral_present,
+             risk_level, risk_codes, raw_text)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """,
+        (ext.get("entity_id"), ext.get("entity_name"), ext.get("source_ref_id"),
+         ext.get("security_type"), ext.get("issue_amount"), ext.get("maturity_date"),
+         ext.get("coupon_rate"), ext.get("conversion_price"),
+         bool(ext.get("refixing_present")), ext.get("refixing_floor"),
+         ext.get("refixing_period"), "no_refixing_floor" in codes, "monthly_reset" in codes,
+         bool(ext.get("early_redemption_right")), bool(ext.get("call_option")),
+         bool(ext.get("collateral_present")), ext.get("risk_level"),
+         json.dumps(codes, ensure_ascii=False), (ext.get("raw_text") or "")[:5000]),
+    )
+    conn.commit()
+    cur.close()
+    conn.close()

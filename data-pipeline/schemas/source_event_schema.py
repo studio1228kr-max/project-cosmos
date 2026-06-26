@@ -1,9 +1,9 @@
 """Signal Contract — RawEvent / NormalizedSignal 표준 dataclass."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass
@@ -35,3 +35,6 @@ class NormalizedSignal:
     observed_at: Optional[datetime]
     raw_event_id: Optional[int] = None
     normalized_id: Optional[int] = None
+    # v2.9 ingestion: 재무/CB 신호 (Redis로 consumer까지 전달 → signal_engine 병합)
+    financial_signals: List[dict] = field(default_factory=list)
+    cb_signals: List[dict] = field(default_factory=list)
