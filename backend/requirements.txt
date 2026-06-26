@@ -8,3 +8,4 @@ requests
 httpx
 python-dateutil
 slowapi
+redis

@@ -50,8 +50,10 @@ app = FastAPI(
     openapi_url=None if IS_PROD else "/openapi.json",
 )
 
-# PATCH-03: 로그인 brute-force 방어
-limiter = Limiter(key_func=get_remote_address)
+# PATCH-03: 로그인 brute-force 방어.
+# 멀티워커/레플리카에서 카운터 공유되도록 Redis 스토리지 사용(없으면 in-memory fallback).
+limiter = Limiter(key_func=get_remote_address,
+                  storage_uri=os.getenv("REDIS_URL") or "memory://")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded,
     lambda request, exc: JSONResponse(status_code=429, content={"detail": "too many requests"}))
