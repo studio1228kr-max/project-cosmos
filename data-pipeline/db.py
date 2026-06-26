@@ -43,6 +43,32 @@ def save_financial_rows(entity_id: str, mythos_rows: list) -> None:
     get_pipeline().save_rows(rows=rows, expected_report_types={"annual", "q3", "half", "q1"})
 
 
+# ── Sprint #3: 재무 fetch 로그 (normalize 무관 전체 corp_code 루프) ──
+def save_fetch_log(corp_code: str, status: str, periods_saved: int = 0, error_msg=None) -> None:
+    """financial_fetch_log 기록. status: SUCCESS / FAILED / EMPTY / SKIP."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """INSERT INTO financial_fetch_log (corp_code, fetch_status, periods_saved, error_msg)
+           VALUES (%s,%s,%s,%s)""",
+        (corp_code, status, periods_saved, (error_msg or None) and str(error_msg)[:1000]),
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def get_today_fetched_corps() -> set:
+    """오늘(batch_date=CURRENT_DATE) 이미 fetch 시도한 corp_code 집합 (중복 방지)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT DISTINCT corp_code FROM financial_fetch_log WHERE batch_date = CURRENT_DATE")
+    out = {r["corp_code"] for r in cur.fetchall()}
+    cur.close()
+    conn.close()
+    return out
+
+
 def ensure_schema():
     """schema.sql 적용 (재실행 안전)."""
     sql = (Path(__file__).resolve().parent / "schema.sql").read_text(encoding="utf-8")

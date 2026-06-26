@@ -82,16 +82,17 @@ class DartFinancialFetcher:
     _RTYPE = [("annual", "11011", "12-31", 12), ("q3", "11014", "09-30", 9),
               ("half", "11012", "06-30", 6), ("q1", "11013", "03-31", 3)]
 
-    async def fetch_mythos_rows(self, corp_code: str, entity_name: str) -> List[dict]:
+    async def fetch_mythos_rows(self, corp_code: str, entity_name: str, max_years: int = 3) -> List[dict]:
         """Mythos 저장용 — 4보고서가 모두 존재하는 가장 최근 회계연도 1개를 반환.
 
         period_end = 회계연도 앵커({year}-12-31), statement_end = 보고서별 실제 결산일.
         features = financial_engine.build_ratio_features (X1~X5 ratio dict).
+        max_years: 거슬러 탐색할 회계연도 수 (대량 루프는 1로 DART 호출 제한).
         """
         from engines.financial_engine import FinancialEngine
         fe = FinancialEngine()
         cy = datetime.now().year
-        for year in range(cy - 1, cy - 4, -1):
+        for year in range(cy - 1, cy - 1 - max_years, -1):
             rows: List[dict] = []
             for rtype, reprt, mmdd, months in self._RTYPE:
                 feat = await self.fetch_features(corp_code, str(year), rtype, corp_code, entity_name)

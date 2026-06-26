@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import os
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -75,6 +76,53 @@ class DartScanner(BaseScanner):
         self.cb_extractor = CBTermExtractor()
         # 재무 fetch 비활성 옵션 (DART API 부하/디버그용)
         self.financial_enabled = os.getenv("FINANCIAL_FETCH_ENABLED", "true").lower() != "false"
+        # 대량 재무 fetch 루프 시 회계연도 탐색 폭 (DART 호출 제한)
+        self.bulk_fetch_max_years = int(os.getenv("BULK_FETCH_MAX_YEARS", "1"))
+
+    async def run(self, **kwargs) -> dict:
+        """BaseScanner.run() → 그 뒤 normalize 무관 전체 corp_code 재무 fetch 루프(Sprint #3)."""
+        result = await super().run(**kwargs)
+        corp_map = result.pop("corp_map", {}) or {}
+        if self.financial_enabled and corp_map:
+            try:
+                result["financial_fetch"] = await self.run_financial_fetch_loop(corp_map)
+            except Exception as e:
+                print(f"financial fetch loop error: {e}")
+                result["financial_fetch"] = {"error": str(e)}
+        return result
+
+    async def run_financial_fetch_loop(self, corp_map: dict) -> dict:
+        """스캔된 전체 corp_code 재무 fetch → Mythos 저장 + financial_fetch_log.
+
+        normalize/signal 루프와 완전 격리(try/except). 오늘 이미 fetch한 corp는 SKIP.
+        """
+        already = await asyncio.to_thread(db.get_today_fetched_corps)
+        stats = {"total": len(corp_map), "SUCCESS": 0, "EMPTY": 0, "FAILED": 0, "SKIP": 0, "saved_periods": 0}
+        for corp_code, entity_name in corp_map.items():
+            if corp_code in already:
+                stats["SKIP"] += 1
+                continue
+            try:
+                rows = await self.financial_fetcher.fetch_mythos_rows(
+                    corp_code, entity_name or "", max_years=self.bulk_fetch_max_years)
+                if not rows:
+                    await asyncio.to_thread(db.save_fetch_log, corp_code, "EMPTY", 0, None)
+                    stats["EMPTY"] += 1
+                    continue
+                await asyncio.to_thread(db.save_financial_rows, corp_code, rows)
+                await asyncio.to_thread(db.save_fetch_log, corp_code, "SUCCESS", len(rows), None)
+                stats["SUCCESS"] += 1
+                stats["saved_periods"] += len(rows)
+            except Exception as e:
+                # 실패 격리 — 다음 corp_code 계속 (즉시 재시도 금지)
+                try:
+                    await asyncio.to_thread(db.save_fetch_log, corp_code, "FAILED", 0, str(e))
+                except Exception:
+                    pass
+                stats["FAILED"] += 1
+            await asyncio.sleep(0.5)   # DART rate-limit
+        print(json.dumps({"financial_fetch": stats}, ensure_ascii=False))
+        return stats
 
     async def scan(self, bgn_de: str = None, end_de: str = None, page_count: int = 100, **kwargs) -> List[RawEvent]:
         if not self.api_key:
@@ -148,19 +196,15 @@ class DartScanner(BaseScanner):
         return signal
 
     async def _fetch_and_score_financial(self, raw_event: RawEvent) -> List[dict]:
-        """corp_code(=entity_id) 재무제표 fetch → Mythos 저장 + Z-score/ICR 신호."""
+        """corp_code(=entity_id) 재무제표 fetch → Z-score/ICR 신호 (스코어 전용).
+
+        Mythos 저장은 Sprint #3에서 run_financial_fetch_loop(전체 corp_code)로 분리됨.
+        여기선 normalize 통과 신호의 스코어링을 위한 raw FinancialFeatures만 사용한다.
+        """
         corp_code = raw_event.entity_id or await self.financial_fetcher.get_corp_code(raw_event.entity_name)
         if not corp_code:
             return []
         try:
-            # 저장: Mythos (1회계연도 4보고서 → versions append + current upsert)
-            mythos_rows = await self.financial_fetcher.fetch_mythos_rows(corp_code, raw_event.entity_name)
-            if mythos_rows:
-                try:
-                    await asyncio.to_thread(db.save_financial_rows, corp_code, mythos_rows)
-                except Exception as e:
-                    print(f"mythos save error {raw_event.entity_name}: {e}")
-            # 스코어: raw FinancialFeatures → detect_signals
             features = await self.financial_fetcher.fetch_multi_period(
                 corp_code, raw_event.entity_id or corp_code, raw_event.entity_name, periods=4)
             if not features:

@@ -43,6 +43,8 @@ class BaseScanner(ABC):
         raw_events = await self.scan(**kwargs)
         hits, signals = [], []
         accepted = rejected = 0
+        # Sprint #3: normalize 무관 — 스캔된 모든 corp_code 수집(재무 fetch 별도 루프 입력)
+        corp_map = {e.entity_id: e.entity_name for e in raw_events if e.entity_id}
 
         for event in raw_events:
             verdict = guardrail.evaluate(event)
@@ -79,6 +81,7 @@ class BaseScanner(ABC):
             "scanned": len(raw_events),
             "emitted": len(signals),
             "hits": hits,
+            "corp_map": corp_map,
             "intake_summary": {"accepted": accepted, "rejected": rejected},
             "scanner": self.__class__.__name__,
             "version": self.VERSION,

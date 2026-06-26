@@ -187,4 +187,16 @@ CREATE TABLE IF NOT EXISTS cb_term_extractions (
 );
 CREATE INDEX IF NOT EXISTS idx_cbte_entity ON cb_term_extractions(entity_id);
 
+-- 재무 fetch 로그 (Sprint #3: normalize 무관 전체 corp_code fetch 추적/멱등)
+CREATE TABLE IF NOT EXISTS financial_fetch_log (
+    id            BIGSERIAL PRIMARY KEY,
+    corp_code     VARCHAR(20) NOT NULL,
+    fetched_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fetch_status  VARCHAR(10) NOT NULL,   -- SUCCESS / FAILED / EMPTY / SKIP
+    periods_saved INT DEFAULT 0,
+    error_msg     TEXT,
+    batch_date    DATE NOT NULL DEFAULT CURRENT_DATE
+);
+CREATE INDEX IF NOT EXISTS idx_ffl_corp_date ON financial_fetch_log (corp_code, batch_date);
+
 COMMIT;
