@@ -148,20 +148,24 @@ class DartScanner(BaseScanner):
         return signal
 
     async def _fetch_and_score_financial(self, raw_event: RawEvent) -> List[dict]:
-        """corp_code(=entity_id) 재무제표 fetch → Z-score/ICR 신호."""
+        """corp_code(=entity_id) 재무제표 fetch → Mythos 저장 + Z-score/ICR 신호."""
         corp_code = raw_event.entity_id or await self.financial_fetcher.get_corp_code(raw_event.entity_name)
         if not corp_code:
             return []
         try:
+            # 저장: Mythos (1회계연도 4보고서 → versions append + current upsert)
+            mythos_rows = await self.financial_fetcher.fetch_mythos_rows(corp_code, raw_event.entity_name)
+            if mythos_rows:
+                try:
+                    await asyncio.to_thread(db.save_financial_rows, corp_code, mythos_rows)
+                except Exception as e:
+                    print(f"mythos save error {raw_event.entity_name}: {e}")
+            # 스코어: raw FinancialFeatures → detect_signals
             features = await self.financial_fetcher.fetch_multi_period(
                 corp_code, raw_event.entity_id or corp_code, raw_event.entity_name, periods=4)
             if not features:
                 return []
-            current = features[0]
-            z = self.financial_engine.calculate_altman_z(current)
-            icr = self.financial_engine.calculate_icr(current)
-            await asyncio.to_thread(db.save_financial_features, current, corp_code, z, icr)
-            return self.financial_engine.detect_signals(current, features[1:])
+            return self.financial_engine.detect_signals(features[0], features[1:])
         except Exception as e:
             print(f"financial fetch error {raw_event.entity_name}: {e}")
             return []

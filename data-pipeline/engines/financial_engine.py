@@ -2,7 +2,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
+from decimal import Decimal
+from typing import List, Optional
+
+
+def _dec(value, places: int) -> Optional[Decimal]:
+    """float/int → 지정 scale Decimal (Mythos scale guard 통과용). None 보존."""
+    if value is None:
+        return None
+    return Decimal(str(round(float(value), places)))
 
 
 @dataclass
@@ -69,6 +77,29 @@ class FinancialEngine:
         else:
             status = 'NORMAL'
         return {'icr': round(icr, 4), 'status': status}
+
+    def build_ratio_features(self, f: FinancialFeatures) -> dict:
+        """FinancialFeatures → entity_financial_features ratio 스키마 dict (Mythos features).
+
+        Altman X1~X5 비율(4 scale) + z_score(4) + icr(4) + 원시금액(2 scale).
+        total_assets=0이면 ratio들이 None → Mythos REQUIRED 검증에서 거부(정상).
+        """
+        z = self.calculate_altman_z(f)
+        icr = self.calculate_icr(f)
+        comp = z.get("components") or {}
+        return {
+            "working_capital_ratio":   _dec(comp.get("x1"), 4),
+            "retained_earnings_ratio": _dec(comp.get("x2"), 4),
+            "ebit_ratio":              _dec(comp.get("x3"), 4),
+            "equity_to_debt_ratio":    _dec(comp.get("x4"), 4),
+            "sales_ratio":             _dec(comp.get("x5"), 4),
+            "z_score":                 _dec(z.get("z_score"), 4),
+            "ebit":                    _dec(f.ebit, 2),
+            "interest_expense":        _dec(f.interest_expense, 2),
+            "icr":                     _dec(icr.get("icr"), 4),
+            "ocf":                     _dec(f.operating_cf, 2),
+            "short_term_debt":         _dec(f.short_term_debt, 2),
+        }
 
     def detect_signals(self, current: FinancialFeatures, history: List[FinancialFeatures]) -> List[dict]:
         """재무 지표 → 신호 자동 감지."""

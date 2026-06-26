@@ -65,7 +65,7 @@ class DartFinancialFetcher:
 
     async def fetch_multi_period(self, corp_code: str, entity_id: str, entity_name: str,
                                  periods: int = 4) -> List[FinancialFeatures]:
-        """최근 N기 FinancialFeatures (rate-limit sleep)."""
+        """최근 N기 FinancialFeatures (스코어용 detect_signals 입력, rate-limit sleep)."""
         out: List[FinancialFeatures] = []
         cy = datetime.now().year
         for year in range(cy - 1, cy - 3, -1):
@@ -77,3 +77,35 @@ class DartFinancialFetcher:
                         return out
                 await asyncio.sleep(0.3)
         return out
+
+    # ── Mythos: 1회계연도 4보고서(annual/q3/half/q1) 묶음 ──
+    _RTYPE = [("annual", "11011", "12-31", 12), ("q3", "11014", "09-30", 9),
+              ("half", "11012", "06-30", 6), ("q1", "11013", "03-31", 3)]
+
+    async def fetch_mythos_rows(self, corp_code: str, entity_name: str) -> List[dict]:
+        """Mythos 저장용 — 4보고서가 모두 존재하는 가장 최근 회계연도 1개를 반환.
+
+        period_end = 회계연도 앵커({year}-12-31), statement_end = 보고서별 실제 결산일.
+        features = financial_engine.build_ratio_features (X1~X5 ratio dict).
+        """
+        from engines.financial_engine import FinancialEngine
+        fe = FinancialEngine()
+        cy = datetime.now().year
+        for year in range(cy - 1, cy - 4, -1):
+            rows: List[dict] = []
+            for rtype, reprt, mmdd, months in self._RTYPE:
+                feat = await self.fetch_features(corp_code, str(year), rtype, corp_code, entity_name)
+                await asyncio.sleep(0.3)
+                if not feat or not (feat.total_assets or feat.sales or feat.equity):
+                    rows = []
+                    break
+                rows.append({
+                    "reprt_code": reprt, "report_type": rtype,
+                    "period_end": f"{year}-12-31",        # 회계연도 앵커
+                    "statement_end": f"{year}-{mmdd}",     # 보고서 실제 결산일
+                    "period_months": months, "is_accumulated": True,
+                    "features": fe.build_ratio_features(feat),
+                })
+            if len(rows) == 4:
+                return rows
+        return []

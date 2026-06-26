@@ -7,10 +7,40 @@ from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
+from psycopg2.pool import ThreadedConnectionPool
 
 
 def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"], cursor_factory=psycopg2.extras.RealDictCursor)
+
+
+# ── Mythos 재무 피처 파이프라인 (append-only versions + current projection) ──
+_pool = None
+_pipeline = None
+
+
+def get_pool() -> ThreadedConnectionPool:
+    global _pool
+    if _pool is None:
+        # 기본 tuple cursor (Mythos는 row[0] 인덱스 접근)
+        _pool = ThreadedConnectionPool(1, 5, dsn=os.environ["DATABASE_URL"])
+    return _pool
+
+
+def get_pipeline():
+    global _pipeline
+    if _pipeline is None:
+        from mythos_financial_feature_pipeline import MythosFinancialFeaturePipeline
+        _pipeline = MythosFinancialFeaturePipeline(get_pool())
+    return _pipeline
+
+
+def save_financial_rows(entity_id: str, mythos_rows: list) -> None:
+    """Mythos 저장 — 1회계연도 4보고서 dict 리스트 → versions append + current upsert."""
+    from mythos_financial_feature_pipeline import canonicalize_rows
+    rows = canonicalize_rows(entity_id=entity_id, fetched_rows=mythos_rows,
+                             require_single_period_end=True)
+    get_pipeline().save_rows(rows=rows, expected_report_types={"annual", "q3", "half", "q1"})
 
 
 def ensure_schema():
@@ -105,49 +135,6 @@ def save_scored(normalized_signal_id, entity_name, entity_id, scores: dict, agg:
     cur.close()
     conn.close()
     return row["id"] if row else None
-
-
-def save_financial_features(features, corp_code: str, z: dict, icr: dict) -> None:
-    """entity_financial_features upsert (entity_id, period_end).
-
-    테이블은 Altman X1~X5 비율(working_capital_ratio 등)을 저장하므로
-    z['components']를 매핑한다. 원시 금액 컬럼은 ebit/interest_expense/ocf/short_term_debt만.
-    """
-    comp = z.get("components") or {}
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO entity_financial_features
-            (entity_id, entity_name, dart_corp_code, period_end,
-             working_capital_ratio, retained_earnings_ratio, ebit_ratio,
-             equity_to_debt_ratio, sales_ratio,
-             z_score, z_zone, ebit, interest_expense, icr, ocf, short_term_debt)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        ON CONFLICT (entity_id, period_end) DO UPDATE
-          SET working_capital_ratio   = EXCLUDED.working_capital_ratio,
-              retained_earnings_ratio  = EXCLUDED.retained_earnings_ratio,
-              ebit_ratio               = EXCLUDED.ebit_ratio,
-              equity_to_debt_ratio     = EXCLUDED.equity_to_debt_ratio,
-              sales_ratio              = EXCLUDED.sales_ratio,
-              z_score                  = EXCLUDED.z_score,
-              z_zone                   = EXCLUDED.z_zone,
-              ebit                     = EXCLUDED.ebit,
-              interest_expense         = EXCLUDED.interest_expense,
-              icr                      = EXCLUDED.icr,
-              ocf                      = EXCLUDED.ocf,
-              short_term_debt          = EXCLUDED.short_term_debt,
-              calculated_at            = NOW()
-        """,
-        (features.entity_id, features.entity_name, corp_code, features.period_end,
-         comp.get("x1"), comp.get("x2"), comp.get("x3"), comp.get("x4"), comp.get("x5"),
-         z.get("z_score"), z.get("z_zone"),
-         features.ebit, features.interest_expense, icr.get("icr"),
-         features.operating_cf, features.short_term_debt),
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
 
 
 def save_entity_event(entity_id: str, raw_event, signal) -> None:
