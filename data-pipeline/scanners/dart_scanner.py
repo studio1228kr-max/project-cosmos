@@ -19,7 +19,6 @@ from engines.financial_engine import FinancialEngine
 from extractors.cb_term_extractor import CBTermExtractor
 from fetchers.dart_financial_fetcher import DartFinancialFetcher
 from normalizers.dart_normalizer import normalize_dart
-from parsers.dart_financial_parser import DartFinancialParser
 from scanners.base_scanner import BaseScanner, NormalizedSignal, RawEvent
 
 CB_KEYWORDS = ["전환사채", "신주인수권부사채", "교환사채", "전환우선주"]
@@ -68,7 +67,6 @@ class DartScanner(BaseScanner):
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("DART_API_KEY", "")
         self.financial_fetcher = DartFinancialFetcher()
-        self.financial_parser = DartFinancialParser()
         self.financial_engine = FinancialEngine()
         self.cb_extractor = CBTermExtractor()
         # 재무 fetch 비활성 옵션 (DART API 부하/디버그용)
@@ -138,11 +136,10 @@ class DartScanner(BaseScanner):
         if not corp_code:
             return []
         try:
-            raw_periods = await self.financial_fetcher.fetch_multi_period(corp_code, periods=4)
-            if not raw_periods:
+            features = await self.financial_fetcher.fetch_multi_period(
+                corp_code, raw_event.entity_id or corp_code, raw_event.entity_name, periods=4)
+            if not features:
                 return []
-            features = [self.financial_parser.parse(p, raw_event.entity_id or corp_code, raw_event.entity_name, corp_code)
-                        for p in raw_periods]
             current = features[0]
             z = self.financial_engine.calculate_altman_z(current)
             icr = self.financial_engine.calculate_icr(current)

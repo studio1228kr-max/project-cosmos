@@ -1,8 +1,8 @@
 """DART 재무제표 fetcher.
 
-스펙의 fnlttSinglAcnt(주요계정)는 이자비용/현금흐름이 없어 ICR 계산 불가 →
-TARGET_ACCOUNTS(IFRS 전체코드)에 맞는 fnlttSinglAcntAll(전체계정)을 사용.
-corp_code는 공시 item에 이미 있으므로(scan→entity_id) 그것을 직접 쓰는 게 정확.
+fnlttSinglAcntAll(전체계정)을 CFS/OFS 각각 호출 → ChatGPT 파서
+(parse_opendart_financial_accounts_with_fallback) → to_financial_features 로
+FinancialFeatures 생성. corp_code는 공시 item의 corp_code(entity_id)를 직접 사용.
 """
 from __future__ import annotations
 
@@ -13,62 +13,25 @@ from typing import List, Optional
 
 import httpx
 
+from engines.financial_engine import FinancialFeatures
+from parsers.dart_financial_parser import (
+    parse_opendart_financial_accounts,
+    to_financial_features,
+)
+
 DART_API_KEY = os.getenv("DART_API_KEY", "")
-DART_FINANCIAL_URL = "https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json"
+# 주요계정(fnlttSinglAcnt): 행마다 fs_div(CFS/OFS) 포함 → ChatGPT 파서 native.
+# (전체계정 All은 행에 fs_div가 없고 SCE 자본총계 중복으로 오매칭 → 사용 안 함)
+DART_FINANCIAL_URL = "https://opendart.fss.or.kr/api/fnlttSinglAcnt.json"
 DART_CORP_URL = "https://opendart.fss.or.kr/api/company.json"
 
 REPORT_CODES = {"annual": "11011", "q3": "11014", "half": "11012", "q1": "11013"}
-
-# IFRS account_id → 필드
-TARGET_ACCOUNTS = {
-    "ifrs-full_CurrentAssets": "current_assets",
-    "ifrs-full_Assets": "total_assets",
-    "ifrs-full_RetainedEarnings": "retained_earnings",
-    "ifrs-full_Equity": "equity",
-    "ifrs-full_Liabilities": "total_debt",
-    "ifrs-full_CurrentLiabilities": "current_liabilities",
-    "ifrs-full_ShorttermBorrowings": "short_term_debt",
-    "ifrs-full_Revenue": "sales",
-    "ifrs-full_OperatingIncome": "ebit",
-    "dart_OperatingIncomeLoss": "ebit",
-    "ifrs-full_FinanceCosts": "interest_expense",
-    "ifrs-full_CashFlowsFromUsedInOperatingActivities": "operating_cf",
-}
-
-# account_nm(한글) 부분일치 fallback — 표준 account_id 없는 SME 대응
-KOREAN_FALLBACK = [
-    ("유동자산", "current_assets"),
-    ("자산총계", "total_assets"),
-    ("이익잉여금", "retained_earnings"),
-    ("결손금", "retained_earnings"),
-    ("자본총계", "equity"),
-    ("부채총계", "total_debt"),
-    ("유동부채", "current_liabilities"),
-    ("단기차입금", "short_term_debt"),
-    ("매출액", "sales"),
-    ("영업수익", "sales"),
-    ("영업이익", "ebit"),
-    ("이자비용", "interest_expense"),
-    ("영업활동", "operating_cf"),
-]
-
-
-def _num(s) -> float:
-    """부호 보존 숫자 파싱 (음수 보존 — 결손금/손실/적자 신호 핵심)."""
-    s = str(s or "").replace(",", "").strip()
-    if not s or s == "-":
-        return 0.0
-    try:
-        return float(s)
-    except ValueError:
-        return 0.0
 
 
 class DartFinancialFetcher:
 
     async def get_corp_code(self, entity_name: str) -> Optional[str]:
-        """(fallback) company.json은 이름검색을 지원하지 않아 보통 None.
-        실제로는 공시 item의 corp_code(entity_id)를 사용한다."""
+        """(fallback) company.json은 이름검색 미지원이라 보통 None — 실제로는 공시 corp_code 사용."""
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 res = await client.get(DART_CORP_URL, params={"crtfc_key": DART_API_KEY, "corp_name": entity_name})
@@ -79,50 +42,38 @@ class DartFinancialFetcher:
             pass
         return None
 
-    async def fetch_financial(self, corp_code: str, year: str, report_type: str = "annual") -> dict:
-        """전체계정 재무제표 → 필드 dict (CFS 우선, 없으면 OFS)."""
-        for fs_div in ("CFS", "OFS"):
-            try:
-                async with httpx.AsyncClient(timeout=15) as client:
-                    res = await client.get(DART_FINANCIAL_URL, params={
-                        "crtfc_key": DART_API_KEY, "corp_code": corp_code,
-                        "bsns_year": year, "reprt_code": REPORT_CODES[report_type], "fs_div": fs_div,
-                    })
-                    data = res.json()
-            except Exception:
-                continue
-            if data.get("status") == "000" and data.get("list"):
-                return self._parse_accounts(data["list"])
-        return {}
+    async def _fetch_raw(self, corp_code: str, year: str, report_type: str) -> Optional[dict]:
+        """주요계정: fs_div 파라미터 없음 → 한 응답에 CFS/OFS 행이 fs_div로 구분돼 옴."""
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                res = await client.get(DART_FINANCIAL_URL, params={
+                    "crtfc_key": DART_API_KEY, "corp_code": corp_code,
+                    "bsns_year": year, "reprt_code": REPORT_CODES[report_type],
+                })
+                return res.json()
+        except Exception:
+            return None
 
-    def _parse_accounts(self, rows: List[dict]) -> dict:
-        result: dict = {}
-        for item in rows:
-            field_name = TARGET_ACCOUNTS.get(item.get("account_id", ""))
-            if not field_name:
-                nm = (item.get("account_nm", "") or "").strip()
-                for kw, fn in KOREAN_FALLBACK:
-                    # startswith: "자본및부채총계"가 "부채총계"에 오인매칭되는 것 방지,
-                    # "영업이익(손실)"·"이익잉여금(결손금)" 같은 접미사는 허용
-                    if nm.startswith(kw):
-                        field_name = fn
-                        break
-            if field_name and field_name not in result:
-                result[field_name] = _num(item.get("thstrm_amount", "0"))
-        return result
+    async def fetch_features(self, corp_code: str, year: str, report_type: str,
+                             entity_id: str, entity_name: str) -> Optional[FinancialFeatures]:
+        """fetch → ChatGPT 파서(parse_opendart_financial_accounts) → FinancialFeatures."""
+        resp = await self._fetch_raw(corp_code, year, report_type)
+        parsed = parse_opendart_financial_accounts(
+            resp or {}, strict_fs_consistency=False,  # CFS 누락계정 OFS 보완 허용
+        )
+        return to_financial_features(parsed, entity_id, entity_name, f"{year}-12-31")
 
-    async def fetch_multi_period(self, corp_code: str, periods: int = 4) -> List[dict]:
-        """최근 N기 재무 (연간·분기, rate-limit sleep)."""
-        results: List[dict] = []
+    async def fetch_multi_period(self, corp_code: str, entity_id: str, entity_name: str,
+                                 periods: int = 4) -> List[FinancialFeatures]:
+        """최근 N기 FinancialFeatures (rate-limit sleep)."""
+        out: List[FinancialFeatures] = []
         cy = datetime.now().year
         for year in range(cy - 1, cy - 3, -1):
             for rtype in ("annual", "q3", "half", "q1"):
-                data = await self.fetch_financial(corp_code, str(year), rtype)
-                if data:
-                    data["period_year"] = year
-                    data["report_type"] = rtype
-                    results.append(data)
-                    if len(results) >= periods:
-                        return results
+                feat = await self.fetch_features(corp_code, str(year), rtype, entity_id, entity_name)
+                if feat and (feat.total_assets or feat.sales or feat.equity):
+                    out.append(feat)
+                    if len(out) >= periods:
+                        return out
                 await asyncio.sleep(0.3)
-        return results
+        return out
