@@ -51,9 +51,18 @@ app = FastAPI(
 )
 
 # PATCH-03: 로그인 brute-force 방어.
-# 멀티워커/레플리카에서 카운터 공유되도록 Redis 스토리지 사용(없으면 in-memory fallback).
-limiter = Limiter(key_func=get_remote_address,
-                  storage_uri=os.getenv("REDIS_URL") or "memory://")
+# Railway 엣지 프록시 뒤에서는 request.client.host가 회전/프록시 IP라 키가 분산됨.
+# → X-Forwarded-For의 실제 클라이언트 IP로 키링. Redis 스토리지로 워커 간 공유.
+def _client_key(request: Request) -> str:
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=_client_key,
+                  storage_uri=os.getenv("REDIS_URL") or "memory://",
+                  headers_enabled=True)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded,
     lambda request, exc: JSONResponse(status_code=429, content={"detail": "too many requests"}))
