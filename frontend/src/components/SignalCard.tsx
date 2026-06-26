@@ -47,9 +47,10 @@ interface Props {
   onConvert: () => void;
   onDismiss: () => void;
   onWatch: () => void;
+  processing?: boolean;
 }
 
-export default function SignalCard({ signal, onConvert, onDismiss, onWatch }: Props) {
+export default function SignalCard({ signal, onConvert, onDismiss, onWatch, processing }: Props) {
   const u = URGENCY_CONFIG[signal.urgency] || URGENCY_CONFIG.MONITOR;
   const reasons = parseReasons(signal.reason_summary);
   const dtLabel = signal.suggested_deal_type
@@ -99,8 +100,11 @@ export default function SignalCard({ signal, onConvert, onDismiss, onWatch }: Pr
 
       {/* 액션 */}
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={onConvert} style={{ padding: "7px 16px", background: C.gold, border: "none", borderRadius: 6, color: "#0A0E14", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>딜로 등록 →</button>
-        <button onClick={onWatch} disabled={signal.status === "WATCHING"}
+        <button onClick={onConvert} disabled={processing}
+          style={{ padding: "7px 16px", background: processing ? "transparent" : C.gold, border: `1px solid ${C.gold}`, borderRadius: 6, color: processing ? C.gold : "#0A0E14", fontSize: 12, fontWeight: 700, cursor: processing ? "default" : "pointer", opacity: processing ? 0.7 : 1 }}>
+          {processing ? "자동 소싱 중…" : "딜로 등록 →"}
+        </button>
+        <button onClick={onWatch} disabled={signal.status === "WATCHING" || processing}
           style={{ padding: "7px 14px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: signal.status === "WATCHING" ? C.textDim : C.textMid, fontSize: 12, cursor: signal.status === "WATCHING" ? "default" : "pointer" }}>
           {signal.status === "WATCHING" ? "Watching" : "Watch"}
         </button>

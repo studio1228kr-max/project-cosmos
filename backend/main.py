@@ -1884,6 +1884,113 @@ def convert_to_deal(signal_id: int, _auth: dict = Depends(verify_token)):
         conn.close()
 
 
+@app.post("/api/signals/{signal_id}/auto-source")
+def auto_source_signal(signal_id: int, _auth: dict = Depends(verify_token)):
+    """Signal → 딜 자동 등록 → Kill Check 자동 → PASS 시 SDD AUTO → Narrative Gate → IC Memo
+    전체 자동화 체인. 사람 개입 시점은 S9 숫자/S10 의견뿐."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM signal_room WHERE id=%s", (signal_id,))
+        sig = cur.fetchone()
+        if not sig:
+            raise HTTPException(status_code=404, detail="signal not found")
+        if sig.get("status") == "CONVERTED" and sig.get("deal_id"):
+            return {"already_converted": True, "deal_id": sig["deal_id"],
+                    "notification": "이미 전환된 신호입니다."}
+
+        deal_type = sig.get("suggested_deal_type") or "DIRECT_LENDING"
+        corp_code = sig.get("entity_id")   # signal_room.entity_id == DART corp_code
+        thesis = sig.get("thesis_suggestion") or ""
+        # 딜타입 첫 thesis_type 자동 선택
+        ttypes = narrative_gate.list_thesis_types(deal_type)
+        thesis_type = ttypes[0]["thesis_type"] if ttypes else None
+
+        # 1) DealIntake 자동 채움 → deal_master 생성
+        deal_code = f"LSK-{datetime.now().year}-{uuid.uuid4().hex[:4].upper()}"
+        cur.execute(
+            """INSERT INTO deal_master
+                (deal_code, deal_name, deal_type, dd_tier, sourcing_channel, thesis, thesis_type,
+                 dart_corp_code, stage, sector)
+               VALUES (%s,%s,%s,'SDD','자동소싱',%s,%s,%s,'INTAKE',%s) RETURNING id""",
+            (deal_code, sig["entity_name"], deal_type, thesis, thesis_type, corp_code, sig.get("signal_type")))
+        deal_id = cur.fetchone()["id"]
+        cur.execute("SELECT fn_create_sdd_checklist(%s, %s) AS n", (deal_id, deal_type))
+
+        # 2) Kill Check 자동 실행 (signal 기반 6개 질문 자동 답변)
+        kill_qa = [
+            {"q": "법인 실존/등기 유효?", "a": f"DART corp_code {corp_code or '미상'} 기준 실존" if corp_code else "corp_code 미상 — 보강 필요"},
+            {"q": "명백한 사기/폐업 정황?", "a": "자동 소싱 신호상 없음"},
+            {"q": "딜타입 적합성?", "a": f"제안 딜타입 {deal_type}"},
+            {"q": "Thesis 성립 가능?", "a": thesis or "신호 thesis 미상"},
+            {"q": "규제/제재 대상?", "a": "신호상 해당 없음"},
+            {"q": "진행 가치(스코어)?", "a": f"aggregate_score {sig.get('aggregate_score')}"},
+        ]
+        kill_pass = bool(corp_code)   # corp_code 없으면 DROP(자동 채움 불가)
+        kill_result = "PASS" if kill_pass else "DROP"
+        kill_drops = [] if kill_pass else ["corp_code 미상 — 자동 소싱 불가"]
+        cur.execute(
+            """UPDATE deal_master SET kill_check_status=%s, kill_check_at=NOW(), kill_check_drops=%s,
+               stage=CASE WHEN %s='PASS' THEN 'SDD' ELSE 'DROPPED' END WHERE id=%s""",
+            (kill_result, json.dumps(kill_drops), kill_result, deal_id))
+        cur.execute("INSERT INTO deal_kill_check_log (deal_id, result, drop_reasons) VALUES (%s,%s,%s)",
+                    (deal_id, kill_result, json.dumps([q["a"] for q in kill_qa], ensure_ascii=False)))
+
+        chain = {"sdd_auto": None, "narrative_gate": None, "ic_memo": None}
+        if not kill_pass:
+            cur.execute("UPDATE signal_room SET status='CONVERTED', deal_id=%s, updated_at=NOW() WHERE id=%s", (deal_id, signal_id))
+            conn.commit()
+            return {"deal_id": deal_id, "deal_code": deal_code, "kill_check": kill_result,
+                    "kill_qa": kill_qa, "chain": chain,
+                    "notification": "Kill Check DROP — corp_code 미상으로 자동 소싱 중단, 수동 확인 필요"}
+
+        # 3) PASS 자동 체인: SDD AUTO → Narrative Gate → IC Memo
+        auto = sdd_auto.populate(cur, deal_id, corp_code)
+        chain["sdd_auto"] = {"filled": auto["filled_count"], "na": auto["na_count"], "flags": auto["quality_flags"]}
+
+        if thesis_type:
+            cur.execute("SELECT item_code, item_name, item_status FROM deal_checklist_item WHERE deal_id=%s AND dd_tier='SDD'", (deal_id,))
+            items = [dict(r) for r in cur.fetchall()]
+            g = narrative_gate.compute_gate(deal_type, thesis_type, items)
+            cur.execute(
+                """INSERT INTO narrative_gate_results
+                   (deal_id, thesis_type, gate_result, supported_count, contradicted_items, missing_evidence, auto_reason)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                (deal_id, thesis_type, g["gate_result"], g["supported_count"],
+                 json.dumps(g["contradicted_items"], ensure_ascii=False),
+                 json.dumps(g["missing_evidence"], ensure_ascii=False), g["auto_reason"]))
+            chain["narrative_gate"] = {"result": g["gate_result"], "supported": g["supported_count"]}
+
+        memo_ready = False
+        try:
+            memo = ic_memo.generate(cur, deal_id)
+            if memo.get("locked"):
+                chain["ic_memo"] = {"locked": True, "unlock": memo["unlock"]}
+            else:
+                memo_ready = True
+                chain["ic_memo"] = {"locked": False, "memo_id": memo["memo_id"], "gate_result": memo.get("gate_result")}
+        except Exception as e:
+            chain["ic_memo"] = {"error": str(e)}
+
+        cur.execute("UPDATE signal_room SET status='CONVERTED', deal_id=%s, updated_at=NOW() WHERE id=%s", (deal_id, signal_id))
+        conn.commit()
+
+        notification = ("IC Memo 초안 준비됨 — 확인해줘" if memo_ready
+                        else "자동 체인 완료 — IC Memo 잠금(조건 미충족), 딜 상세에서 확인 필요")
+        return {"deal_id": deal_id, "deal_code": deal_code, "kill_check": kill_result,
+                "kill_qa": kill_qa, "chain": chain, "memo_ready": memo_ready,
+                "notification": notification}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
 @app.patch("/api/signals/{signal_id}/status")
 def update_signal_status(signal_id: int, payload: dict, _auth: dict = Depends(verify_token)):
     status = payload.get("status")

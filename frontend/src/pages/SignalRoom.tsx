@@ -31,6 +31,8 @@ export default function SignalRoom({ onDealRegistered }: { onDealRegistered: (de
   const [err, setErr] = useState("");
   const [filter, setFilter] = useState("all");
   const [intakePrefill, setIntakePrefill] = useState<IntakePrefill | null>(null);
+  const [processing, setProcessing] = useState<number | null>(null);
+  const [notice, setNotice] = useState<any>(null);
 
   const load = useCallback(() => {
     setLoading(true); setErr("");
@@ -41,10 +43,13 @@ export default function SignalRoom({ onDealRegistered }: { onDealRegistered: (de
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  // [딜로 등록 →] 전체 자동화 체인: 딜 등록 → Kill Check → SDD AUTO → Narrative Gate → IC Memo
   const handleConvert = (s: Signal) => {
-    API.post(`/api/signals/${s.id}/convert`)
-      .then(r => setIntakePrefill(r.data.prefill))
-      .catch(e => setErr(e?.response?.data?.detail || "전환 실패"));
+    setProcessing(s.id); setErr(""); setNotice(null);
+    API.post(`/api/signals/${s.id}/auto-source`)
+      .then(r => { setNotice(r.data); load(); })
+      .catch(e => setErr(e?.response?.data?.detail || "자동 소싱 실패"))
+      .finally(() => setProcessing(null));
   };
   const handleDismiss = (id: number) => {
     API.patch(`/api/signals/${id}/status`, { status: "DISMISSED" })
@@ -90,6 +95,30 @@ export default function SignalRoom({ onDealRegistered }: { onDealRegistered: (de
           <button onClick={load} style={{ padding: "7px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.textMid, fontSize: 12, cursor: "pointer" }}>↻ 새로고침</button>
         </div>
 
+        {/* 자동 소싱 체인 결과 알림 */}
+        {notice && (
+          <div style={{ background: notice.memo_ready ? "rgba(43,196,138,0.08)" : "rgba(201,168,76,0.08)",
+            border: `1px solid ${notice.memo_ready ? "rgba(43,196,138,0.4)" : "rgba(201,168,76,0.4)"}`,
+            borderRadius: 8, padding: "14px 18px", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 14 }}>{notice.memo_ready ? "✅" : "⚠️"}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: notice.memo_ready ? C.green : C.gold }}>{notice.notification}</span>
+              <div style={{ flex: 1 }} />
+              <span style={{ fontSize: 11, color: C.textMid }}>{notice.deal_code}</span>
+              <button onClick={() => setNotice(null)} style={{ background: "transparent", border: "none", color: C.textDim, fontSize: 16, cursor: "pointer" }}>×</button>
+            </div>
+            {notice.chain && (
+              <div style={{ display: "flex", gap: 14, marginTop: 10, fontSize: 11, color: C.textMid, flexWrap: "wrap" }}>
+                <span>Kill Check: <b style={{ color: notice.kill_check === "PASS" ? C.green : C.red }}>{notice.kill_check}</b></span>
+                {notice.chain.sdd_auto && <span>SDD AUTO: <b style={{ color: C.text }}>{notice.chain.sdd_auto.filled}채움 / {notice.chain.sdd_auto.na} NA</b></span>}
+                {notice.chain.narrative_gate && <span>Gate: <b style={{ color: notice.chain.narrative_gate.result === "CONFIRMED" ? C.green : notice.chain.narrative_gate.result === "BROKEN" ? C.red : C.gold }}>{notice.chain.narrative_gate.result}</b></span>}
+                {notice.chain.ic_memo && <span>IC Memo: <b style={{ color: notice.chain.ic_memo.locked ? C.gold : C.green }}>{notice.chain.ic_memo.locked ? "잠금" : "초안 생성"}</b></span>}
+              </div>
+            )}
+            <div style={{ fontSize: 10, color: C.textDim, marginTop: 8 }}>Dashboard에서 딜을 열어 S9 구조 숫자·S10 판단 의견을 입력하세요.</div>
+          </div>
+        )}
+
         {/* 통계 */}
         <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
           <Stat label="전체 신호" value={stats.total} />
@@ -122,6 +151,7 @@ export default function SignalRoom({ onDealRegistered }: { onDealRegistered: (de
         ) : (
           filtered.map(s => (
             <SignalCard key={s.id} signal={s}
+              processing={processing === s.id}
               onConvert={() => handleConvert(s)}
               onWatch={() => handleWatch(s.id)}
               onDismiss={() => handleDismiss(s.id)} />
