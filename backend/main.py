@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -15,13 +16,22 @@ from evidence_engine import evaluate_evidence_engine
 from refi_path_engine import evaluate_refi_path_engine
 from recovery_strategy_engine_kr import evaluate_korea_recovery_strategy_engine
 from deal_pipeline_orchestrator import evaluate_deal_pipeline
-from fastapi import FastAPI, HTTPException, Depends, Header, Form
+from fastapi import FastAPI, HTTPException, Depends, Header, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
+logger = logging.getLogger("cosmos")
+
+# PATCH-01: 기본값 폴백 제거 + fail-closed. 환경변수 없으면 서버 시작 거부.
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY or len(SECRET_KEY) < 32:
+    raise RuntimeError("SECRET_KEY must be set to a >=32-byte random value")
 ALGORITHM = "HS256"
-TOKEN_EXPIRE_HOURS = 24 * 30
+TOKEN_EXPIRE_HOURS = 12  # PATCH-01: 30일 → 12시간
 
 
 def get_conn():
@@ -31,17 +41,52 @@ def get_conn():
     )
 
 
-app = FastAPI(title="COSMOS Deal OS API")
+# PATCH-03: prod에서 Swagger/OpenAPI 비공개
+IS_PROD = os.getenv("RAILWAY_ENVIRONMENT") == "production"
+app = FastAPI(
+    title="COSMOS Deal OS API",
+    docs_url=None if IS_PROD else "/docs",
+    redoc_url=None if IS_PROD else "/redoc",
+    openapi_url=None if IS_PROD else "/openapi.json",
+)
+
+# PATCH-03: 로그인 brute-force 방어
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded,
+    lambda request, exc: JSONResponse(status_code=429, content={"detail": "too many requests"}))
 
 from quant.api import router as quant_router
 app.include_router(quant_router)
 
+# PATCH-03: CORS 화이트리스트 (* 제거)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[
+        "https://cosmos.luskacapital.com",
+        "http://localhost:3000",
+    ],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# PATCH-03: 보안 헤더
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    return response
+
+
+# PATCH-03: 미처리 예외 일반화 (스택/DB 내부 노출 차단)
+@app.exception_handler(Exception)
+async def global_error_handler(request: Request, exc: Exception):
+    logger.exception("unhandled error: %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "internal server error"})
 
 
 class LoginRequest(BaseModel):
@@ -69,6 +114,19 @@ def verify_token(authorization: Optional[str] = Header(None)):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
     return payload
+
+
+# PATCH-02: RBAC. 현재 운영 사용자 role='gp'(최상위 권한)이므로 gp를 항상 포함.
+ADMIN_ROLES = ("gp", "admin")
+EDITOR_ROLES = ("gp", "admin", "editor")
+
+
+def require_role(*allowed_roles):
+    def dep(payload: dict = Depends(verify_token)):
+        if payload.get("role") not in allowed_roles:
+            raise HTTPException(status_code=403, detail="insufficient role")
+        return payload
+    return dep
 
 
 @app.get("/health")
@@ -291,7 +349,7 @@ def onbid_search(
 
 
 @app.delete("/api/risk-book/deals/{deal_code}")
-def delete_deal(deal_code: str, payload: dict = Depends(verify_token)):
+def delete_deal(deal_code: str, payload: dict = Depends(require_role(*ADMIN_ROLES))):
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT id, is_test FROM deal_master WHERE deal_code = %s", (deal_code,))
@@ -780,7 +838,8 @@ def get_dashboard_scores(payload: dict = Depends(verify_token)):
 
 
 @app.post("/login")
-def login(body: LoginRequest):
+@limiter.limit("5/minute")
+def login(request: Request, body: LoginRequest):
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
@@ -801,7 +860,8 @@ def login(body: LoginRequest):
 
 
 @app.post("/token")
-def token(username: str = Form(...), password: str = Form(...)):
+@limiter.limit("5/minute")
+def token(request: Request, username: str = Form(...), password: str = Form(...)):
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
@@ -1182,7 +1242,7 @@ def api_get_checklist(deal_code: str, dd_tier: str = None, payload: dict = Depen
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1347,7 +1407,7 @@ def register_deal(payload: DealRegisterIn, _auth: dict = Depends(verify_token)):
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1361,7 +1421,7 @@ class KillCheckIn(BaseModel):
 
 
 @app.post("/deals/kill-check")
-def submit_kill_check(payload: KillCheckIn, _auth: dict = Depends(verify_token)):
+def submit_kill_check(payload: KillCheckIn, _auth: dict = Depends(require_role(*EDITOR_ROLES))):
     if payload.result not in ("PASS", "DROP"):
         raise HTTPException(status_code=400, detail="result must be PASS or DROP")
     conn = get_conn()
@@ -1407,7 +1467,7 @@ def submit_kill_check(payload: KillCheckIn, _auth: dict = Depends(verify_token))
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1477,12 +1537,19 @@ class ChecklistUpdateIn(BaseModel):
 
 
 @app.patch("/deals/checklist/item")
-def update_detail_checklist_item(payload: ChecklistUpdateIn, _auth: dict = Depends(verify_token)):
+def update_detail_checklist_item(payload: ChecklistUpdateIn, _auth: dict = Depends(require_role(*EDITOR_ROLES))):
     if payload.item_status is not None and payload.item_status not in ("PENDING", "CONFIRMED", "NOT_AVAILABLE"):
         raise HTTPException(status_code=400, detail="invalid item_status")
+    # PATCH-02: VERIFIED는 증빙 file_url 필수 (무증빙 통과 차단)
+    if payload.status == "VERIFIED" and not payload.file_url:
+        raise HTTPException(status_code=400, detail="VERIFIED requires evidence file_url")
     conn = get_conn()
     cur = conn.cursor()
     try:
+        # 감사 로그용 이전 상태 조회
+        cur.execute("SELECT status FROM deal_checklist_item WHERE id = %s", (payload.item_id,))
+        prev = cur.fetchone()
+        old_status = prev["status"] if prev else None
         cur.execute(
             """
             UPDATE deal_checklist_item
@@ -1494,6 +1561,13 @@ def update_detail_checklist_item(payload: ChecklistUpdateIn, _auth: dict = Depen
             (payload.status, payload.value_text, payload.file_url, payload.item_status, payload.item_id),
         )
         row = cur.fetchone()
+        if row:
+            # PATCH-02: 변경 이력 audit
+            cur.execute(
+                """INSERT INTO checklist_audit_log (item_id, actor, old_status, new_status, file_url)
+                   VALUES (%s,%s,%s,%s,%s)""",
+                (payload.item_id, _auth.get("sub"), old_status, payload.status, payload.file_url),
+            )
         if not row:
             raise HTTPException(status_code=404, detail="checklist item not found")
         conn.commit()
@@ -1503,7 +1577,7 @@ def update_detail_checklist_item(payload: ChecklistUpdateIn, _auth: dict = Depen
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1563,7 +1637,7 @@ def api_run_narrative_gate(deal_id: int, body: NarrativeGateRequest, _auth: dict
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1620,7 +1694,7 @@ def api_sdd_auto_populate(deal_id: int, body: SddAutoRequest, _auth: dict = Depe
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1650,7 +1724,7 @@ def api_ic_memo_generate(deal_id: int, body: IcMemoGenIn, _auth: dict = Depends(
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1702,7 +1776,7 @@ def api_ic_memo_patch(deal_id: int, body: IcMemoPatchIn, _auth: dict = Depends(v
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1739,7 +1813,7 @@ def add_observation(payload: ObservationIn, _auth: dict = Depends(verify_token))
         return {"obs_id": obs_id, "gate_impact": gate_impact}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1798,7 +1872,7 @@ def request_gate(payload: GateRequestIn, _auth: dict = Depends(verify_token)):
         return {**result, "checklist_pct": pct, "red_flag_count": rf_cnt}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1836,7 +1910,7 @@ def ingest_signal(payload: dict, x_internal_key: Optional[str] = Header(None)):
         return {"status": "ok"}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -1985,7 +2059,7 @@ def auto_source_signal(signal_id: int, _auth: dict = Depends(verify_token)):
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2013,7 +2087,7 @@ def update_signal_status(signal_id: int, payload: dict, _auth: dict = Depends(ve
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2078,7 +2152,7 @@ def api_create_deal(body: NewDealRequest, payload: dict = Depends(verify_token))
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2136,7 +2210,7 @@ def api_update_checklist(
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2202,7 +2276,7 @@ def api_gate_check(body: GateCheckRequest, payload: dict = Depends(verify_token)
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2332,7 +2406,7 @@ def api_risk_card(deal_code: str, payload: dict = Depends(verify_token)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
 
 
 @app.post("/api/infra/dart/ingest")
@@ -2345,7 +2419,7 @@ def dart_ingest(days: int = 90, payload: dict = Depends(verify_token)):
         result = run_ingestion(lookback_days=days)
         return {"status": "ok", "stats": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
 
 
 @app.get("/api/infra/dart/events")
@@ -2418,7 +2492,7 @@ def migrate_deal_collateral(payload: dict = Depends(verify_token)):
         return {"status": "ok", "message": "deal_collateral 테이블 생성 + ANH 초기 데이터 삽입 완료"}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2432,7 +2506,7 @@ def molit_ingest(months: int = 3, payload: dict = Depends(verify_token)):
         result = run_ingestion(months_back=months)
         return {"status": "ok", "stats": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
 
 
 @app.get("/api/infra/molit/trades")
@@ -2488,7 +2562,7 @@ def trigger_diagnostic(deal_code: str, payload: dict = Depends(verify_token)):
         result = run_failure_diagnostic(deal_id)
         return {"status": "ok", "deal_code": deal_code, "result": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
 
 @app.post("/api/infra/migrate/add-collateral-area")
 def migrate_collateral_area(payload: dict = Depends(verify_token)):
@@ -2602,7 +2676,7 @@ def migrate_cashflow_schema(payload: dict = Depends(verify_token)):
         return {"status": "ok", "message": "cashflow schema v1 생성 완료 (4 테이블)"}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2669,7 +2743,7 @@ def migrate_irr_schema(payload: dict = Depends(verify_token)):
         return {"status": "ok", "message": "irr_results + irr_cashflow_schedule 테이블 생성"}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2697,7 +2771,7 @@ def trigger_irr(deal_code: str, scenario: str = "BASE", payload: dict = Depends(
     except _IRREngineError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
 
 @app.get("/api/risk-book/deals/{deal_code}/irr")
 def get_irr(deal_code: str, scenario: str = "BASE", payload: dict = Depends(verify_token)):
@@ -2770,7 +2844,7 @@ def create_ic_pack(deal_code: str, payload: dict = Depends(verify_token)):
         return {"status": "ok", "ic_pack_id": pack["id"], "irr_linked": irr_ids}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2796,7 +2870,7 @@ def get_ic_pack(deal_code: str, payload: dict = Depends(verify_token)):
         conn.close()
 
 @app.patch("/api/ic-pack/{deal_code}")
-def patch_ic_pack(deal_code: str, body: dict, payload: dict = Depends(verify_token)):
+def patch_ic_pack(deal_code: str, body: dict, payload: dict = Depends(require_role(*EDITOR_ROLES))):
     EDITABLE_FIELDS = {
         "gate_status", "data_status", "model_status", "ic_date", "prepared_by",
         "ic_recommendation", "preliminary_view",
@@ -2856,7 +2930,7 @@ def patch_ic_pack(deal_code: str, body: dict, payload: dict = Depends(verify_tok
         return {"status": "ok", "updated": result}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
@@ -2964,7 +3038,7 @@ def update_checklist_item(deal_code: str, item_code: str, body: dict, payload: d
         return {"status": "ok", "updated": dict(updated)}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
     finally:
         cur.close()
         conn.close()
