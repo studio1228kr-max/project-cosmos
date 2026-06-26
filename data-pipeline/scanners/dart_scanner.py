@@ -237,11 +237,33 @@ class DartScanner(BaseScanner):
             return []
 
     async def _fetch_disclosure_text(self, rcept_no: str) -> str:
-        """DART 공시 뷰어 텍스트 (근사 — 정식 문서 API는 Phase 3)."""
+        """DART 정식 문서 API(document.xml) — ZIP→XML 본문 추출.
+
+        (구버전: dart.fss.or.kr 뷰어 HTML 스크래핑은 JS 프레임 껍데기라 본문 0자 →
+         CB 추출 0건의 직접 원인이었음. document.xml은 실제 공시 원문 XML을 반환.)
+        """
         try:
-            async with httpx.AsyncClient(timeout=15) as client:
-                res = await client.get(f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={rcept_no}")
-            from bs4 import BeautifulSoup
-            return BeautifulSoup(res.text, "html.parser").get_text(separator=" ", strip=True)[:10000]
+            async with httpx.AsyncClient(timeout=20) as client:
+                res = await client.get(f"{DART_API_BASE}/document.xml",
+                                       params={"crtfc_key": self.api_key, "rcept_no": rcept_no})
+            if res.status_code != 200 or res.content[:2] != b"PK":  # ZIP 매직 아님(=에러 XML)
+                return ""
+            import io
+            import zipfile
+            import re
+            z = zipfile.ZipFile(io.BytesIO(res.content))
+            raw = z.read(z.namelist()[0])
+            doc = None
+            for enc in ("utf-8", "euc-kr", "cp949"):
+                try:
+                    doc = raw.decode(enc)
+                    break
+                except Exception:
+                    continue
+            if not doc:
+                return ""
+            text = re.sub(r"<[^>]+>", " ", doc)
+            text = re.sub(r"\s+", " ", text).strip()
+            return text[:12000]
         except Exception:
             return ""

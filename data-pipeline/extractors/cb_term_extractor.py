@@ -42,6 +42,20 @@ def _get_client():
     return _client
 
 
+def _parse_json(text: str) -> dict:
+    """Claude 응답에서 JSON 추출 — ```json 펜스/설명문 제거 후 첫 {..} 파싱."""
+    t = (text or "").strip()
+    if t.startswith("```"):
+        t = t.split("```", 2)[1]
+        if t.startswith("json"):
+            t = t[4:]
+    t = t.strip().strip("`").strip()
+    s, e = t.find("{"), t.rfind("}")
+    if s >= 0 and e > s:
+        t = t[s:e + 1]
+    return json.loads(t)
+
+
 class CBTermExtractor:
 
     def extract(self, raw_text: str, entity_id: str, entity_name: str, source_ref_id: str) -> dict:
@@ -53,7 +67,7 @@ class CBTermExtractor:
             messages=[{'role': 'user', 'content': EXTRACT_PROMPT.format(text=(raw_text or "")[:8000])}],
         )
         try:
-            terms = json.loads(response.content[0].text)
+            terms = _parse_json(response.content[0].text)
         except Exception:
             return {'error': 'parse_failed', 'entity_id': entity_id, 'source_ref_id': source_ref_id}
         return self.judge_risk(terms, entity_id, entity_name, source_ref_id)
