@@ -108,26 +108,42 @@ def save_scored(normalized_signal_id, entity_name, entity_id, scores: dict, agg:
 
 
 def save_financial_features(features, corp_code: str, z: dict, icr: dict) -> None:
-    """entity_financial_features upsert (entity_id, period_end)."""
+    """entity_financial_features upsert (entity_id, period_end).
+
+    테이블은 Altman X1~X5 비율(working_capital_ratio 등)을 저장하므로
+    z['components']를 매핑한다. 원시 금액 컬럼은 ebit/interest_expense/ocf/short_term_debt만.
+    """
+    comp = z.get("components") or {}
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
         """
         INSERT INTO entity_financial_features
             (entity_id, entity_name, dart_corp_code, period_end,
-             current_assets, total_assets, retained_earnings, ebit, equity,
-             total_debt, sales, interest_expense, operating_cf, short_term_debt,
-             z_score, z_zone, icr, ocf)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             working_capital_ratio, retained_earnings_ratio, ebit_ratio,
+             equity_to_debt_ratio, sales_ratio,
+             z_score, z_zone, ebit, interest_expense, icr, ocf, short_term_debt)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (entity_id, period_end) DO UPDATE
-          SET z_score=EXCLUDED.z_score, z_zone=EXCLUDED.z_zone, icr=EXCLUDED.icr,
-              ocf=EXCLUDED.ocf, calculated_at=NOW()
+          SET working_capital_ratio   = EXCLUDED.working_capital_ratio,
+              retained_earnings_ratio  = EXCLUDED.retained_earnings_ratio,
+              ebit_ratio               = EXCLUDED.ebit_ratio,
+              equity_to_debt_ratio     = EXCLUDED.equity_to_debt_ratio,
+              sales_ratio              = EXCLUDED.sales_ratio,
+              z_score                  = EXCLUDED.z_score,
+              z_zone                   = EXCLUDED.z_zone,
+              ebit                     = EXCLUDED.ebit,
+              interest_expense         = EXCLUDED.interest_expense,
+              icr                      = EXCLUDED.icr,
+              ocf                      = EXCLUDED.ocf,
+              short_term_debt          = EXCLUDED.short_term_debt,
+              calculated_at            = NOW()
         """,
         (features.entity_id, features.entity_name, corp_code, features.period_end,
-         features.current_assets, features.total_assets, features.retained_earnings,
-         features.ebit, features.equity, features.total_debt, features.sales,
-         features.interest_expense, features.operating_cf, features.short_term_debt,
-         z.get("z_score"), z.get("z_zone"), icr.get("icr"), features.operating_cf),
+         comp.get("x1"), comp.get("x2"), comp.get("x3"), comp.get("x4"), comp.get("x5"),
+         z.get("z_score"), z.get("z_zone"),
+         features.ebit, features.interest_expense, icr.get("icr"),
+         features.operating_cf, features.short_term_debt),
     )
     conn.commit()
     cur.close()
