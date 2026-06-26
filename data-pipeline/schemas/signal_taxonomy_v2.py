@@ -26,6 +26,31 @@ SIGNAL_TAXONOMY_V2 = {
             'STRUCTURED_TRANCHE': 'INFO',
         },
     },
+    # ── #4 신규 signal_type (부실/디폴트/유동성/지배구조) ──
+    'DART_DEFAULT_EVENT': {
+        'default': 'FATAL',
+        'by_deal_type': {'DISTRESSED_SPECIAL': 'CRITICAL', 'DEBT_PURCHASE': 'CRITICAL'},
+        'description': '부도/당좌거래정지/기한이익상실',
+    },
+    'DART_COURT_REHABILITATION': {'default': 'CRITICAL', 'description': '회생절차'},
+    'DART_COURT_BANKRUPTCY': {'default': 'FATAL', 'description': '파산'},
+    'DART_FRAUD_EMBEZZLEMENT': {'default': 'CRITICAL', 'description': '횡령·배임'},
+    'DART_DEBT_GUARANTEE': {
+        'default': 'REVIEW',
+        'by_deal_type': {'DIRECT_LENDING': 'REVIEW', 'DEBT_PURCHASE': 'REVIEW'},
+        'description': '채무보증/채무인수 — 우발채무',
+    },
+    'DART_LIQUIDITY_BORROWING': {
+        'default': 'REVIEW',
+        'by_deal_type': {'DIRECT_LENDING': 'CRITICAL', 'DEBT_PURCHASE': 'REVIEW'},
+        'description': '특수관계인 자금차입/금전대여 — 은행 거절 프록시',
+    },
+    'DART_OWNERSHIP_CHANGE': {'default': 'REVIEW', 'description': '최대주주/경영권 변동'},
+    'DART_EQUITY_RAISE': {'default': 'WATCH', 'description': '유상증자 — 자본확충 수요'},
+    'DART_LARGE_CONTRACT': {'default': 'WATCH', 'description': '단일판매·공급계약'},
+    'DART_SERIOUS_ACCIDENT': {'default': 'REVIEW', 'description': '중대재해 발생'},
+    'DART_EQUITY_ACQUISITION': {'default': 'INFO', 'description': '타법인주식 취득/양수도'},
+    'DART_LARGE_LOSS': {'default': 'REVIEW', 'description': '대규모 손실/손익구조 변경'},
     'DART_LAWSUIT_FILED': {
         'default': 'WATCH',
         'by_deal_type': {

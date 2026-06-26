@@ -14,19 +14,33 @@ class SignalEngine:
         self.financial_engine = FinancialEngine()
         self.cb_extractor = CBTermExtractor()
 
+    # 신용악화 base 점수 (#4: 신규 signal_type 포함). 법원/파산은 enforcement에서.
+    CREDIT_BASE_POINTS = {
+        'DART_AUDIT_OPINION_CHANGE': (30, 'audit_opinion_change'),
+        'DART_GOING_CONCERN':        (35, 'going_concern_flag'),
+        'DART_LARGE_LOSS':           (20, 'large_loss_reported'),
+        'DART_DEFAULT_EVENT':        (50, 'default_event'),
+        'DART_FRAUD_EMBEZZLEMENT':   (35, 'fraud_embezzlement'),
+        'DART_LIQUIDITY_BORROWING':  (20, 'related_party_borrowing'),
+        'DART_DEBT_GUARANTEE':       (15, 'debt_guarantee_contingent'),
+        'DART_SERIOUS_ACCIDENT':     (12, 'serious_accident'),
+        'DART_EQUITY_RAISE':         (12, 'equity_raise_capital_need'),
+        'DART_OWNERSHIP_CHANGE':     (10, 'ownership_control_change'),
+        'DART_LARGE_CONTRACT':       (5,  'large_contract'),
+        'DART_EQUITY_ACQUISITION':   (3,  'equity_acquisition'),
+    }
+
     async def score_credit_deterioration(self, signal: dict) -> dict:
-        """신용악화 (Oaktree) — v2.9: 재무/CB 신호 병합."""
+        """신용악화 (Oaktree) — v2.9: 재무/CB 신호 병합. #4: 신규 타입 base 점수."""
         score, reasons = 0, []
         st = signal.get('signal_type', '')
         # v2 taxonomy severity (딜타입 반영) — 신호 메타에 부착
         signal['v2_severity'] = get_severity(st, signal.get('suggested_deal_type'))
 
-        if st == 'DART_AUDIT_OPINION_CHANGE':
-            score += 30; reasons.append({'code': 'audit_opinion_change', 'points': 30})
-        if st == 'DART_GOING_CONCERN':
-            score += 35; reasons.append({'code': 'going_concern_flag', 'points': 35})
-        if st == 'DART_LARGE_LOSS':
-            score += 20; reasons.append({'code': 'large_loss_reported', 'points': 20})
+        base = self.CREDIT_BASE_POINTS.get(st)
+        if base:
+            pts, code = base
+            score += pts; reasons.append({'code': code, 'points': pts})
 
         # v2.9: financial_engine 신호 병합
         for fs in signal.get('financial_signals', []):
@@ -50,11 +64,18 @@ class SignalEngine:
         """담보 커버리지 (Lone Star) — MOLIT 연결 전 placeholder."""
         return {'score': 0, 'reasons': [], 'model': 'collateral_coverage', 'version': 'v0_placeholder'}
 
+    # 법적 집행 base 점수 (#4: DART 법원/파산 공시 포함)
+    ENFORCEMENT_BASE_POINTS = {
+        'COURT_REHABILITATION': 40, 'COURT_AUCTION_START': 40,
+        'DART_COURT_REHABILITATION': 40, 'DART_COURT_BANKRUPTCY': 45,
+    }
+
     async def score_enforcement_pathway(self, signal: dict) -> dict:
-        """법적 집행 (Elliott)."""
+        """법적 집행 (Elliott). #4: 회생/파산 공시 → 집행경로 신호."""
         score, reasons = 0, []
-        if signal.get('signal_type') in ('COURT_REHABILITATION', 'COURT_AUCTION_START'):
-            score += 40; reasons.append({'code': 'legal_enforcement_active', 'points': 40})
+        pts = self.ENFORCEMENT_BASE_POINTS.get(signal.get('signal_type'))
+        if pts:
+            score += pts; reasons.append({'code': 'legal_enforcement_active', 'points': pts})
         return {'score': min(score, 100), 'reasons': reasons, 'model': 'enforcement_pathway', 'version': 'v0_rule'}
 
     async def score_sector_cycle(self, signal: dict) -> dict:
