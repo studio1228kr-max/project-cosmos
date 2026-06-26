@@ -8,6 +8,7 @@ import jwt
 import bcrypt
 import psycopg2
 import psycopg2.extras
+import narrative_gate
 from evidence_engine import evaluate_evidence_engine
 from refi_path_engine import evaluate_refi_path_engine
 from recovery_strategy_engine_kr import evaluate_korea_recovery_strategy_engine
@@ -1457,21 +1458,25 @@ class ChecklistUpdateIn(BaseModel):
     status: str
     value_text: Optional[str] = None
     file_url: Optional[str] = None
+    item_status: Optional[str] = None   # Narrative Gate용 (PENDING/CONFIRMED/NOT_AVAILABLE)
 
 
 @app.patch("/deals/checklist/item")
 def update_detail_checklist_item(payload: ChecklistUpdateIn, _auth: dict = Depends(verify_token)):
+    if payload.item_status is not None and payload.item_status not in ("PENDING", "CONFIRMED", "NOT_AVAILABLE"):
+        raise HTTPException(status_code=400, detail="invalid item_status")
     conn = get_conn()
     cur = conn.cursor()
     try:
         cur.execute(
             """
             UPDATE deal_checklist_item
-            SET status = %s, value_text = %s, file_url = %s, updated_at = NOW()
+            SET status = %s, value_text = %s, file_url = %s,
+                item_status = COALESCE(%s, item_status), updated_at = NOW()
             WHERE id = %s
-            RETURNING id, status
+            RETURNING id, status, item_status
             """,
-            (payload.status, payload.value_text, payload.file_url, payload.item_id),
+            (payload.status, payload.value_text, payload.file_url, payload.item_status, payload.item_id),
         )
         row = cur.fetchone()
         if not row:
@@ -1484,6 +1489,90 @@ def update_detail_checklist_item(payload: ChecklistUpdateIn, _auth: dict = Depen
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ── Narrative Gate (P0) ────────────────────────────────────────
+class NarrativeGateRequest(BaseModel):
+    thesis_type: str
+
+
+def _run_narrative_gate(cur, deal_id: int, deal_type: str, thesis_type: str) -> dict:
+    """SDD item_status 읽어 게이트 계산 + narrative_gate_results 저장."""
+    cur.execute(
+        "SELECT item_code, item_name, item_status FROM deal_checklist_item WHERE deal_id=%s AND dd_tier='SDD'",
+        (deal_id,),
+    )
+    items = [dict(r) for r in cur.fetchall()]
+    res = narrative_gate.compute_gate(deal_type, thesis_type, items)
+    cur.execute(
+        """
+        INSERT INTO narrative_gate_results
+            (deal_id, thesis_type, gate_result, supported_count, contradicted_items, missing_evidence, auto_reason)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+        RETURNING id, created_at
+        """,
+        (deal_id, thesis_type, res["gate_result"], res["supported_count"],
+         json.dumps(res["contradicted_items"], ensure_ascii=False),
+         json.dumps(res["missing_evidence"], ensure_ascii=False), res["auto_reason"]),
+    )
+    row = cur.fetchone()
+    return {**res, "id": row["id"], "created_at": row["created_at"], "evaluated_items": len(items)}
+
+
+@app.post("/api/deals/{deal_id}/narrative-gate")
+def api_run_narrative_gate(deal_id: int, body: NarrativeGateRequest, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, deal_type, thesis_type FROM deal_master WHERE id=%s", (deal_id,))
+        deal = cur.fetchone()
+        if not deal:
+            raise HTTPException(status_code=404, detail="deal not found")
+        old = deal["thesis_type"]
+        # thesis_type 변경 시 이력 저장 + deal 갱신 (→ 자동 재실행)
+        if body.thesis_type != old:
+            cur.execute(
+                "INSERT INTO deal_thesis_history (deal_id, old_thesis_type, new_thesis_type) VALUES (%s,%s,%s)",
+                (deal_id, old, body.thesis_type),
+            )
+            cur.execute("UPDATE deal_master SET thesis_type=%s, updated_at=NOW() WHERE id=%s",
+                        (body.thesis_type, deal_id))
+        result = _run_narrative_gate(cur, deal_id, deal["deal_type"], body.thesis_type)
+        conn.commit()
+        return result
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/api/deals/{deal_id}/narrative-gate")
+def api_get_narrative_gate(deal_id: int, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT deal_type, thesis_type FROM deal_master WHERE id=%s", (deal_id,))
+        deal = cur.fetchone()
+        if not deal:
+            raise HTTPException(status_code=404, detail="deal not found")
+        cur.execute(
+            "SELECT * FROM narrative_gate_results WHERE deal_id=%s ORDER BY id DESC LIMIT 1", (deal_id,)
+        )
+        latest = cur.fetchone()
+        return {
+            "deal_type": deal["deal_type"],
+            "current_thesis_type": deal["thesis_type"],
+            "available_thesis_types": narrative_gate.list_thesis_types(deal["deal_type"]),
+            "latest": dict(latest) if latest else None,
+        }
     finally:
         cur.close()
         conn.close()

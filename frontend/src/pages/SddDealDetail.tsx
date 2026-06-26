@@ -27,6 +27,9 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [tier, setTier] = useState<Tier>("SDD");
   const [requesting, setRequesting] = useState(false);
+  const [narrative, setNarrative] = useState<any>(null);
+  const [selThesis, setSelThesis] = useState<string>("");
+  const [gateRunning, setGateRunning] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -36,7 +39,17 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
       .finally(() => setLoading(false));
   }, [dealId]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadNarrative = useCallback(() => {
+    API.get(`/api/deals/${dealId}/narrative-gate`)
+      .then(r => {
+        setNarrative(r.data);
+        const cur = r.data.current_thesis_type || r.data.available_thesis_types?.[0]?.thesis_type || "";
+        setSelThesis(prev => prev || cur);
+      })
+      .catch(() => {});
+  }, [dealId]);
+
+  useEffect(() => { load(); loadNarrative(); }, [load, loadNarrative]);
 
   const deal = data?.deal;
   const checklist: any[] = data?.checklist || [];
@@ -56,10 +69,13 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
   else if (latestGate?.final_gate === "HOLD") gateStatus = "HOLD";
   else if (latestGate?.final_gate === "FAIL") gateStatus = "FAIL";
 
+  const ng = narrative?.latest;
+  const ngResult: string | undefined = ng?.gate_result;
+  const ngChip: "pass" | "warn" | "fail" = ngResult === "CONFIRMED" ? "pass" : ngResult === "BROKEN" ? "fail" : "warn";
   const chips: GateChip[] = [
     { label: "체크리스트", value: `${activePct}%`, status: activePct >= 80 ? "pass" : activePct >= 50 ? "warn" : "fail" },
     { label: "Red Flag", value: rfCount > 0 ? "CRITICAL" : "CLEAR", status: rfCount > 0 ? "fail" : "pass" },
-    { label: "Narrative", value: "PENDING", status: "warn" },
+    { label: "Narrative", value: ngResult || "PENDING", status: ngChip },
   ];
   const canRequestGate = blockers.length === 0 && rfCount === 0;
 
@@ -72,6 +88,30 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
     try { await API.post("/deals/gate/request", { deal_id: dealId, dd_tier: tier }); load(); }
     catch { /* noop */ }
     setRequesting(false);
+  };
+
+  const runGate = async (thesis?: string) => {
+    const t = thesis || selThesis;
+    if (!t) return;
+    setGateRunning(true);
+    try { await API.post(`/api/deals/${dealId}/narrative-gate`, { thesis_type: t }); loadNarrative(); }
+    catch { /* noop */ }
+    setGateRunning(false);
+  };
+
+  // WEAK 확인: 미확인 핵심 증빙을 CONFIRMED 처리 후 재평가
+  const confirmMissing = async () => {
+    const missing = ng?.missing_evidence || [];
+    setGateRunning(true);
+    try {
+      for (const m of missing) {
+        const it = checklist.find((i: any) => i.item_code === m.item_code);
+        if (it) await API.patch("/deals/checklist/item", { item_id: it.id, status: it.status, item_status: "CONFIRMED" });
+      }
+      await API.post(`/api/deals/${dealId}/narrative-gate`, { thesis_type: selThesis });
+      loadNarrative(); load();
+    } catch { /* noop */ }
+    setGateRunning(false);
   };
 
   const selectTier = (t: Tier) => {
@@ -127,6 +167,60 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Narrative Gate */}
+              <div style={{ background: "#11161D", border: "1px solid #1E2630", borderRadius: 8, padding: "14px 16px", marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#d0d0d0" }}>Narrative Gate</span>
+                  {ngResult && (
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 10px", borderRadius: 12,
+                      color: ngResult === "CONFIRMED" ? "#4ade80" : ngResult === "BROKEN" ? "#fb7185" : "#C9A84C",
+                      background: ngResult === "CONFIRMED" ? "rgba(74,222,128,0.12)" : ngResult === "BROKEN" ? "rgba(251,113,133,0.12)" : "rgba(201,168,76,0.12)" }}>{ngResult}</span>
+                  )}
+                  <div style={{ flex: 1 }} />
+                  <select value={selThesis} onChange={e => setSelThesis(e.target.value)}
+                    style={{ background: "#0d0d0d", border: "1px solid #1e1e1e", color: "#d0d0d0", fontSize: 11, padding: "5px 8px", borderRadius: 6, cursor: "pointer" }}>
+                    {(narrative?.available_thesis_types || []).map((t: any) => <option key={t.thesis_type} value={t.thesis_type}>{t.label}</option>)}
+                  </select>
+                  <button onClick={() => runGate()} disabled={gateRunning || !selThesis}
+                    style={{ background: "#C9A84C", border: "none", borderRadius: 6, color: "#0a0a0a", fontSize: 11, fontWeight: 700, padding: "6px 14px", cursor: gateRunning ? "default" : "pointer", opacity: gateRunning ? 0.6 : 1 }}>
+                    {gateRunning ? "평가 중..." : "Gate 평가"}
+                  </button>
+                </div>
+                {ng ? (
+                  <div>
+                    <div style={{ fontSize: 12, color: "#8B95A3", marginBottom: 6 }}>{ng.auto_reason}</div>
+                    <div style={{ fontSize: 11, color: "#525C6B", marginBottom: 8 }}>지지 증빙 확정 {ng.supported_count}건 · thesis: {ng.thesis_type}</div>
+                    {ng.missing_evidence?.length > 0 && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, color: "#525C6B" }}>미확인: </span>
+                        {ng.missing_evidence.map((m: any, i: number) => (
+                          <span key={i} style={{ fontSize: 10, color: "#C9A84C", border: "1px solid rgba(201,168,76,0.25)", borderRadius: 4, padding: "1px 6px", marginRight: 4, display: "inline-block", marginBottom: 4 }}>{m.item_name}</span>
+                        ))}
+                      </div>
+                    )}
+                    {ng.contradicted_items?.length > 0 && (
+                      <div style={{ marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, color: "#fb7185" }}>⛔ 반박: </span>
+                        {ng.contradicted_items.map((c: any, i: number) => (
+                          <span key={i} style={{ fontSize: 10, color: "#fb7185", border: "1px solid rgba(251,113,133,0.25)", borderRadius: 4, padding: "1px 6px", marginRight: 4, display: "inline-block", marginBottom: 4 }}>{c.item_name}</span>
+                        ))}
+                      </div>
+                    )}
+                    {ngResult === "WEAK" && (
+                      <button onClick={confirmMissing} disabled={gateRunning}
+                        style={{ background: "transparent", border: "1px solid #C9A84C", color: "#C9A84C", borderRadius: 6, fontSize: 11, fontWeight: 600, padding: "6px 14px", cursor: "pointer" }}>
+                        미확인 증빙 확인 후 재평가
+                      </button>
+                    )}
+                    {ngResult === "BROKEN" && (
+                      <div style={{ fontSize: 11, color: "#fb7185", marginTop: 4 }}>⚠ Thesis 성립 불가 — 위에서 thesis를 변경(재작성)하고 [Gate 평가]를 다시 실행하세요.</div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11, color: "#525C6B" }}>아직 미평가 — thesis 선택 후 [Gate 평가] 실행</div>
+                )}
               </div>
 
               <ObservationPanel dealId={dealId} observations={observations} onAdded={load} />
