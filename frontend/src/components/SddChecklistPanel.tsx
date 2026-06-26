@@ -7,6 +7,17 @@ const STATUS_COLOR: Record<string, string> = {
   PENDING: "#525C6B", RECEIVED: "#C9A84C", VERIFIED: "#4ade80", REVIEW: "#fb7185", NA: "#3a3a3a",
 };
 
+const STALE_MS = 183 * 24 * 60 * 60 * 1000; // 6개월
+
+// data_as_of(자동 채움 시각) → "[자동] DART 2025-12-31" + 6개월 경과 시 amber 경고
+function autoMeta(it: any): { label: string; stale: boolean } | null {
+  if (!it.data_source || !it.data_as_of) return null;
+  const d = new Date(it.data_as_of);
+  if (isNaN(d.getTime())) return null;
+  const stale = Date.now() - d.getTime() > STALE_MS;
+  return { label: `[자동] ${it.data_source} ${d.toISOString().slice(0, 10)}`, stale };
+}
+
 interface Props {
   items: any[];      // 현재 티어 deal_checklist_item 행
   onUpdate: () => void;
@@ -61,10 +72,20 @@ export default function SddChecklistPanel({ items, onUpdate }: Props) {
         <div style={{ padding: "0 16px 12px" }}>
           {items.length === 0 ? (
             <div style={{ fontSize: 11, color: "#525C6B", padding: "8px 0" }}>항목 없음 — 템플릿 시드 대기 (Phase 2)</div>
-          ) : items.map(it => (
+          ) : items.map(it => {
+            const meta = autoMeta(it);
+            return (
             <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: "1px solid #161c24" }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: STATUS_COLOR[it.status] || "#525C6B", flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 12, color: "#d0d0d0" }}>{it.item_name}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 12, color: "#d0d0d0" }}>{it.item_name}</span>
+                {meta && (
+                  <div style={{ fontSize: 9, marginTop: 2, color: meta.stale ? "#f59e0b" : "#5b6470" }}>
+                    {meta.label}{meta.stale ? " · ⚠ 6개월 경과, 재확인 요구" : ""}
+                    {it.value_text ? ` · ${it.value_text}` : ""}
+                  </div>
+                )}
+              </div>
               {it.item_type === "RULE" && (
                 <span style={{ fontSize: 9, color: "#fb7185", border: "1px solid rgba(251,113,133,.2)", borderRadius: 4, padding: "1px 6px" }}>엔진 미연결</span>
               )}
@@ -73,7 +94,7 @@ export default function SddChecklistPanel({ items, onUpdate }: Props) {
               </span>
               {renderAction(it)}
             </div>
-          ))}
+          );})}
         </div>
       )}
     </div>

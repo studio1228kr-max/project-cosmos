@@ -9,6 +9,7 @@ import bcrypt
 import psycopg2
 import psycopg2.extras
 import narrative_gate
+import sdd_auto
 from evidence_engine import evaluate_evidence_engine
 from refi_path_engine import evaluate_refi_path_engine
 from recovery_strategy_engine_kr import evaluate_korea_recovery_strategy_engine
@@ -1385,8 +1386,21 @@ def submit_kill_check(payload: KillCheckIn, _auth: dict = Depends(verify_token))
             "INSERT INTO deal_kill_check_log (deal_id, result, drop_reasons) VALUES (%s, %s, %s)",
             (payload.deal_id, payload.result, json.dumps(payload.drop_reasons)),
         )
+
+        # PASS 시 SDD AUTO 자동 채움 (corp_code 있을 때 best-effort)
+        auto = None
+        if payload.result == "PASS":
+            cur.execute("SELECT dart_corp_code FROM deal_master WHERE id=%s", (payload.deal_id,))
+            cc = cur.fetchone()
+            if cc and cc["dart_corp_code"]:
+                try:
+                    auto = sdd_auto.populate(cur, payload.deal_id, cc["dart_corp_code"])
+                except Exception as e:
+                    print(f"kill-check auto-populate skip: {e}")
+
         conn.commit()
-        return {"deal_id": row["id"], "deal_code": row["deal_code"], "status": row["kill_check_status"]}
+        return {"deal_id": row["id"], "deal_code": row["deal_code"], "status": row["kill_check_status"],
+                "auto_populated": (auto["filled_count"] if auto else 0)}
     except HTTPException:
         conn.rollback()
         raise
@@ -1573,6 +1587,39 @@ def api_get_narrative_gate(deal_id: int, _auth: dict = Depends(verify_token)):
             "available_thesis_types": narrative_gate.list_thesis_types(deal["deal_type"]),
             "latest": dict(latest) if latest else None,
         }
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ── SDD AUTO 연결 (P0) ─────────────────────────────────────────
+class SddAutoRequest(BaseModel):
+    corp_code: Optional[str] = None
+
+
+@app.post("/api/deals/{deal_id}/sdd/auto-populate")
+def api_sdd_auto_populate(deal_id: int, body: SddAutoRequest, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, deal_type, dart_corp_code FROM deal_master WHERE id=%s", (deal_id,))
+        deal = cur.fetchone()
+        if not deal:
+            raise HTTPException(status_code=404, detail="deal not found")
+        corp_code = body.corp_code or deal["dart_corp_code"]
+        if not corp_code:
+            raise HTTPException(status_code=400, detail="corp_code 필요 (DART 고유 8자리 코드)")
+        if body.corp_code and body.corp_code != deal["dart_corp_code"]:
+            cur.execute("UPDATE deal_master SET dart_corp_code=%s, updated_at=NOW() WHERE id=%s", (corp_code, deal_id))
+        result = sdd_auto.populate(cur, deal_id, corp_code)
+        conn.commit()
+        return result
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
         cur.close()
         conn.close()

@@ -30,6 +30,7 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
   const [narrative, setNarrative] = useState<any>(null);
   const [selThesis, setSelThesis] = useState<string>("");
   const [gateRunning, setGateRunning] = useState(false);
+  const [autoRunning, setAutoRunning] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -60,6 +61,20 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
   const cddPct = tierPct(checklist, "CDD");
   const activePct = tierPct(checklist, tier);
   const tierItems = checklist.filter(i => i.dd_tier === tier);
+
+  // SDD AUTO 품질 — data_as_of 6개월 경과 / NOT_AVAILABLE 다수
+  const STALE_MS = 183 * 24 * 60 * 60 * 1000;
+  const sddItems = checklist.filter(i => i.dd_tier === "SDD");
+  const staleCount = sddItems.filter(i => i.data_as_of && (Date.now() - new Date(i.data_as_of).getTime() > STALE_MS)).length;
+  const naCount = sddItems.filter(i => i.item_status === "NOT_AVAILABLE").length;
+  const autoFilled = sddItems.some(i => i.data_source);
+
+  const autoPopulate = async () => {
+    setAutoRunning(true);
+    try { await API.post(`/api/deals/${dealId}/sdd/auto-populate`, {}); load(); loadNarrative(); }
+    catch (e: any) { alert(e?.response?.data?.detail || "자동 채움 실패 — corp_code(DART) 미등록일 수 있음"); }
+    setAutoRunning(false);
+  };
 
   const rfCount = observations.filter(o => o.severity === "CRITICAL" || o.severity === "FATAL").length;
   const blockers = tierItems.filter(i => i.status === "PENDING" || i.status === "REVIEW").map(i => i.item_name).slice(0, 3);
@@ -130,6 +145,10 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
           <button onClick={onClose} style={{ background: "transparent", border: "none", color: "#555", fontSize: 16, cursor: "pointer" }}>←</button>
           <span style={{ fontSize: 13, fontWeight: 700, color: "#C9A84C", fontFamily: "'IBM Plex Mono', monospace" }}>{deal?.deal_code || "…"}</span>
           <div style={{ flex: 1 }} />
+          <button onClick={autoPopulate} disabled={autoRunning}
+            style={{ background: autoRunning ? "transparent" : "rgba(201,168,76,0.1)", border: "1px solid #C9A84C", color: "#C9A84C", borderRadius: 6, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: autoRunning ? "default" : "pointer", opacity: autoRunning ? 0.6 : 1 }}>
+            {autoRunning ? "채우는 중…" : "⚡ 자동 채움"}
+          </button>
           <button onClick={load} style={{ background: "transparent", border: "1px solid #1e1e1e", color: "#8B95A3", borderRadius: 6, padding: "4px 12px", fontSize: 11, cursor: "pointer" }}>↻ 자동반영</button>
         </div>
 
@@ -224,6 +243,24 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
               </div>
 
               <ObservationPanel dealId={dealId} observations={observations} onAdded={load} />
+
+              {/* SDD AUTO 품질 배너 */}
+              {tier === "SDD" && staleCount > 0 && (
+                <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.35)", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 11, color: "#f59e0b" }}>
+                  ⚠ 자동 데이터 {staleCount}건이 6개월 이상 경과 — IC 전 재확인이 요구됩니다.
+                </div>
+              )}
+              {tier === "SDD" && naCount >= 3 && (
+                <div style={{ background: "rgba(251,113,133,0.07)", border: "1px solid rgba(251,113,133,0.3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 11, color: "#fb7185" }}>
+                  ⚠ 정보 미확인(NOT_AVAILABLE) 항목 {naCount}건 — IC 전 재검토를 권장합니다.
+                </div>
+              )}
+              {tier === "SDD" && !autoFilled && (
+                <div style={{ background: "rgba(201,168,76,0.05)", border: "1px dashed rgba(201,168,76,0.3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 11, color: "#8B95A3" }}>
+                  상단 [⚡ 자동 채움]으로 DART 기반 AUTO 항목을 일괄 채울 수 있습니다.
+                </div>
+              )}
+
               <SddChecklistPanel items={tierItems} onUpdate={load} />
               <IcMemoButton sddPct={sddPct} cddPct={cddPct} onOpen={() => alert("IC 메모 작성 — 외부 투심위 제출 포맷 자동생성은 Phase 2")} />
             </>
