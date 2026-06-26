@@ -58,6 +58,55 @@ def save_fetch_log(corp_code: str, status: str, periods_saved: int = 0, error_ms
     conn.close()
 
 
+def save_macro_indicator(code: str, name: str, value: float, period_date: str, source: str = "ECOS") -> None:
+    """macro_indicators upsert (indicator_code, period_date)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """INSERT INTO macro_indicators (indicator_code, indicator_name, value, period_date, source)
+           VALUES (%s,%s,%s,%s,%s)
+           ON CONFLICT (indicator_code, period_date)
+           DO UPDATE SET value=EXCLUDED.value, indicator_name=EXCLUDED.indicator_name, fetched_at=NOW()""",
+        (code, name, value, period_date, source),
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def save_macro_indicators_bulk(rows: list) -> int:
+    """macro_indicators 일괄 upsert. rows=[(code,name,value,period_date,source),...]. 1커넥션."""
+    if not rows:
+        return 0
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.executemany(
+        """INSERT INTO macro_indicators (indicator_code, indicator_name, value, period_date, source)
+           VALUES (%s,%s,%s,%s,%s)
+           ON CONFLICT (indicator_code, period_date)
+           DO UPDATE SET value=EXCLUDED.value, indicator_name=EXCLUDED.indicator_name, fetched_at=NOW()""",
+        rows,
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return len(rows)
+
+
+def get_latest_macro(code: str):
+    """지표의 최신 값 (없으면 None)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT value FROM macro_indicators WHERE indicator_code=%s ORDER BY period_date DESC LIMIT 1",
+        (code,),
+    )
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return float(row["value"]) if row else None
+
+
 def get_today_fetched_corps() -> set:
     """오늘(batch_date=CURRENT_DATE) 이미 fetch 시도한 corp_code 집합 (중복 방지)."""
     conn = get_conn()

@@ -199,4 +199,17 @@ CREATE TABLE IF NOT EXISTS financial_fetch_log (
 );
 CREATE INDEX IF NOT EXISTS idx_ffl_corp_date ON financial_fetch_log (corp_code, batch_date);
 
+-- 매크로 지표 (Sprint #6: ECOS 한국은행 — sector_cycle 입력)
+CREATE TABLE IF NOT EXISTS macro_indicators (
+    id             BIGSERIAL PRIMARY KEY,
+    indicator_code VARCHAR(50) NOT NULL,   -- BASE_RATE / CREDIT_SPREAD / CORP_BOND_AA3 / TREASURY_3Y
+    indicator_name VARCHAR(100),
+    value          NUMERIC NOT NULL,
+    period_date    DATE NOT NULL,
+    source         VARCHAR(20) DEFAULT 'ECOS',
+    fetched_at     TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (indicator_code, period_date)
+);
+CREATE INDEX IF NOT EXISTS idx_macro_code_date ON macro_indicators (indicator_code, period_date DESC);
+
 COMMIT;

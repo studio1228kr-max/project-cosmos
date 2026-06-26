@@ -1,6 +1,7 @@
 """signal_engine v2.9 — rule-based + financial/CB 신호 병합 + aggregate."""
 from __future__ import annotations
 
+import asyncio
 from typing import List
 
 from engines.financial_engine import FinancialEngine
@@ -79,8 +80,19 @@ class SignalEngine:
         return {'score': min(score, 100), 'reasons': reasons, 'model': 'enforcement_pathway', 'version': 'v0_rule'}
 
     async def score_sector_cycle(self, signal: dict) -> dict:
-        """섹터 사이클 (MBK) — 섹터 테이블 연결 전 placeholder."""
-        return {'score': 0, 'reasons': [], 'model': 'sector_cycle', 'version': 'v0_placeholder'}
+        """섹터 사이클 (MBK) — #6: ECOS 매크로(기준금리/회사채 스프레드) 반영."""
+        import db
+        score, reasons = 0, []
+        base_rate = await asyncio.to_thread(db.get_latest_macro, "BASE_RATE")
+        spread = await asyncio.to_thread(db.get_latest_macro, "CREDIT_SPREAD")
+        if base_rate is not None and base_rate > 3.5:
+            score += 10
+            reasons.append({'code': 'high_base_rate', 'points': 10, 'detail': f'기준금리 {base_rate}%'})
+        if spread is not None and spread > 150:
+            score += 15
+            reasons.append({'code': 'wide_credit_spread', 'points': 15, 'detail': f'회사채AA- 스프레드 {spread}bp'})
+        return {'score': min(score, 100), 'reasons': reasons,
+                'model': 'sector_cycle', 'version': 'v1_macro'}
 
     async def score_all(self, signal: dict) -> List[dict]:
         return [

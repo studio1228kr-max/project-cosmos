@@ -68,6 +68,12 @@ async def score_handler(signal_data: dict) -> None:
 async def run_scan() -> dict:
     db.ensure_schema()
     result = await DartScanner().run()
+    # #6: ECOS 매크로 지표 수집 (best-effort, sector_cycle 입력). upsert라 일 1회 무해.
+    try:
+        from scanners.ecos_scanner import EcosScanner
+        result["ecos"] = await EcosScanner().scan()
+    except Exception as e:
+        print(json.dumps({"ecos_error": str(e)}, ensure_ascii=False))
     summary = {k: v for k, v in result.items() if k != 'hits'}
     print(json.dumps(summary, ensure_ascii=False))
     return result
