@@ -10,6 +10,7 @@ import psycopg2
 import psycopg2.extras
 import narrative_gate
 import sdd_auto
+import ic_memo
 from evidence_engine import evaluate_evidence_engine
 from refi_path_engine import evaluate_refi_path_engine
 from recovery_strategy_engine_kr import evaluate_korea_recovery_strategy_engine
@@ -1614,6 +1615,88 @@ def api_sdd_auto_populate(deal_id: int, body: SddAutoRequest, _auth: dict = Depe
         result = sdd_auto.populate(cur, deal_id, corp_code)
         conn.commit()
         return result
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ── IC Memo (Claude 연결) ──
+class IcMemoGenIn(BaseModel):
+    force: bool = False   # 잠금 무시 강제 생성(테스트용)
+
+
+@app.post("/api/deals/{deal_id}/ic-memo/generate")
+def api_ic_memo_generate(deal_id: int, body: IcMemoGenIn, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM deal_master WHERE id=%s", (deal_id,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="deal not found")
+        result = ic_memo.generate(cur, deal_id, force=body.force)
+        if result.get("locked"):
+            conn.rollback()
+            raise HTTPException(status_code=423, detail={"message": "IC Memo 잠금 — 조건 미충족", "unlock": result["unlock"]})
+        conn.commit()
+        return result
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/api/deals/{deal_id}/ic-memo")
+def api_ic_memo_get(deal_id: int, _auth: dict = Depends(verify_token)):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM ic_memos WHERE deal_id=%s ORDER BY generated_at DESC LIMIT 1", (deal_id,))
+        memo = cur.fetchone()
+        unlock = ic_memo.check_unlock(cur, deal_id)
+        return {"memo": dict(memo) if memo else None, "unlock": unlock}
+    finally:
+        cur.close()
+        conn.close()
+
+
+class IcMemoPatchIn(BaseModel):
+    s9_user_input: Optional[dict] = None
+    s10_user_input: Optional[str] = None
+    s10_recommendation: Optional[str] = None   # PROMOTE | CONDITIONAL | HOLD
+
+
+@app.patch("/api/deals/{deal_id}/ic-memo")
+def api_ic_memo_patch(deal_id: int, body: IcMemoPatchIn, _auth: dict = Depends(verify_token)):
+    if body.s10_recommendation and body.s10_recommendation not in ("PROMOTE", "CONDITIONAL", "HOLD"):
+        raise HTTPException(status_code=400, detail="invalid recommendation")
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM ic_memos WHERE deal_id=%s ORDER BY generated_at DESC LIMIT 1", (deal_id,))
+        memo = cur.fetchone()
+        if not memo:
+            raise HTTPException(status_code=404, detail="ic memo not found — 먼저 생성하세요")
+        cur.execute("""UPDATE ic_memos SET
+                s9_user_input = COALESCE(%s, s9_user_input),
+                s10_user_input = COALESCE(%s, s10_user_input),
+                s10_recommendation = COALESCE(%s, s10_recommendation),
+                updated_at = NOW()
+            WHERE id=%s RETURNING id, s9_user_input, s10_user_input, s10_recommendation""",
+            (json.dumps(body.s9_user_input) if body.s9_user_input is not None else None,
+             body.s10_user_input, body.s10_recommendation, memo["id"]))
+        conn.commit()
+        return dict(cur.fetchone())
     except HTTPException:
         conn.rollback()
         raise

@@ -4,6 +4,7 @@ import DecisionCard, { GateChip } from "../components/DecisionCard";
 import ObservationPanel from "../components/ObservationPanel";
 import SddChecklistPanel from "../components/SddChecklistPanel";
 import IcMemoButton from "../components/IcMemoButton";
+import IcMemoModal from "../components/IcMemoModal";
 
 const TIERS = ["SDD", "CDD", "EDD"] as const;
 type Tier = typeof TIERS[number];
@@ -31,6 +32,7 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
   const [selThesis, setSelThesis] = useState<string>("");
   const [gateRunning, setGateRunning] = useState(false);
   const [autoRunning, setAutoRunning] = useState(false);
+  const [icMemoOpen, setIcMemoOpen] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -262,7 +264,8 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
               )}
 
               <SddChecklistPanel items={tierItems} onUpdate={load} />
-              <IcMemoButton sddPct={sddPct} cddPct={cddPct} onOpen={() => alert("IC 메모 작성 — 외부 투심위 제출 포맷 자동생성은 Phase 2")} />
+              <IcMemoButton sddPct={sddPct} cddPct={cddPct} onOpen={() => setIcMemoOpen(true)} />
+              {icMemoOpen && <IcMemoModal dealId={dealId} onClose={() => { setIcMemoOpen(false); load(); }} />}
             </>
           )}
         </div>
