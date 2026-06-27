@@ -2008,6 +2008,85 @@ def get_morning_brief(_auth: dict = Depends(verify_token)):
         conn.close()
 
 
+@app.get("/api/signals/room")
+def get_signals_room(_auth: dict = Depends(verify_token)):
+    """Signal Room 카드용 — signal_room 실데이터를 카드 형태로 반환.
+    z_score/icr은 signal_room에 미보유(재무 피처 소스 연동 전) → null."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT to_regclass('public.signal_room') AS t")
+        if cur.fetchone()["t"] is None:
+            return {"signals": []}
+        cur.execute(
+            """
+            SELECT id, entity_name, entity_id, signal_type, aggregate_score,
+                   suggested_deal_type, urgency, thesis_suggestion, reason_summary, created_at
+            FROM signal_room
+            WHERE status = 'NEW'
+            ORDER BY CASE urgency WHEN 'CRITICAL_72H' THEN 1 WHEN 'WATCH_2W' THEN 2 ELSE 3 END,
+                     aggregate_score DESC
+            LIMIT 100
+            """
+        )
+        zone_map = {"CRITICAL_72H": "DISTRESS", "WATCH_2W": "GREY", "MONITOR": "SAFE"}
+        cards = [{
+            "id": r["id"],
+            "urgency": r["urgency"],
+            "entity": r["entity_name"],
+            "entity_sub": r["entity_id"] or r["signal_type"],
+            "signal_type": r["signal_type"],
+            "z_score": None,   # signal_room 미보유 — 재무 피처 소스 연동 시 채움
+            "icr": None,       # 동일
+            "zone": zone_map.get(r["urgency"]),
+            "score": r["aggregate_score"],
+            "suggested_deal_type": r["suggested_deal_type"],
+            "thesis": r["thesis_suggestion"],
+            "data_asof": r["created_at"].isoformat() if r["created_at"] else None,
+        } for r in cur.fetchall()]
+        return {"signals": cards}
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/api/macro/latest")
+def get_macro_latest(_auth: dict = Depends(verify_token)):
+    """normalized_macro_series 최신값 — BASE_RATE/CREDIT_SPREAD/BSI_MANUFACTURING.
+    미적재 지표(credit_spread/bsi)는 null."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT to_regclass('public.normalized_macro_series') AS t")
+        if cur.fetchone()["t"] is None:
+            return {"macro": {"BASE_RATE": None, "CREDIT_SPREAD": None, "BSI_MANUFACTURING": None}, "series": {}}
+        cur.execute(
+            """
+            SELECT DISTINCT ON (metric_name)
+                   metric_name, value, unit, delta_mom, as_of_date
+            FROM normalized_macro_series
+            ORDER BY metric_name, as_of_date DESC
+            """
+        )
+        by_name = {}
+        for r in cur.fetchall():
+            by_name[r["metric_name"]] = {
+                "value": float(r["value"]) if r["value"] is not None else None,
+                "unit": r["unit"],
+                "delta_mom": float(r["delta_mom"]) if r["delta_mom"] is not None else None,
+                "as_of": r["as_of_date"].isoformat() if r["as_of_date"] else None,
+            }
+        macro = {
+            "BASE_RATE": by_name.get("base_rate"),
+            "CREDIT_SPREAD": by_name.get("credit_spread"),
+            "BSI_MANUFACTURING": by_name.get("bsi_manufacturing"),
+        }
+        return {"macro": macro, "series": by_name}
+    finally:
+        cur.close()
+        conn.close()
+
+
 @app.get("/api/signals")
 def get_signals(_auth: dict = Depends(verify_token)):
     conn = get_conn()

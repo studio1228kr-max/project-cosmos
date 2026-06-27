@@ -12,6 +12,7 @@ import MarketScan from "./pages/MarketScan";
 import SignalRoom from "./pages/SignalRoom";
 import RiskBook from "./pages/RiskBook";
 import EvidenceChecklist from "./pages/EvidenceChecklist";
+import CreditDesk from "./pages/CreditDesk";
 
 const STATUS_COLOR: any = { INTAKE: "#888", SCREENED: "#185FA5", WATCHLIST: "#854F0B", ADVANCE: "#3B6D11", REJECT: "#A32D2D" };
 const STATUS_BG: any = { INTAKE: "#F1EFE8", SCREENED: "#E6F1FB", WATCHLIST: "#FAEEDA", ADVANCE: "#EAF3DE", REJECT: "#FCEBEB" };
@@ -929,6 +930,9 @@ function App() {
       return <Login onLogin={(t) => { localStorage.setItem("token", t); setToken(t); }} />;
     }
     return <Landing onLogin={() => { window.location.href = "/login"; }} />;
+  }
+  if (window.location.pathname === "/dashboard") {
+    return <CreditDesk onLogout={handleLogout} />;
   }
   return <MainApp onLogout={handleLogout} />;
 }
