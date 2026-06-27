@@ -93,6 +93,22 @@ def save_macro_indicators_bulk(rows: list) -> int:
     return len(rows)
 
 
+def get_cb_terms(corp_code: str) -> list:
+    """cb_term_extractions에서 해당 corp(entity_id) CB 조건 조회 (HERMES facts용)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """SELECT security_type, issue_amount, maturity_date, coupon_rate, conversion_price,
+                  refixing_present, early_redemption_right, collateral_present, risk_level, risk_codes
+           FROM cb_term_extractions WHERE entity_id=%s ORDER BY id DESC LIMIT 10""",
+        (corp_code,),
+    )
+    rows = [dict(r) for r in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return rows
+
+
 def save_collateral_prices_bulk(rows: list) -> int:
     """collateral_price_history 일괄 upsert. rows=[(deal_id,address_raw,lawd_cd,apt_name,
     exclusive_area,floor,trade_price_krw,trade_ym,trade_day,build_year),...]."""
