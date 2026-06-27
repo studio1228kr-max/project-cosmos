@@ -88,8 +88,11 @@ CREATE TABLE IF NOT EXISTS morning_brief_runs (
   run_date    DATE NOT NULL,
   top_signals JSONB,
   stats       JSONB,
+  brief_text  TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
+-- #10: Claude API 모닝 브리핑 텍스트 (기존 배포 테이블 호환)
+ALTER TABLE morning_brief_runs ADD COLUMN IF NOT EXISTS brief_text TEXT;
 
 -- guardrail 거부 사유 (spec §5)
 CREATE TABLE IF NOT EXISTS guardrail_rejections (

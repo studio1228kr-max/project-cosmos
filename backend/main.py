@@ -1928,6 +1928,86 @@ def ingest_signal(payload: dict, x_internal_key: Optional[str] = Header(None)):
         conn.close()
 
 
+# morning_brief 테이블 자체 보장 (COSMOS는 startup 자동 마이그레이션이 없음).
+# morning_brief_migration.sql 과 동일 정의 — 멱등.
+_MORNING_BRIEF_DDL = """
+CREATE TABLE IF NOT EXISTS morning_brief (
+  id              SERIAL PRIMARY KEY,
+  run_date        DATE NOT NULL UNIQUE,
+  brief_text      TEXT,
+  cards           JSONB DEFAULT '[]',
+  stats           JSONB DEFAULT '{}',
+  critical_count  INTEGER DEFAULT 0,
+  watch_count     INTEGER DEFAULT 0,
+  monitor_count   INTEGER DEFAULT 0,
+  model           TEXT,
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_mb_run_date ON morning_brief(run_date DESC);
+"""
+
+
+@app.post("/api/brief/today")
+def ingest_morning_brief(payload: dict, x_internal_key: Optional[str] = Header(None)):
+    """data-pipeline(HERMES) Morning Brief → run_date 당 1행 upsert."""
+    if not INTERNAL_API_KEY or x_internal_key != INTERNAL_API_KEY:
+        raise HTTPException(status_code=401, detail="invalid internal key")
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(_MORNING_BRIEF_DDL)
+        cur.execute(
+            """
+            INSERT INTO morning_brief
+                (run_date, brief_text, cards, stats,
+                 critical_count, watch_count, monitor_count, model)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (run_date) DO UPDATE SET
+                brief_text     = EXCLUDED.brief_text,
+                cards          = EXCLUDED.cards,
+                stats          = EXCLUDED.stats,
+                critical_count = EXCLUDED.critical_count,
+                watch_count    = EXCLUDED.watch_count,
+                monitor_count  = EXCLUDED.monitor_count,
+                model          = EXCLUDED.model,
+                updated_at     = NOW()
+            """,
+            (
+                payload.get("date"), payload.get("brief_text"),
+                json.dumps(payload.get("cards", []), ensure_ascii=False),
+                json.dumps(payload.get("stats", {}), ensure_ascii=False),
+                payload.get("critical_count", 0), payload.get("watch_count", 0),
+                payload.get("monitor_count", 0), payload.get("model"),
+            ),
+        )
+        conn.commit()
+        return {"status": "ok"}
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다")
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/api/brief/today")
+def get_morning_brief(_auth: dict = Depends(verify_token)):
+    """오늘(없으면 최근) 모닝 브리핑 조회 — Signal Room 대시보드용."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT to_regclass('public.morning_brief') AS t")
+        if cur.fetchone()["t"] is None:
+            return {"brief": None}  # 아직 첫 ingest 전 (테이블 미생성)
+        cur.execute("SELECT * FROM morning_brief ORDER BY run_date DESC LIMIT 1")
+        row = cur.fetchone()
+        return {"brief": dict(row) if row else None}
+    finally:
+        cur.close()
+        conn.close()
+
+
 @app.get("/api/signals")
 def get_signals(_auth: dict = Depends(verify_token)):
     conn = get_conn()

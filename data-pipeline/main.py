@@ -94,6 +94,10 @@ KST = timezone(timedelta(hours=9))
 SCAN_TIMES_KST = os.getenv("SCAN_TIMES_KST", "05:50,17:50")
 SCAN_SCHEDULE_ENABLED = os.getenv("SCAN_SCHEDULE_ENABLED", "true").lower() != "false"
 
+# #10: Morning Brief 매일 1회 (기본 04:00 KST). Railway cron을 쓰면 false로 끄기.
+BRIEF_TIME_KST = os.getenv("BRIEF_TIME_KST", "04:00")
+BRIEF_SCHEDULE_ENABLED = os.getenv("BRIEF_SCHEDULE_ENABLED", "true").lower() != "false"
+
 
 def _seconds_until_next_scan() -> float:
     now = datetime.now(KST)
@@ -123,13 +127,35 @@ async def _scan_loop() -> None:
             print(json.dumps({"scan_error": str(e)}, ensure_ascii=False))
 
 
+def _seconds_until_next_brief() -> float:
+    now = datetime.now(KST)
+    hh, mm = BRIEF_TIME_KST.split(":")
+    c = now.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
+    if c <= now:
+        c += timedelta(days=1)
+    return max(1.0, (c - now).total_seconds())
+
+
+async def _brief_loop() -> None:
+    """매일 BRIEF_TIME_KST(기본 04:00 KST)에 Morning Brief 생성·전달. 부팅 시 즉시 실행 안 함."""
+    from brief.morning_brief import generate_morning_brief
+    while True:
+        await asyncio.sleep(_seconds_until_next_brief())
+        try:
+            await generate_morning_brief()
+        except Exception as e:
+            print(json.dumps({"brief_error": str(e)}, ensure_ascii=False))
+
+
 async def run_worker() -> None:
     db.ensure_schema()
-    # consume 상시 + (옵션) 지정 시각 scan. Railway cron 사용 시 SCAN_SCHEDULE_ENABLED=false
+    # consume 상시 + (옵션) 지정 시각 scan/brief. Railway cron 사용 시 *_SCHEDULE_ENABLED=false
+    tasks = [run_consume()]
     if SCAN_SCHEDULE_ENABLED:
-        await asyncio.gather(run_consume(), _scan_loop())
-    else:
-        await run_consume()
+        tasks.append(_scan_loop())
+    if BRIEF_SCHEDULE_ENABLED:
+        tasks.append(_brief_loop())
+    await asyncio.gather(*tasks)
 
 
 def _serve() -> None:
