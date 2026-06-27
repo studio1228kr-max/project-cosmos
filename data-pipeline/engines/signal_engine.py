@@ -91,8 +91,16 @@ class SignalEngine:
         if spread is not None and spread > 150:
             score += 15
             reasons.append({'code': 'wide_credit_spread', 'points': 15, 'detail': f'회사채AA- 스프레드 {spread}bp'})
+        # #7: 제조업 BSI (기준선 100). 90 하회 +10, 80 하회 추가 +10.
+        bsi = await asyncio.to_thread(db.get_latest_macro, "BSI_MANUFACTURING")
+        if bsi is not None and bsi < 90:
+            score += 10
+            reasons.append({'code': 'bsi_below_90', 'points': 10, 'detail': f'제조업 BSI {bsi} (기준선 100 하회)'})
+        if bsi is not None and bsi < 80:
+            score += 10
+            reasons.append({'code': 'bsi_severe', 'points': 10, 'detail': f'제조업 BSI {bsi} (심각 수축)'})
         return {'score': min(score, 100), 'reasons': reasons,
-                'model': 'sector_cycle', 'version': 'v1_macro'}
+                'model': 'sector_cycle', 'version': 'v2_macro_bsi'}
 
     async def score_all(self, signal: dict) -> List[dict]:
         return [

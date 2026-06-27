@@ -57,5 +57,19 @@ class EcosScanner:
                 rows.append(("CREDIT_SPREAD", "회사채AA- 스프레드(bp)", spread_bp, d, "ECOS"))
                 stats["CREDIT_SPREAD"] += 1
 
+        # 3) 기업경기실사지수 BSI (월) — 512Y015: 업종(C0000제조/Y9900비제조/99988전산업) × 업황실적BSI(AA)
+        #    (KOSIS BSI 표 DT_512Y007의 업종 objL1이 포털 잠금이라, 동일 한국은행 BSI를 ECOS에서 수집)
+        for code, item, name in [
+            ("BSI_MANUFACTURING", "C0000/AA", "제조업 업황실적BSI"),
+            ("BSI_NONMANUFACTURING", "Y9900/AA", "비제조업 업황실적BSI"),
+            ("BSI_ALL", "99988/AA", "전산업 업황실적BSI"),
+        ]:
+            bsi = await fetch_stat("512Y015", item, ym_start, ym_end, "M")
+            for r in bsi:
+                d = time_to_date(r["time"])
+                if d:
+                    rows.append((code, name, r["value"], d, "ECOS-BSI"))
+                    stats[code] = stats.get(code, 0) + 1
+
         saved = await asyncio.to_thread(db.save_macro_indicators_bulk, rows)
         return {"scanner": "ECOS", "saved": stats, "rows": saved}
