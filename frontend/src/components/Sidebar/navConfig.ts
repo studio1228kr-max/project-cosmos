@@ -37,7 +37,8 @@ export const navConfig: NavSection[] = [
   {
     id: "top",
     items: [
-      { type: "leaf", id: "dashboard", label: "대시보드", path: "today", icon: "◆" },
+      { type: "leaf", id: "creditdesk", label: "크레딧 데스크", path: "creditdesk", icon: "◆", badge: { text: "NEW" } },
+      { type: "leaf", id: "dashboard", label: "대시보드", path: "today", icon: "◇" },
     ],
   },
   {
