@@ -11,6 +11,7 @@ COPY data-pipeline/ .
 
 # Sprint #9: HERMES API(uvicorn) 구동 + startup에서 워커(scan+consume) 백그라운드.
 # PORT는 Railway 주입(없으면 8000). COSMOS는 http://data-pipeline.railway.internal:8000 호출.
-# Railway 사설망은 IPv6 전용 → ::로 바인딩. -u(unbuffered)로 기동/에러 로그 노출.
 ENV PYTHONUNBUFFERED=1
-CMD ["sh", "-c", "echo BOOT PORT=$PORT; python -u -m uvicorn api:app --host :: --port ${PORT:-8000}"]
+# 복구: 작동하던 워커로 환원(백그라운드 scan/consume). HERMES 웹서버(api.py)는
+# 별도 Railway 웹 서비스로 띄워야 함 — 동일 워커 서비스에서 uvicorn 기동이 Railway에서 불발.
+CMD ["python", "main.py", "worker_only"]
