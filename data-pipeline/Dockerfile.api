@@ -1,0 +1,17 @@
+# HERMES API 서비스 전용 Dockerfile (Sprint #9) — uvicorn 웹서버.
+# data-pipeline(워커)와 같은 코드/이미지지만 CMD만 다름. hermes-api 서비스에서
+# RAILWAY_DOCKERFILE_PATH=data-pipeline/Dockerfile.api 로 지정.
+# 빌드 컨텍스트는 repo 루트이므로 COPY 경로는 data-pipeline/ 기준.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY data-pipeline/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY data-pipeline/ .
+
+ENV PYTHONUNBUFFERED=1
+# Railway 사설망(IPv6)에서 COSMOS가 hermes-api.railway.internal로 접속하려면 :: 바인딩 필요.
+# RUN_WORKER=false 로 워커는 띄우지 않고 /facts 서빙만.
+CMD ["sh", "-c", "uvicorn api:app --host :: --port ${PORT:-8000}"]
