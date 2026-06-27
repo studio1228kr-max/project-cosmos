@@ -41,6 +41,10 @@ class BaseEngine(ABC):
     name: str
     version: str
 
+    # 엔진별 입력 스키마. 라우터가 이 모델로 요청 body 를 검증한다.
+    # 하위 엔진이 전용 입력 모델을 가지면 오버라이드한다 (예: IRREngine -> IRRInput).
+    input_model: type[EngineInput] = EngineInput
+
     # ─────────────────────────────────────────────────────────
     # Public
     # ─────────────────────────────────────────────────────────

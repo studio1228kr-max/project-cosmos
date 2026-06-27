@@ -28,9 +28,16 @@ def _build_registry() -> dict[str, BaseEngine]:
     except Exception as exc:
         logger.error("engine_register_failed", engine="ping", error=str(exc))
 
+    try:
+        from engines.irr_engine import IRREngine
+        e = IRREngine()
+        registry[e.name] = e
+        logger.info("engine_registered", name=e.name, version=e.version)
+    except Exception as exc:
+        logger.error("engine_register_failed", engine="irr_engine", error=str(exc))
+
     # 엔진 추가시 여기에만:
     # from engines.merton_kmv import MertonKMVEngine
-    # from engines.irr_engine import IRREngine
     # from engines.behavioral_risk_engine import BehavioralRiskEngine
 
     return registry

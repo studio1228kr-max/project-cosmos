@@ -19,7 +19,7 @@ from core.config import settings
 from core.exceptions import EngineExecutionError, EngineNotFoundError
 from core.logging_config import get_logger
 from engines.registry import get_engine, list_engines
-from schemas.base import EngineInput, EngineRunLog
+from schemas.base import EngineRunLog
 
 logger = get_logger("router.engines")
 router = APIRouter(prefix="/engines", tags=["engines"])
@@ -58,7 +58,7 @@ async def run_engine(engine_name: str, body: dict) -> dict:
         raise HTTPException(status_code=404, detail=e.to_response())
 
     try:
-        inp = EngineInput.model_validate(body)
+        inp = engine.input_model.model_validate(body)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"입력 검증 실패: {e}")
 
