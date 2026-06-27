@@ -15,28 +15,159 @@ from typing import Optional
 
 import requests
 
-# Sprint #9: DART 직접 호출 제거 → HERMES facts endpoint 경유 (3계층 분리 복원).
-#   COSMOS → HERMES(data-pipeline) → DART
-HERMES_URL = os.getenv("COSMOS_INTERNAL_URL", "http://data-pipeline.railway.internal:8000")
-INTERNAL_KEY = os.getenv("INTERNAL_API_KEY", "")
-TIMEOUT = 30
+DART_BASE = "https://opendart.fss.or.kr/api"
+TIMEOUT = 15
 STALE_DAYS = 183  # 6개월
 
+# ── 재무 계정 매핑 (fnlttSinglAcntAll, account_id + 한글 startswith) ──
+ACCOUNT_ID = {
+    "ifrs-full_CurrentAssets": "current_assets", "ifrs-full_Assets": "total_assets",
+    "ifrs-full_RetainedEarnings": "retained_earnings", "ifrs-full_Equity": "equity",
+    "ifrs-full_Liabilities": "total_debt", "ifrs-full_ShorttermBorrowings": "short_term_debt",
+    "ifrs-full_Revenue": "revenue", "ifrs-full_OperatingIncome": "ebit",
+    "dart_OperatingIncomeLoss": "ebit", "ifrs-full_FinanceCosts": "interest_expense",
+    "ifrs-full_CashFlowsFromUsedInOperatingActivities": "operating_cf",
+}
+KOREAN = [("유동자산", "current_assets"), ("자산총계", "total_assets"), ("이익잉여금", "retained_earnings"),
+          ("결손금", "retained_earnings"), ("자본총계", "equity"), ("부채총계", "total_debt"),
+          ("단기차입금", "short_term_debt"), ("매출액", "revenue"), ("영업수익", "revenue"),
+          ("영업이익", "ebit"), ("이자비용", "interest_expense"), ("영업활동", "operating_cf")]
 
-# ── HERMES facts endpoint 경유 (DART 직접 호출 제거) ──
-def fetch_facts(corp_code: str) -> dict:
-    """HERMES facts API 호출 → corp facts dict. 실패 시 graceful 빈 facts(→ NOT_AVAILABLE)."""
+
+def _key():
+    return os.getenv("DART_API_KEY", "")
+
+
+def _num(s) -> float:
+    s = str(s or "").replace(",", "").strip()
+    if not s or s == "-":
+        return 0.0
     try:
-        r = requests.post(
-            f"{HERMES_URL}/facts/{corp_code}",
-            headers={"X-Internal-Key": INTERNAL_KEY},
-            timeout=TIMEOUT,
-        )
-        r.raise_for_status()
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
+def _get(path: str, params: dict) -> dict:
+    try:
+        r = requests.get(f"{DART_BASE}/{path}", params={**params, "crtfc_key": _key()}, timeout=TIMEOUT)
         return r.json()
-    except Exception as e:
-        print(f"HERMES facts fetch failed {corp_code}: {e}")
-        return {"corp_code": corp_code, "fin_as_of": None, "disc_as_of": None}
+    except Exception:
+        return {}
+
+
+# ── DART fetch ──
+def fetch_company(corp_code: str) -> dict:
+    d = _get("company.json", {"corp_code": corp_code})
+    if d.get("status") != "000":
+        return {"exists": False}
+    est = (d.get("est_dt") or "")[:4]
+    return {"exists": True, "ceo": d.get("ceo_nm"), "industry": d.get("induty_code"),
+            "est_year": est or None, "corp_name": d.get("corp_name")}
+
+
+def _parse_financial_rows(rows: list) -> dict:
+    out: dict = {}
+    for it in rows:
+        sj = str(it.get("sj_div") or "").upper()
+        if sj == "SCE":   # 자본변동표 제외 (자본총계 중복 오매칭 방지)
+            continue
+        f = ACCOUNT_ID.get(it.get("account_id", ""))
+        if not f:
+            nm = (it.get("account_nm") or "").strip()
+            for kw, fn in KOREAN:
+                if nm.startswith(kw):
+                    f = fn
+                    break
+        if f and f not in out:
+            amt = it.get("thstrm_add_amount") if f in ("revenue", "ebit", "interest_expense", "operating_cf") else None
+            out[f] = _num(amt if amt not in (None, "") else it.get("thstrm_amount"))
+    return out
+
+
+def fetch_financials(corp_code: str, year: str) -> dict:
+    for fs in ("CFS", "OFS"):
+        d = _get("fnlttSinglAcntAll.json", {"corp_code": corp_code, "bsns_year": year,
+                                            "reprt_code": "11011", "fs_div": fs})
+        if d.get("status") == "000" and d.get("list"):
+            return _parse_financial_rows(d["list"])
+    return {}
+
+
+def fetch_disclosures(corp_code: str) -> dict:
+    """최근 2년 공시 분류."""
+    end = datetime.now(timezone.utc)
+    bgn = end - timedelta(days=730)
+    facts = {"dart_filed": False, "audit_opinion": None, "cb_bw": False,
+             "ceo_changes": 0, "litigation": False, "amendment": False}
+    page = 1
+    while page <= 5:
+        d = _get("list.json", {"corp_code": corp_code, "bgn_de": bgn.strftime("%Y%m%d"),
+                               "end_de": end.strftime("%Y%m%d"), "page_no": page, "page_count": 100})
+        if d.get("status") != "000":
+            break
+        items = d.get("list", [])
+        if items:
+            facts["dart_filed"] = True
+        for it in items:
+            nm = it.get("report_nm", "") or ""
+            if "감사보고서" in nm or "감사의견" in nm:
+                for op in ("의견거절", "부적정", "한정"):
+                    if op in nm:
+                        facts["audit_opinion"] = op
+                if facts["audit_opinion"] is None:
+                    facts["audit_opinion"] = "적정"
+            if "전환사채" in nm or "신주인수권부사채" in nm or "교환사채" in nm:
+                facts["cb_bw"] = True
+            if "대표이사" in nm and ("변경" in nm or "선임" in nm):
+                facts["ceo_changes"] += 1
+            if "소송" in nm or "제소" in nm:
+                facts["litigation"] = True
+            if "정정" in nm:
+                facts["amendment"] = True
+        if len(items) < 100:
+            break
+        page += 1
+    return facts
+
+
+# ── facts 빌드 ──
+def build_facts(corp_code: str) -> dict:
+    year = str(datetime.now(timezone.utc).year - 1)
+    comp = fetch_company(corp_code)
+    fin = fetch_financials(corp_code, year)
+    disc = fetch_disclosures(corp_code)
+
+    # Altman Z (한국 SME) + ICR + 부채비율 + OCF
+    z = z_zone = icr = debt_ratio = None
+    ocf_positive = None
+    ta = fin.get("total_assets", 0)
+    if ta:
+        wc = fin.get("current_assets", 0) - (fin.get("total_debt", 0) - fin.get("short_term_debt", 0))
+        zscore = (0.717 * (wc / ta) + 0.847 * (fin.get("retained_earnings", 0) / ta)
+                  + 3.107 * (fin.get("ebit", 0) / ta) + 0.420 * (fin.get("equity", 0) / max(fin.get("total_debt", 0), 1))
+                  + 0.998 * (fin.get("revenue", 0) / ta))
+        z = round(zscore, 2)
+        z_zone = "DISTRESS" if z < 1.23 else "GREY" if z < 2.90 else "SAFE"
+    ie = fin.get("interest_expense", 0)
+    if ie:
+        icr = round(fin.get("ebit", 0) / ie, 2)
+    eq = fin.get("equity", 0)
+    if eq:
+        debt_ratio = round(fin.get("total_debt", 0) / eq * 100, 1)
+    if "operating_cf" in fin:
+        ocf_positive = fin.get("operating_cf", 0) > 0
+
+    fin_as_of = f"{year}-12-31T00:00:00+00:00" if fin else None
+    disc_as_of = datetime.now(timezone.utc).isoformat()
+    return {
+        "corp_code": corp_code, "fin_as_of": fin_as_of, "disc_as_of": disc_as_of,
+        "corp_exists": comp.get("exists"), "ceo": comp.get("ceo"), "industry": comp.get("industry"),
+        "est_year": comp.get("est_year"),
+        "revenue": fin.get("revenue", 0) if fin else None, "ebit": fin.get("ebit") if fin else None,
+        "icr": icr, "zscore": z, "z_zone": z_zone, "debt_ratio": debt_ratio, "ocf_positive": ocf_positive,
+        **disc,
+    }
 
 
 # ── item_name 키워드 → fact 매핑 ──
@@ -118,7 +249,7 @@ def _resolve(facts: dict, fact: str, cat: str):
 
 def populate(cur, deal_id: int, corp_code: str) -> dict:
     """SDD AUTO/RULE 항목 자동 채움 + 메타데이터 저장. cur는 호출자 트랜잭션."""
-    facts = fetch_facts(corp_code)
+    facts = build_facts(corp_code)
     cur.execute("SELECT id, item_code, item_name, item_type FROM deal_checklist_item WHERE deal_id=%s AND dd_tier='SDD'", (deal_id,))
     items = [dict(r) for r in cur.fetchall()]
     filled, not_available = [], []
