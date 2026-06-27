@@ -212,4 +212,41 @@ CREATE TABLE IF NOT EXISTS macro_indicators (
 );
 CREATE INDEX IF NOT EXISTS idx_macro_code_date ON macro_indicators (indicator_code, period_date DESC);
 
+-- 담보 실거래가 이력 (Sprint #8: MOLIT 아파트 실거래 → collateral_coverage)
+CREATE TABLE IF NOT EXISTS collateral_price_history (
+    id BIGSERIAL PRIMARY KEY,
+    deal_id VARCHAR(50),
+    address_raw TEXT NOT NULL,
+    lawd_cd VARCHAR(10),
+    apt_name TEXT,
+    exclusive_area NUMERIC,
+    floor INT,
+    trade_price_krw BIGINT NOT NULL,
+    trade_ym VARCHAR(6) NOT NULL,
+    trade_day VARCHAR(2),
+    build_year INT,
+    source VARCHAR(20) DEFAULT 'MOLIT',
+    fetched_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (lawd_cd, apt_name, exclusive_area, floor, trade_ym, trade_day)
+);
+CREATE INDEX IF NOT EXISTS idx_cph_lawd_ym ON collateral_price_history (lawd_cd, trade_ym DESC);
+CREATE INDEX IF NOT EXISTS idx_cph_deal ON collateral_price_history (deal_id);
+
+-- 담보 LTV 계산 결과
+CREATE TABLE IF NOT EXISTS collateral_ltv_snapshot (
+    id BIGSERIAL PRIMARY KEY,
+    deal_id VARCHAR(50) NOT NULL,
+    calc_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    gross_value BIGINT,
+    target_debt BIGINT,
+    net_ltv NUMERIC(6,4),
+    coverage_ratio NUMERIC(6,4),
+    comparable_count INT,
+    price_source VARCHAR(50),
+    confidence VARCHAR(20),
+    notes TEXT,
+    fetched_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (deal_id, calc_date)
+);
+
 COMMIT;

@@ -74,6 +74,12 @@ async def run_scan() -> dict:
         result["ecos"] = await EcosScanner().scan()
     except Exception as e:
         print(json.dumps({"ecos_error": str(e)}, ensure_ascii=False))
+    # #8: MOLIT 담보 실거래 → LTV (담보주소 있는 딜)
+    try:
+        from scanners.molit_scanner import MolitScanner
+        result["molit"] = await MolitScanner().scan_all_deals()
+    except Exception as e:
+        print(json.dumps({"molit_error": str(e)}, ensure_ascii=False))
     summary = {k: v for k, v in result.items() if k != 'hits'}
     print(json.dumps(summary, ensure_ascii=False))
     return result

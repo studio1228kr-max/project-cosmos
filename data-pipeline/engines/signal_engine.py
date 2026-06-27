@@ -62,8 +62,27 @@ class SignalEngine:
         return {'score': min(score, 100), 'reasons': reasons, 'model': 'refinancing_pressure', 'version': 'v0_rule'}
 
     async def score_collateral_coverage(self, signal: dict) -> dict:
-        """담보 커버리지 (Lone Star) — MOLIT 연결 전 placeholder."""
-        return {'score': 0, 'reasons': [], 'model': 'collateral_coverage', 'version': 'v0_placeholder'}
+        """담보 커버리지 (Lone Star) — #8: MOLIT 실거래가 기반 LTV 스코어링."""
+        import db
+        score, reasons = 0, []
+        deal_id = signal.get("deal_id") or signal.get("deal_code")
+        if deal_id:
+            net_ltv, conf = await asyncio.to_thread(db.get_latest_ltv, str(deal_id))
+            if net_ltv is not None:
+                ltv_pct = net_ltv * 100
+                if net_ltv > 0.90:
+                    score += 30; code = 'ltv_above_90'
+                elif net_ltv > 0.80:
+                    score += 20; code = 'ltv_above_80'
+                elif net_ltv > 0.70:
+                    score += 10; code = 'ltv_above_70'
+                else:
+                    code = None
+                if code:
+                    reasons.append({'code': code, 'points': score,
+                                    'detail': f'실질 LTV {ltv_pct:.1f}% (conf={conf})'})
+        return {'score': min(score, 100), 'reasons': reasons,
+                'model': 'collateral_coverage', 'version': 'v1_molit_ltv'}
 
     # 법적 집행 base 점수 (#4: DART 법원/파산 공시 포함)
     ENFORCEMENT_BASE_POINTS = {

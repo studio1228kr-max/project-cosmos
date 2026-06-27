@@ -93,6 +93,73 @@ def save_macro_indicators_bulk(rows: list) -> int:
     return len(rows)
 
 
+def save_collateral_prices_bulk(rows: list) -> int:
+    """collateral_price_history 일괄 upsert. rows=[(deal_id,address_raw,lawd_cd,apt_name,
+    exclusive_area,floor,trade_price_krw,trade_ym,trade_day,build_year),...]."""
+    if not rows:
+        return 0
+    # 배치 내 충돌키(lawd,apt,area,floor,ym,day=idx 2,3,4,5,7,8) 중복 제거 (마지막 유지)
+    dedup = {}
+    for r in rows:
+        dedup[(r[2], r[3], r[4], r[5], r[7], r[8])] = r
+    rows = list(dedup.values())
+    conn = get_conn()
+    cur = conn.cursor()
+    # execute_values: 행별 round-trip 대신 1배치 INSERT (강남 등 대량 거래 대응)
+    psycopg2.extras.execute_values(
+        cur,
+        """INSERT INTO collateral_price_history
+           (deal_id,address_raw,lawd_cd,apt_name,exclusive_area,floor,
+            trade_price_krw,trade_ym,trade_day,build_year)
+           VALUES %s
+           ON CONFLICT (lawd_cd, apt_name, exclusive_area, floor, trade_ym, trade_day)
+           DO UPDATE SET trade_price_krw=EXCLUDED.trade_price_krw,
+             deal_id=COALESCE(EXCLUDED.deal_id, collateral_price_history.deal_id), fetched_at=NOW()""",
+        rows, page_size=500,
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return len(rows)
+
+
+def save_ltv_snapshot(deal_id, gross_value, target_debt, net_ltv, coverage_ratio,
+                      comparable_count, price_source, confidence, notes) -> None:
+    """collateral_ltv_snapshot upsert (deal_id, calc_date=오늘)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """INSERT INTO collateral_ltv_snapshot
+           (deal_id,gross_value,target_debt,net_ltv,coverage_ratio,comparable_count,price_source,confidence,notes)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+           ON CONFLICT (deal_id, calc_date) DO UPDATE SET
+             gross_value=EXCLUDED.gross_value, target_debt=EXCLUDED.target_debt,
+             net_ltv=EXCLUDED.net_ltv, coverage_ratio=EXCLUDED.coverage_ratio,
+             comparable_count=EXCLUDED.comparable_count, price_source=EXCLUDED.price_source,
+             confidence=EXCLUDED.confidence, notes=EXCLUDED.notes, fetched_at=NOW()""",
+        (deal_id, gross_value, target_debt, net_ltv, coverage_ratio,
+         comparable_count, price_source, confidence, notes),
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def get_latest_ltv(deal_id: str):
+    """딜의 최신 LTV 스냅샷 (net_ltv) — collateral_coverage용. 없으면 None."""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT net_ltv, confidence FROM collateral_ltv_snapshot WHERE deal_id=%s ORDER BY calc_date DESC LIMIT 1",
+        (deal_id,),
+    )
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return (float(row["net_ltv"]) if row and row["net_ltv"] is not None else None,
+            row["confidence"] if row else None)
+
+
 def get_latest_macro(code: str):
     """지표의 최신 값 (없으면 None)."""
     conn = get_conn()
