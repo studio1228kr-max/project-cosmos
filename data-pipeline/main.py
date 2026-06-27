@@ -132,6 +132,14 @@ async def run_worker() -> None:
         await run_consume()
 
 
+def _serve() -> None:
+    """HERMES API(uvicorn) 구동 — api:app startup이 워커를 백그라운드로 띄움.
+    Railway 시작명령이 'python main.py worker'로 고정돼 있어도 HTTP 서버가 뜨도록."""
+    import uvicorn
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("api:app", host="::", port=port)
+
+
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "worker"
     if mode == "initdb":
@@ -144,8 +152,11 @@ def main() -> None:
     elif mode == "brief":
         from brief.morning_brief import generate_morning_brief
         print(json.dumps(asyncio.run(generate_morning_brief()), ensure_ascii=False, default=str))
-    else:
+    elif mode == "worker_only":
         asyncio.run(run_worker())
+    else:
+        # 기본/worker: HERMES API 서버 구동(+startup 백그라운드 워커)
+        _serve()
 
 
 if __name__ == "__main__":
