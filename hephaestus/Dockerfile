@@ -11,8 +11,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# 컨테이너 stdout 즉시 flush — Railway 로그에 앱 출력이 보이게.
+ENV PYTHONUNBUFFERED=1
+
 EXPOSE 8000
 
-# sh -c 로 셸 확장을 보장하고, Railway 가 PORT 를 안 넣어주는 경우(내부 서비스)
-# 8000 으로 폴백한다. exec/shell 어느 쪽으로 호출돼도 $PORT 가 리터럴로 새지 않는다.
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
+# --host :: : Railway 사설 네트워크/헬스체크는 IPv6 라 0.0.0.0(IPv4 전용)으로는
+#   "service unavailable" 로 도달 실패한다. :: 듀얼스택이면 IPv6+IPv4 모두 수신.
+# sh -c : $PORT 셸 확장 보장. 내부 서비스라 PORT 미주입 시 8000 폴백.
+CMD ["sh", "-c", "uvicorn main:app --host :: --port ${PORT:-8000} --workers 2"]
