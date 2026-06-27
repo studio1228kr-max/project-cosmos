@@ -25,6 +25,13 @@ RUN_WORKER = os.getenv("RUN_WORKER", "true").lower() != "false"
 
 @app.on_event("startup")
 async def _startup():
+    # 진단 하트비트: api.py startup이 실제 실행됐는지 DB로 확인(Railway 로그 미가시 대응)
+    try:
+        await asyncio.to_thread(
+            db.save_fetch_log, "HERMES_BOOT", "SUCCESS",
+            int(os.getenv("PORT", "0")), f"uvicorn startup {datetime.now(timezone.utc).isoformat()}")
+    except Exception as e:
+        print(f"[HERMES] boot heartbeat failed: {e}")
     if RUN_WORKER:
         # 기존 워커(scan 루프 + redis consume)를 백그라운드로 구동
         async def _worker():
