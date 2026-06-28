@@ -377,6 +377,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           <div style={{
             background: "#080C14", border: "1px solid #1A2332", borderRadius: 8,
             maxWidth: 560, width: "100%", padding: isMobile ? "28px 24px" : "40px 48px", color: "#E2E8F0",
+            fontFamily: "'Inter', sans-serif",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
