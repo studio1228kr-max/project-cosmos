@@ -234,7 +234,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       {/* PHILOSOPHY */}
       <div style={{ background: "#FFFFFF", borderBottom: "1px solid #D9E4EF", padding: isMobile ? "48px 24px" : "64px 80px", textAlign: "center" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#15213D", lineHeight: 1.5, marginBottom: 16, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
+          <p style={{ fontSize: isMobile ? 16 : 18, fontWeight: 500, color: "#15213D", lineHeight: 1.5, marginBottom: 16, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
             We believe private credit requires disciplined evidence, not optimism.
           </p>
           <p style={{ fontSize: 12, color: "#5A6B85", lineHeight: 1.9, fontFamily: "'Goldman Sans', sans-serif" }}>
@@ -245,7 +245,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
       {/* DISCLAIMER + FOOTER */}
       <div style={{ borderTop: `1px solid ${C.border}`, padding: isMobile ? "24px 20px 16px" : "32px 80px 24px", background: C.surface }}>
-        <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 20, fontWeight: 700 }}>DISCLAIMER</div>
+        <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 20, fontWeight: 700 }}>Disclaimer</div>
         <div style={{ fontSize: 11, color: C.textSS, lineHeight: 1.9, maxWidth: 1200 }}>
           <p style={{ marginBottom: 16 }}>
             This material is provided for informational purposes only and should not be construed as investment advice, investment recommendation, solicitation, or an offer to buy or sell any securities or adopt any investment strategy. Opinions and information contained in this material are subject to change without notice.
@@ -265,7 +265,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         </div>
         <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20 }}>
           <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.08em" }}>
-            © 2025 Cosmos by Luska Capital Management. All Rights Reserved.
+            © 2026 Cosmos by LuskaCapitalManagement. All Rights Reserved.
             <span style={{ margin: "0 12px", color: C.border }}>|</span>
             <span style={{ cursor: "pointer", textDecoration: "underline" }}
               onClick={() => setPrivacyOpen(true)}>
