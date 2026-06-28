@@ -151,7 +151,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       {/* 3-CARD CAPABILITIES SECTION */}
       <div style={{ background: "#080C14", padding: isMobile ? "60px 24px" : "100px 80px", borderTop: "1px solid #1a2535" }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 48 : 72 }}>
-          <div style={{ fontSize: 10, color: "#4A7FA5", letterSpacing: "0.3em", marginBottom: 16, fontWeight: 700 }}>PLATFORM CAPABILITIES</div>
+          <div style={{ fontSize: 11, color: "#4A5568", letterSpacing: "0.08em", marginBottom: 16, fontWeight: 500 }}>PLATFORM CAPABILITIES</div>
           <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, color: "#FFFFFF", margin: 0, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
             Built for the Full Deal Lifecycle
           </h2>
@@ -194,14 +194,10 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             },
           ].map(({ icon, title, sub }) => (
             <div key={title} style={{
-              border: "1px solid #1e3048",
-              padding: isMobile ? "40px 28px" : "52px 44px",
-              background: "rgba(255,255,255,0.02)",
-              transition: "border-color 0.2s",
+              borderTop: "1px solid #1A2332",
+              padding: isMobile ? "28px 0 0" : "32px 28px 0 0",
               display: "flex", flexDirection: "column",
-            }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = "#4A7FA5")}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "#1e3048")}>
+            }}>
               <div style={{ marginBottom: 32 }}>{icon}</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: "#FFFFFF", marginBottom: 16, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "0.01em" }}>{title}</div>
               <div style={{ fontSize: 13, color: "#7A9ABF", lineHeight: 1.9, fontFamily: "'Goldman Sans', sans-serif" }}>{sub}</div>
@@ -216,8 +212,8 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           Cosmos is available to institutional investors by invitation only.
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <button onClick={onLogin} style={{ padding: "8px 20px", fontSize: 10, letterSpacing: "0.15em", background: "#1D4F77", color: "#fff", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>
-            INVESTOR LOGIN
+          <button onClick={onLogin} style={{ padding: 0, fontSize: 12, letterSpacing: "0.03em", background: "transparent", color: "#E2E8F0", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}>
+            Investor Login →
           </button>
           <span style={{ fontSize: 10, color: "#4A7FA5", letterSpacing: "0.1em", cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }} onClick={() => setModalOpen(true)}>
             Request Access
