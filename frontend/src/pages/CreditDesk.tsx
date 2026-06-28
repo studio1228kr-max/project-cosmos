@@ -25,6 +25,9 @@ const KEYFRAMES = `
 @keyframes pulse-glow{0%,100%{box-shadow:0 0 0px #4A90D9}50%{box-shadow:0 0 12px #4A90D9cc}}
 @keyframes cdgglow{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}
 @keyframes cdsweep{0%{transform:translateX(-130%)}100%{transform:translateX(230%)}}
+@keyframes ticker{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+.alert-strip{height:24px;background:#0F0A06;border-bottom:1px solid #3A2A0A;overflow:hidden;white-space:nowrap;display:flex;align-items:center}
+.alert-track{display:inline-flex;align-items:center;gap:32px;white-space:nowrap;animation:ticker 20s linear infinite}
 `;
 
 const URG: Record<string, { label: string; color: string }> = {
@@ -191,6 +194,8 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
     ["제조업 BSI", macro.BSI_MANUFACTURING],
   ];
 
+  const alertItems = sorted.filter(c => c.urgency === "CRITICAL_72H" || c.urgency === "WATCH_2W").slice(0, 20);
+
   const kpis = [
     { label: "Active signals", value: String(cards.length), color: T.text },
     { label: "Critical", value: String(cnt("CRITICAL_72H")), color: cnt("CRITICAL_72H") > 0 ? T.critical : T.muted },
@@ -231,7 +236,10 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
           })}
         </div>
         <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
-          <button onClick={() => go("/app?nav=intake")} style={{ padding: "8px 15px", background: T.gold, color: "#0A0E14", border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: T.font }}>+ New Deal</button>
+          <button onClick={() => go("/app?nav=intake")}
+            onMouseEnter={e => (e.currentTarget.style.background = "#C9A84C11")}
+            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+            style={{ padding: "8px 15px", background: "transparent", color: T.gold, border: `1px solid ${T.gold}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: T.font }}>+ New Deal</button>
           <span onClick={onLogout} title="로그아웃" style={{ fontSize: 17, color: T.muted, cursor: "pointer", lineHeight: 1 }}>⏻</span>
         </div>
       </div>
@@ -244,18 +252,38 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
         <Agent name="KRONOS" kind="kronos" state={kronosState} />
       </div>
 
+      {/* ── Alert Strip (티커) ── */}
+      <div className="alert-strip">
+        {alertItems.length === 0 ? (
+          <span style={{ paddingLeft: 20, fontSize: 11, color: T.muted }}>활성 알림 없음 — HERMES 수집 대기</span>
+        ) : (
+          <div className="alert-track">
+            {alertItems.map(c => {
+              const u = urgCfg(c.urgency);
+              return (
+                <span key={c.id} style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11 }}>
+                  <span style={{ color: u.color }}>[{u.label}]</span>
+                  <span style={{ color: T.gold }}>{c.entity}</span>
+                  <span style={{ color: T.muted }}>{c.signal_type || "—"}{c.score != null ? ` · ${c.score}` : ""}</span>
+                </span>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* ── Credit Desk 탭 ── */}
       {activeTab === "creditdesk" && (
         <>
           {/* 3. KPI 바 (한 줄, 32px) */}
-          <div style={{ height: 32, flexShrink: 0, display: "flex", alignItems: "center", gap: 22, padding: "0 20px", borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
+          <div style={{ height: 32, flexShrink: 0, display: "flex", alignItems: "center", gap: 16, padding: "0 20px", borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
             {kpis.map(k => (
-              <span key={k.label} style={{ display: "flex", alignItems: "baseline", gap: 6, whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: 10, color: T.muted }}>{k.label}</span>
-                <span style={{ fontFamily: T.mono, color: k.color }}>{k.value}</span>
+              <span key={k.label} style={{ display: "inline-flex", alignItems: "baseline", gap: 5, whiteSpace: "nowrap", flexShrink: 0 }}>
+                <span style={{ fontSize: 10, color: T.muted, whiteSpace: "nowrap" }}>{k.label}</span>
+                <span style={{ fontFamily: T.mono, color: k.color, whiteSpace: "nowrap" }}>{k.value}</span>
               </span>
             ))}
-            <span style={{ marginLeft: "auto", fontSize: 10, color: T.muted, whiteSpace: "nowrap" }}>auto-refresh 60s</span>
+            <span style={{ marginLeft: "auto", fontSize: 10, color: T.muted, whiteSpace: "nowrap", flexShrink: 0 }}>auto-refresh 60s</span>
           </div>
 
           {/* 4. Signal Room 테이블 */}
