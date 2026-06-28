@@ -139,14 +139,14 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
 
       {/* 3-CARD CAPABILITIES SECTION */}
-      <div style={{ background: "#080C14", padding: isMobile ? "60px 24px" : "100px 80px", borderTop: "1px solid #1a2535" }}>
+      <div style={{ background: "#080C14", padding: isMobile ? "60px 24px" : "100px 40px", borderTop: "1px solid #1a2535" }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 48 : 72 }}>
-          <div style={{ fontSize: 11, color: "#4A5568", letterSpacing: "0.08em", marginBottom: 16, fontWeight: 500 }}>PLATFORM CAPABILITIES</div>
-          <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, color: "#FFFFFF", margin: 0, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
+          <div style={{ fontSize: 11, color: "#4A5568", letterSpacing: "0.08em", marginBottom: 16, fontWeight: 500 }}>Platform capabilities</div>
+          <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 600, color: "#FFFFFF", margin: 0, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
             Built for the Full Deal Lifecycle
           </h2>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 36 : 64, maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 36 : 56, maxWidth: 1200, margin: "0 auto" }}>
           {[
             { title: "Origination", sub: "Surface relevant opportunities and track pipeline momentum." },
             { title: "Underwriting", sub: "Transform raw deal evidence into structured underwriting judgment." },
@@ -154,7 +154,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           ].map(({ title, sub }) => (
             <div key={title} style={{
               borderLeft: "2px solid #1A2332",
-              padding: isMobile ? "6px 0 6px 24px" : "10px 0 10px 36px",
+              padding: isMobile ? "6px 24px" : "10px 32px",
               display: "flex", flexDirection: "column",
             }}>
               <div style={{ fontSize: 22, fontWeight: 700, color: "#FFFFFF", marginBottom: 20, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "0.01em" }}>{title}</div>
