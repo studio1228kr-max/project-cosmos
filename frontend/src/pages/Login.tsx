@@ -103,16 +103,16 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
           onClick={submit}
           disabled={loading}
           style={{
-            width: "100%", background: loading ? "#3a341f" : GOLD, color: loading ? "#8a7d52" : "#050505",
-            border: "none", borderRadius: 4, padding: "13px", fontSize: 14, fontWeight: 600,
+            width: "100%", background: "transparent", color: loading ? "#8a7d52" : GOLD,
+            border: "none", padding: "13px", fontSize: 16, fontWeight: 500,
             cursor: loading ? "default" : "pointer", fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "0.01em",
           }}>
-          {loading ? "Authenticating…" : "Sign In"}
+          {loading ? "Authenticating…" : "Sign In →"}
         </button>
 
         {/* Footer */}
         <div style={{ marginTop: 40, textAlign: "center", fontSize: 11, color: "#3F4756", letterSpacing: "0.03em" }}>
-          Authorized access only · Luska Capital Management Internal
+          Authorized access only · LuskaCapitalManagement Internal
         </div>
       </div>
     </div>
