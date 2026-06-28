@@ -21,8 +21,8 @@ const T = {
 };
 
 const KEYFRAMES = `
-@keyframes cdping{0%{transform:scale(1);opacity:.55}100%{transform:scale(2.8);opacity:0}}
-@keyframes cdglow{0%,100%{box-shadow:0 0 0 0 rgba(74,144,217,.55)}50%{box-shadow:0 0 0 5px rgba(74,144,217,0)}}
+@keyframes ping-anim{0%{transform:scale(1);opacity:.8}100%{transform:scale(3);opacity:0}}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 0px #4A90D9}50%{box-shadow:0 0 12px #4A90D9cc}}
 @keyframes cdgglow{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}50%{box-shadow:0 0 0 5px rgba(34,197,94,0)}}
 @keyframes cdsweep{0%{transform:translateX(-130%)}100%{transform:translateX(230%)}}
 `;
@@ -87,17 +87,47 @@ const renderBrief = (text: string): React.ReactNode =>
     return <div key={i} style={{ padding: "2px 0" }}>{renderInline(t)}</div>;
   });
 
-// ── 에이전트 dot (HERMES=ping 골드 / HEPHAESTUS=glow 블루 / KRONOS=glow 그린) ──
-function AgentDot({ state, color }: { state: string; color: string }) {
+// ── 에이전트 인디케이터 칩 (D-style) ──
+function Agent({ name, kind, state }: { name: string; kind: "hermes" | "hephaestus" | "kronos"; state: string }) {
   const active = state === "active" || state === "scanning";
-  if (!active) return <span style={{ width: 7, height: 7, borderRadius: "50%", background: T.dim, display: "inline-block" }} />;
-  const ping = color === T.gold;
-  const glow = color === T.blue ? "cdglow" : "cdgglow";
+
+  // HERMES active: 골드 칩 + ping (core 6 / ring 10)
+  if (kind === "hermes" && active) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px", background: "#C9A84C11", border: "1px solid #C9A84C22", borderRadius: 4 }}>
+        <span style={{ position: "relative", width: 10, height: 10, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ position: "absolute", width: 10, height: 10, borderRadius: "50%", border: "1px solid #C9A84C", animation: "ping-anim 1.5s ease-out infinite" }} />
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#C9A84C" }} />
+        </span>
+        <span style={{ fontSize: 11, color: "#C9A84C", letterSpacing: "0.04em" }}>{name}</span>
+        {state === "scanning" && <span style={{ fontSize: 9, color: T.muted }}>scanning…</span>}
+      </div>
+    );
+  }
+  // HEPHAESTUS active: 블루 칩 + pulse glow (dot 10)
+  if (kind === "hephaestus" && active) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px", background: "#4A90D911", border: "1px solid #4A90D922", borderRadius: 4 }}>
+        <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#4A90D9", animation: "pulse-glow 1.8s ease-in-out infinite" }} />
+        <span style={{ fontSize: 11, color: "#4A90D9", letterSpacing: "0.04em" }}>{name}</span>
+      </div>
+    );
+  }
+  // KRONOS active(가용 시): 그린 칩
+  if (kind === "kronos" && active) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px", background: "#22C55E11", border: "1px solid #22C55E22", borderRadius: 4 }}>
+        <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#22C55E", animation: "cdgglow 1.8s ease-in-out infinite" }} />
+        <span style={{ fontSize: 11, color: "#22C55E", letterSpacing: "0.04em" }}>{name}</span>
+      </div>
+    );
+  }
+  // idle: 배경 없음, static dot 6px #1A2235, 텍스트 #2A3A52
   return (
-    <span style={{ position: "relative", width: 7, height: 7, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-      {ping && <span style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `1px solid ${color}`, animation: "cdping 1.6s ease-out infinite" }} />}
-      <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, animation: ping ? undefined : `${glow} 1.8s ease-in-out infinite` }} />
-    </span>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px" }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1A2235", display: "inline-block" }} />
+      <span style={{ fontSize: 11, color: "#2A3A52", letterSpacing: "0.04em" }}>{name}</span>
+    </div>
   );
 }
 
@@ -207,22 +237,11 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
       </div>
 
       {/* ── 2. 에이전트 바 ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 22, padding: "9px 20px", borderBottom: `1px solid ${T.border}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 20px", borderBottom: `1px solid ${T.border}` }}>
         <span style={labelStyle}>Agents</span>
-        {[
-          { name: "HERMES", state: hermesState, color: T.gold },
-          { name: "HEPHAESTUS", state: hephState, color: T.blue },
-          { name: "KRONOS", state: kronosState, color: T.green },
-        ].map(a => {
-          const active = a.state === "active" || a.state === "scanning";
-          return (
-            <div key={a.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <AgentDot state={a.state} color={a.color} />
-              <span style={{ fontSize: 11, color: active ? a.color : T.muted, letterSpacing: "0.04em" }}>{a.name}</span>
-              {a.state === "scanning" && <span style={{ fontSize: 9, color: T.muted }}>scanning…</span>}
-            </div>
-          );
-        })}
+        <Agent name="HERMES" kind="hermes" state={hermesState} />
+        <Agent name="HEPHAESTUS" kind="hephaestus" state={hephState} />
+        <Agent name="KRONOS" kind="kronos" state={kronosState} />
       </div>
 
       {/* ── Credit Desk 탭 ── */}
