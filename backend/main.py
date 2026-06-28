@@ -2008,6 +2008,25 @@ def get_morning_brief(_auth: dict = Depends(verify_token)):
         conn.close()
 
 
+@app.post("/api/admin/pipeline-run")
+def admin_pipeline_run(mode: str = "scan_brief", x_internal_key: Optional[str] = Header(None)):
+    """HERMES(data-pipeline) 수동 트리거 프록시 — 외부→COSMOS(public)→HERMES(internal).
+    mode: scan | brief | scan_brief."""
+    if not INTERNAL_API_KEY or x_internal_key != INTERNAL_API_KEY:
+        raise HTTPException(status_code=401, detail="invalid internal key")
+    import requests as _rq
+    hermes = os.getenv("COSMOS_INTERNAL_URL", "http://hermes-api.railway.internal:8000")
+    try:
+        r = _rq.post(
+            f"{hermes}/admin/run", params={"mode": mode},
+            headers={"X-Internal-Key": INTERNAL_API_KEY}, timeout=20,
+        )
+        ct = r.headers.get("content-type", "")
+        return {"hermes_status": r.status_code, "hermes": r.json() if ct.startswith("application/json") else r.text}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"hermes unreachable: {e}")
+
+
 @app.get("/api/signals/room")
 def get_signals_room(_auth: dict = Depends(verify_token)):
     """Signal Room 카드용 — signal_room 실데이터를 카드 형태로 반환.
