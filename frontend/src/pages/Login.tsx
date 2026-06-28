@@ -51,15 +51,12 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
 
       <div style={{ width: 400, maxWidth: "100%" }}>
 
-        {/* Logo */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}>
+        {/* Logo (타이틀 자리, 중앙) */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 36 }}>
           {/* 검정 로고 → 골드. 흰색으로 원하면 filter: "invert(1)" 로 교체 */}
-          <img src="/logo.png" width={56} height={56} alt="Cosmos"
+          <img src="/logo.png" width={64} height={64} alt="Cosmos"
             style={{ filter: "invert(1) sepia(1) saturate(2) hue-rotate(5deg) brightness(0.9)" }} />
         </div>
-
-        {/* Heading */}
-        <h1 style={{ textAlign: "center", fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", margin: "0 0 36px" }}>Log in to Cosmos</h1>
 
         {/* Email */}
         <div style={{ marginBottom: 18 }}>
@@ -67,7 +64,7 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
           <input
             type="email"
             className="login-input"
-            placeholder="name@luskacapital.com"
+            placeholder=""
             value={email}
             onChange={e => setEmail(e.target.value)}
             onKeyDown={e => e.key === "Enter" && submit()}
@@ -83,7 +80,7 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
             <input
               type={show ? "text" : "password"}
               className="login-input"
-              placeholder="••••••••••"
+              placeholder=""
               value={pw}
               onChange={e => setPw(e.target.value)}
               onKeyDown={e => e.key === "Enter" && submit()}
