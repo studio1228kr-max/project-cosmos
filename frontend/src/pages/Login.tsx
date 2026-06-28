@@ -53,8 +53,9 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
 
         {/* Logo */}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}>
-          {/* 흰색 로고면 invert(0) 유지 / 검은 로고를 흰색으로 보이게 하려면 invert(1) */}
-          <img src="/logo.png" width={64} height={64} alt="COSMOS" style={{ filter: "invert(0)" }} />
+          {/* 검정 로고 → 골드. 흰색으로 원하면 filter: "invert(1)" 로 교체 */}
+          <img src="/logo.png" width={56} height={56} alt="COSMOS"
+            style={{ filter: "invert(1) sepia(1) saturate(2) hue-rotate(5deg) brightness(0.9)" }} />
         </div>
 
         {/* Heading */}
