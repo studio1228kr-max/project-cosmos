@@ -116,13 +116,14 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </p>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <button onClick={() => setModalOpen(true)} style={{
-              padding: "14px 32px", fontSize: 11, letterSpacing: "0.15em",
-              background: C.gold, color: "#fff", border: "none",
-              cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
+              padding: "13px 30px", fontSize: 12, letterSpacing: "0.05em",
+              background: "transparent", color: "#1A2A3A",
+              border: "1px solid #1A2A3A", borderRadius: 2,
+              cursor: "pointer", fontFamily: "'Goldman Sans', sans-serif", fontWeight: 500,
             }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = "0.8")}
-              onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
-              LEARN MORE →
+              onMouseEnter={e => { e.currentTarget.style.background = "#1A2A3A"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#1A2A3A"; }}>
+              Learn More →
             </button>
           </div>
         </div>
@@ -365,7 +366,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             </p>
             <button onClick={() => setScamAlert(false)} style={{
               width: "100%", padding: "14px", fontSize: 12, letterSpacing: "0.05em",
-              background: "#C9A84C", color: "#080C14", border: "none", borderRadius: 8,
+              background: "#C9A84C", color: "#080C14", border: "none", borderRadius: 4,
               cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
             }}>
               I understand →
@@ -382,12 +383,13 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           overflowY: "auto", padding: isMobile ? "16px 8px" : "40px 24px",
         }} onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
           <div style={{
-            background: "#FFFFFF", border: "1px solid #D9E4EF",
+            background: "#FFFFFF", border: "1px solid #D9E4EF", borderRadius: 4,
             width: "100%", maxWidth: "100%", padding: isMobile ? "24px 20px" : "48px 80px",
+            fontFamily: "'Goldman Sans', sans-serif",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 }}>
               <div>
-                <div style={{ fontSize: 10, color: "#1D4F77", letterSpacing: "0.2em", marginBottom: 12 }}>Cosmos BY LUSKA CAPITAL</div>
+                <div style={{ fontSize: 10, color: "#1D4F77", letterSpacing: "0.2em", marginBottom: 12 }}>Cosmos</div>
                 <h2 style={{ fontSize: 22, fontWeight: 700, color: "#15213D", margin: 0 }}>
                   Get in touch to learn more about Cosmos
                 </h2>
@@ -489,10 +491,10 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             </div>
 
             <button style={{
-              padding: "14px 40px", fontSize: 11, letterSpacing: "0.15em",
-              background: "#1D4F77", color: "#fff", border: "none",
-              cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
-            }}>SUBMIT →</button>
+              padding: "13px 36px", fontSize: 12, letterSpacing: "0.05em",
+              background: "#1D4F77", color: "#fff", border: "none", borderRadius: 4,
+              cursor: "pointer", fontFamily: "'Goldman Sans', sans-serif", fontWeight: 600,
+            }}>Submit →</button>
           </div>
         </div>
       )}
