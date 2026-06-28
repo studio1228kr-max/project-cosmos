@@ -95,7 +95,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         {/* LEFT */}
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: isMobile ? "40px 24px 80px" : "80px 64px 120px" }}>
           <div style={{ fontSize: 10, color: C.gold, letterSpacing: "0.3em", marginBottom: 32, fontWeight: 700, borderLeft: `2px solid ${C.gold}`, paddingLeft: 12 }}>
-            PRIVATE CREDIT PORTFOLIO MANAGEMENT
+            Private credit portfolio management
           </div>
           <h1 style={{
             fontSize: isMobile ? "clamp(28px, 8vw, 40px)" : "clamp(28px, 3.5vw, 52px)", fontWeight: 700,
@@ -106,11 +106,11 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             The Operating System<br />
             for Korean <span style={{ color: C.gold }}>Private Credit.</span>
           </h1>
-          <p style={{ fontSize: 13, fontWeight: 300, color: "#64748B", lineHeight: 1.9, maxWidth: 480, marginBottom: 16 }}>
+          <p style={{ fontSize: 20, fontWeight: 500, color: "#64748B", lineHeight: 1.9, maxWidth: 480, marginBottom: 16 }}>
             In alternative investments such as real estate, private credit, and private lending,
             risk management and stable return generation are among the most important priorities.
           </p>
-          <p style={{ fontSize: 13, fontWeight: 300, color: "#64748B", lineHeight: 1.9, maxWidth: 480, marginBottom: 48 }}>
+          <p style={{ fontSize: 20, fontWeight: 500, color: "#64748B", lineHeight: 1.9, maxWidth: 480, marginBottom: 48 }}>
             The LCM by Cosmos platform supports domestic institutional investors in transparently
             and systematically managing their overall Private Credit portfolios.
           </p>
