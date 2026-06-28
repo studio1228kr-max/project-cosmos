@@ -15,9 +15,27 @@ const T = {
   watch: "#F59E0B",
   monitor: "#3B82F6",
   green: "#22C55E",
-  font: "'Satoshi', sans-serif",            // 본문 전체
+  font: "'Outfit', sans-serif",             // 본문 전체 (Outfit — 600 포함 안정 로드)
   mono: "'IBM Plex Mono', ui-monospace, monospace", // 숫자/코드값만
 };
+
+// Morning Brief 경량 마크다운 렌더 (## 헤더 / **볼드** / - 불릿)
+const renderInline = (text: string): React.ReactNode =>
+  text.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+    p.startsWith("**") && p.endsWith("**")
+      ? <strong key={i} style={{ fontWeight: 700, color: T.text }}>{p.slice(2, -2)}</strong>
+      : <React.Fragment key={i}>{p}</React.Fragment>);
+
+const renderBrief = (text: string): React.ReactNode =>
+  text.split(/\r?\n/).map((line, i) => {
+    const t = line.trim();
+    if (!t) return <div key={i} style={{ height: 6 }} />;
+    const h = t.match(/^(#{1,3})\s+(.*)/);
+    if (h) return <div key={i} style={{ fontSize: h[1].length <= 1 ? 14 : 13, fontWeight: 700, color: T.text, margin: "10px 0 4px" }}>{renderInline(h[2])}</div>;
+    const b = t.match(/^[-*]\s+(.*)/);
+    if (b) return <div key={i} style={{ display: "flex", gap: 6, padding: "2px 0" }}><span style={{ color: T.muted }}>·</span><span>{renderInline(b[1])}</span></div>;
+    return <div key={i} style={{ padding: "2px 0" }}>{renderInline(t)}</div>;
+  });
 
 const URG: Record<string, { label: string; color: string }> = {
   CRITICAL_72H: { label: "CRITICAL", color: T.critical },
@@ -174,7 +192,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
   ];
 
   return (
-    <div style={{ background: T.bg, color: T.text, minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: T.font, fontWeight: 450, fontSize: 12 }}>
+    <div style={{ background: T.bg, color: T.text, minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: T.font, fontWeight: 500, fontSize: 12 }}>
       <style>{KEYFRAMES}</style>
 
       {/* ── 상단 탭바 ── */}
@@ -274,7 +292,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
             <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 12, alignItems: "start" }}>
               <Panel title="Morning Brief" goldLeft right={brief?.run_date ? <span style={{ fontSize: 10, color: T.muted }}>{brief.run_date}</span> : undefined}>
                 {brief?.brief_text ? (
-                  <div style={{ fontSize: 12, color: T.text, lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 260, overflow: "auto" }}>{brief.brief_text}</div>
+                  <div style={{ fontSize: 12, color: T.text, lineHeight: 1.7, maxHeight: 260, overflow: "auto" }}>{renderBrief(brief.brief_text)}</div>
                 ) : (
                   <div style={{ fontSize: 12, color: T.muted }}>오늘 브리핑 생성 중…<div style={{ fontSize: 10, marginTop: 4 }}>매일 04:00 KST 자동 생성</div></div>
                 )}
