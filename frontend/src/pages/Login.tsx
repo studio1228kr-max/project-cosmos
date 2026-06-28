@@ -41,10 +41,10 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
       minHeight: "100vh",
       background: "radial-gradient(circle at 85% 10%, rgba(201,168,76,0.12) 0%, transparent 55%), radial-gradient(circle at 15% 90%, rgba(201,168,76,0.06) 0%, transparent 40%), #050505",
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "'Inter', sans-serif", color: "#E2E8F0", padding: 24, position: "relative",
+      fontFamily: "'Goldman Sans', sans-serif", color: "#E2E8F0", padding: 24, position: "relative",
     }}>
       <style>{`
-        .login-input{ width:100%; background:#141414; border:1px solid #2A2A2A; border-radius:8px; color:#E2E8F0; padding:13px 14px; font-size:14px; outline:none; box-sizing:border-box; font-family:'Inter',sans-serif; transition:border-color .15s; }
+        .login-input{ width:100%; background:#141414; border:1px solid #2A2A2A; border-radius:8px; color:#E2E8F0; padding:13px 14px; font-size:14px; outline:none; box-sizing:border-box; font-family:'Goldman Sans',sans-serif; transition:border-color .15s; }
         .login-input::placeholder{ color:#4A5568; }
         .login-input:focus{ border-color:${GOLD}; }
       `}</style>
@@ -107,7 +107,7 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
           style={{
             width: "100%", background: loading ? "#3a341f" : GOLD, color: loading ? "#8a7d52" : "#050505",
             border: "none", borderRadius: 8, padding: "13px", fontSize: 14, fontWeight: 600,
-            cursor: loading ? "default" : "pointer", fontFamily: "'Inter', sans-serif", letterSpacing: "0.01em",
+            cursor: loading ? "default" : "pointer", fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "0.01em",
           }}>
           {loading ? "Authenticating…" : "Sign In"}
         </button>

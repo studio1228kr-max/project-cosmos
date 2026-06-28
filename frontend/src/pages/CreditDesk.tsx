@@ -16,7 +16,7 @@ const T = {
   watch: "#F59E0B",
   monitor: "#3B82F6",
   green: "#22C55E",
-  font: "'Outfit', sans-serif",             // 본문 전체 (Outfit — 600 포함 안정 로드)
+  font: "'Goldman Sans', sans-serif",             // 본문 전체 (Outfit — 600 포함 안정 로드)
   mono: "'IBM Plex Mono', ui-monospace, monospace", // 숫자/코드값만
 };
 

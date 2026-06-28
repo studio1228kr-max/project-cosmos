@@ -62,7 +62,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
   }, []);
 
   return (
-    <div style={{ background: C.bg, color: C.text, fontFamily: "'Inter', sans-serif", minHeight: "100vh" }}>
+    <div style={{ background: C.bg, color: C.text, fontFamily: "'Goldman Sans', sans-serif", minHeight: "100vh" }}>
 
       {/* NAV */}
       <nav style={{
@@ -132,7 +132,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             fontSize: isMobile ? "clamp(28px, 8vw, 40px)" : "clamp(28px, 3.5vw, 52px)", fontWeight: 700,
             lineHeight: 1.15, letterSpacing: "-0.02em",
             margin: "0 0 28px", color: C.text,
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'Goldman Sans', sans-serif",
           }}>
             The Operating System<br />
             for Korean <span style={{ color: C.gold }}>Private Credit.</span>
@@ -185,7 +185,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       <div style={{ background: "#080C14", padding: isMobile ? "60px 24px" : "100px 80px", borderTop: "1px solid #1a2535" }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 48 : 72 }}>
           <div style={{ fontSize: 10, color: "#4A7FA5", letterSpacing: "0.3em", marginBottom: 16, fontWeight: 700 }}>PLATFORM CAPABILITIES</div>
-          <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, color: "#FFFFFF", margin: 0, fontFamily: "'Inter', sans-serif", letterSpacing: "-0.01em" }}>
+          <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, color: "#FFFFFF", margin: 0, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
             Built for the Full Deal Lifecycle
           </h2>
         </div>
@@ -236,8 +236,8 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
               onMouseEnter={e => (e.currentTarget.style.borderColor = "#4A7FA5")}
               onMouseLeave={e => (e.currentTarget.style.borderColor = "#1e3048")}>
               <div style={{ marginBottom: 32 }}>{icon}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "#FFFFFF", marginBottom: 16, fontFamily: "'Inter', sans-serif", letterSpacing: "0.01em" }}>{title}</div>
-              <div style={{ fontSize: 13, color: "#7A9ABF", lineHeight: 1.9, fontFamily: "'Inter', sans-serif" }}>{sub}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#FFFFFF", marginBottom: 16, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "0.01em" }}>{title}</div>
+              <div style={{ fontSize: 13, color: "#7A9ABF", lineHeight: 1.9, fontFamily: "'Goldman Sans', sans-serif" }}>{sub}</div>
             </div>
           ))}
         </div>
@@ -245,7 +245,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
       {/* ACCESS STRIP */}
       <div style={{ background: "#0E1E2E", borderTop: "1px solid #1e3a52", borderBottom: "1px solid #1e3a52", padding: isMobile ? "20px 24px" : "20px 80px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-        <span style={{ fontSize: 12, color: "#8FA3BB", letterSpacing: "0.05em", fontFamily: "'Inter', sans-serif" }}>
+        <span style={{ fontSize: 12, color: "#8FA3BB", letterSpacing: "0.05em", fontFamily: "'Goldman Sans', sans-serif" }}>
           Cosmos is available to institutional investors by invitation only.
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -263,7 +263,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         {["Institutional Only", "Korea-Focused", "Private Credit Native"].map(badge => (
           <div key={badge} style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 4, height: 4, background: "#1D4F77", borderRadius: "50%" }} />
-            <span style={{ fontSize: 11, color: "#1D4F77", letterSpacing: "0.12em", fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>{badge}</span>
+            <span style={{ fontSize: 11, color: "#1D4F77", letterSpacing: "0.12em", fontWeight: 700, fontFamily: "'Goldman Sans', sans-serif" }}>{badge}</span>
           </div>
         ))}
       </div>
@@ -271,10 +271,10 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       {/* PHILOSOPHY */}
       <div style={{ background: "#FFFFFF", borderBottom: "1px solid #D9E4EF", padding: isMobile ? "48px 24px" : "64px 80px", textAlign: "center" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#15213D", lineHeight: 1.5, marginBottom: 16, fontFamily: "'Inter', sans-serif", letterSpacing: "-0.01em" }}>
+          <p style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#15213D", lineHeight: 1.5, marginBottom: 16, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
             We believe private credit requires disciplined evidence, not optimism.
           </p>
-          <p style={{ fontSize: 12, color: "#5A6B85", lineHeight: 1.9, fontFamily: "'Inter', sans-serif" }}>
+          <p style={{ fontSize: 12, color: "#5A6B85", lineHeight: 1.9, fontFamily: "'Goldman Sans', sans-serif" }}>
             Built for downside-first underwriting, structured diligence, and active risk monitoring.
           </p>
         </div>
@@ -314,7 +314,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
       {privacyOpen && (
         <div style={{ position:"fixed", inset:0, zIndex:600, background:"rgba(0,0,0,0.85)", backdropFilter:"blur(4px)", display:"flex", alignItems:"flex-start", justifyContent:"center", overflowY:"auto", padding: isMobile ? "16px 8px" : "40px 24px" }} onClick={e => { if(e.target===e.currentTarget) setPrivacyOpen(false); }}>
-          <div style={{ background:"#fff", maxWidth:720, width:"100%", padding: isMobile ? "28px 20px" : "48px 56px", fontFamily:"'Inter', sans-serif" }}>
+          <div style={{ background:"#fff", maxWidth:720, width:"100%", padding: isMobile ? "28px 20px" : "48px 56px", fontFamily:"'Goldman Sans', sans-serif" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:32 }}>
               <div>
                 <div style={{ fontSize:10, color:"#1D4F77", letterSpacing:"0.2em", fontWeight:700, marginBottom:8 }}>LUSKA CAPITAL MANAGEMENT</div>
@@ -377,7 +377,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           <div style={{
             background: "transparent", border: "none",
             maxWidth: 560, width: "100%", padding: isMobile ? "28px 24px" : "40px 48px", color: "#E2E8F0",
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'Goldman Sans', sans-serif",
           }}>
             <div style={{ marginBottom: 20 }}>
               <span style={{ fontSize: 16, color: "#E2E8F0", fontWeight: 500 }}>
