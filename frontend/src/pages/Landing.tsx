@@ -192,10 +192,10 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       {/* PHILOSOPHY */}
       <div style={{ background: "#FFFFFF", borderBottom: "1px solid #D9E4EF", padding: isMobile ? "48px 24px" : "64px 80px", textAlign: "center" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <p style={{ fontSize: isMobile ? 16 : 18, fontWeight: 500, color: "#15213D", lineHeight: 1.5, marginBottom: 16, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
+          <p style={{ fontFamily: "'Goldman Sans', sans-serif", fontSize: isMobile ? 22 : 28, fontWeight: 500, color: "#15213D", lineHeight: 1.5, marginBottom: 16, letterSpacing: "-0.01em" }}>
             We believe private credit requires disciplined evidence, not optimism.
           </p>
-          <p style={{ fontSize: 12, color: "#5A6B85", lineHeight: 1.9, fontFamily: "'Goldman Sans', sans-serif" }}>
+          <p style={{ fontFamily: "'Goldman Sans', sans-serif", fontSize: 16, fontWeight: 400, color: "#5A6B85", lineHeight: 1.9 }}>
             Built for downside-first underwriting, structured diligence, and active risk monitoring.
           </p>
         </div>
@@ -204,12 +204,12 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       {/* DISCLAIMER + FOOTER */}
       <div style={{ borderTop: `1px solid ${C.border}`, padding: isMobile ? "24px 20px 16px" : "32px 80px 24px", background: C.surface }}>
         <div style={{ fontSize: 9, color: C.gold, letterSpacing: "0.2em", marginBottom: 20, fontWeight: 700 }}>Disclaimer</div>
-        <div style={{ fontSize: 11, color: C.textSS, lineHeight: 1.9, maxWidth: 1200 }}>
+        <div style={{ fontFamily: "'Goldman Sans', sans-serif", fontSize: 13, fontWeight: 400, color: C.textSS, lineHeight: 1.9, maxWidth: 1200 }}>
           <p style={{ marginBottom: 16 }}>
             This material is provided for informational purposes only and should not be construed as investment advice, investment recommendation, solicitation, or an offer to buy or sell any securities or adopt any investment strategy. Opinions and information contained in this material are subject to change without notice.
           </p>
           <p style={{ marginBottom: 16 }}>
-            This material is intended to provide general information regarding the Cosmos platform (Cosmos by Luska Capital Management) and is designed to assist in understanding the Private Credit sector, including real estate, private credit, and private lending. We do not guarantee the accuracy or completeness of the information provided. Any investment decision should be based on independent professional advice and your own due diligence.
+            This material is intended to provide general information regarding the Cosmos platform (Cosmos by LuskaCapitalManagement) and is designed to assist in understanding the Private Credit sector, including real estate, private credit, and private lending. We do not guarantee the accuracy or completeness of the information provided. Any investment decision should be based on independent professional advice and your own due diligence.
           </p>
           <p style={{ marginBottom: 16 }}>
             All risk analysis, return analysis, valuation, and other calculations provided through the Cosmos platform are based on assumptions, historical data, user inputs, and other factors, and are not a guarantee of future results. All graphs and screenshots are provided for illustrative purposes only.
@@ -222,7 +222,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </p>
         </div>
         <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20 }}>
-          <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.08em" }}>
+          <div style={{ fontFamily: "'Goldman Sans', sans-serif", fontSize: 10, fontWeight: 400, color: C.textSS, letterSpacing: "0.08em" }}>
             © 2026 Cosmos by LuskaCapitalManagement. All Rights Reserved.
             <span style={{ margin: "0 12px", color: C.border }}>|</span>
             <span style={{ cursor: "pointer", textDecoration: "underline" }}
