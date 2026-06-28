@@ -156,51 +156,19 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             Built for the Full Deal Lifecycle
           </h2>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 24, maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 36 : 64, maxWidth: 1100, margin: "0 auto" }}>
           {[
-            {
-              icon: (
-                <svg width="40" height="40" viewBox="0 0 36 36" fill="none">
-                  <circle cx="14" cy="14" r="9" stroke="#4A7FA5" strokeWidth="1.5"/>
-                  <line x1="21" y1="21" x2="32" y2="32" stroke="#4A7FA5" strokeWidth="1.5" strokeLinecap="round"/>
-                  <circle cx="14" cy="14" r="4" stroke="#4A7FA5" strokeWidth="1"/>
-                </svg>
-              ),
-              title: "Origination",
-              sub: "Surface relevant opportunities and track pipeline momentum.",
-            },
-            {
-              icon: (
-                <svg width="40" height="40" viewBox="0 0 36 36" fill="none">
-                  <rect x="4" y="16" width="28" height="1.5" fill="#4A7FA5"/>
-                  <rect x="10" y="8" width="1.5" height="20" fill="#4A7FA5"/>
-                  <rect x="24.5" y="8" width="1.5" height="20" fill="#4A7FA5"/>
-                  <rect x="7" y="24" width="6" height="1.5" fill="#4A7FA5"/>
-                  <rect x="23" y="10" width="6" height="1.5" fill="#4A7FA5"/>
-                </svg>
-              ),
-              title: "Underwriting",
-              sub: "Transform raw deal evidence into structured underwriting judgment.",
-            },
-            {
-              icon: (
-                <svg width="40" height="40" viewBox="0 0 36 36" fill="none">
-                  <polyline points="4,24 10,16 16,20 22,10 28,14 34,8" stroke="#4A7FA5" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                  <line x1="4" y1="28" x2="34" y2="28" stroke="#1a2535" strokeWidth="1"/>
-                </svg>
-              ),
-              title: "Monitoring",
-              sub: "Track portfolio risk, covenant signals, and execution drift over time.",
-            },
-          ].map(({ icon, title, sub }) => (
+            { title: "Origination", sub: "Surface relevant opportunities and track pipeline momentum." },
+            { title: "Underwriting", sub: "Transform raw deal evidence into structured underwriting judgment." },
+            { title: "Monitoring", sub: "Track portfolio risk, covenant signals, and execution drift over time." },
+          ].map(({ title, sub }) => (
             <div key={title} style={{
-              borderTop: "1px solid #1A2332",
-              padding: isMobile ? "28px 0 0" : "32px 28px 0 0",
+              borderLeft: "2px solid #1A2332",
+              padding: isMobile ? "6px 0 6px 24px" : "10px 0 10px 36px",
               display: "flex", flexDirection: "column",
             }}>
-              <div style={{ marginBottom: 32 }}>{icon}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: "#FFFFFF", marginBottom: 16, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "0.01em" }}>{title}</div>
-              <div style={{ fontSize: 13, color: "#7A9ABF", lineHeight: 1.9, fontFamily: "'Goldman Sans', sans-serif" }}>{sub}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#FFFFFF", marginBottom: 20, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "0.01em" }}>{title}</div>
+              <div style={{ fontSize: 14, color: "#7A9ABF", lineHeight: 1.9, fontFamily: "'Goldman Sans', sans-serif" }}>{sub}</div>
             </div>
           ))}
         </div>
