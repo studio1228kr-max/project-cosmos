@@ -116,7 +116,7 @@ export default function EvidenceChecklist() {
   };
 
   return (
-    <div style={{ flex: 1, overflow: "auto", background: BG, color: TEXT, padding: 24, fontFamily: "'ZenSerif', 'Inter', sans-serif" }}>
+    <div style={{ flex: 1, overflow: "auto", background: BG, color: TEXT, padding: 24, fontFamily: "'Goldman Sans', sans-serif" }}>
       <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>증빙 체크리스트 & 게이트 점검</div>
       <div style={{ fontSize: 11, color: TEXT_DIM, marginBottom: 20 }}>딜 코드 입력 후 조회 → 체크리스트 확인 → 게이트 점검</div>
 

@@ -8,7 +8,7 @@ const TEXT_DIMMER = "#3a3a3a";
 const ROW_ACTIVE_BG = "#1e1e1e";
 const ROW_HOVER_BG = "#1a1a1a";
 const SECTION_LABEL = "#3a3a3a";
-const FONT = "'ZenSerif', 'Inter', sans-serif";
+const FONT = "'Goldman Sans', sans-serif";
 
 type SidebarNavProps = {
   activePath: string;

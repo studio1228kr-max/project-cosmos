@@ -74,50 +74,19 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         padding: isMobile ? "12px 20px" : "16px 48px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.2em", color: C.gold }}>Cosmos</span>
-          {!isMobile && <span style={{ fontSize: 10, color: C.textS, letterSpacing: "0.1em" }}>by Luska Capital Management</span>}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <img src="/logo.png" width={28} height={28} alt="Cosmos" />
+          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "0.02em", color: C.text }}>Cosmos</span>
         </div>
-        <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
-          {!isMobile && ["Platform", "Capabilities", "About"].map(item => (
-            <span key={item} style={{ fontSize: 11, fontWeight: 400, color: C.textS, letterSpacing: "0.05em", cursor: "pointer" }}
-              onMouseEnter={e => (e.currentTarget.style.color = C.text)}
-              onMouseLeave={e => (e.currentTarget.style.color = C.textS)}>
-              {item}
-            </span>
-          ))}
-          {!isMobile && <div style={{ position: "relative" }}>
-            <button onClick={() => setConnectOpen(!connectOpen)} style={{
-              padding: "8px 20px", fontSize: 10, letterSpacing: "0.15em",
-              background: "transparent", color: C.gold,
-              border: `1px solid ${C.gold}`, cursor: "pointer",
-              fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8,
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = C.gold; (e.currentTarget as HTMLButtonElement).style.color = "#fff"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = C.gold; }}>
-              Connect {connectOpen ? "∧" : "∨"}
-            </button>
-            {connectOpen && (
-              <div style={{
-                position: "absolute", top: "calc(100% + 4px)", right: 0,
-                background: C.surface, border: `1px solid ${C.border}`,
-                minWidth: 200, zIndex: 200,
-              }}>
-                <button onClick={onLogin} style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  width: "100%", padding: "14px 20px", fontSize: 11,
-                  letterSpacing: "0.1em", background: "transparent",
-                  color: C.text, border: "none", cursor: "pointer",
-                  fontFamily: "inherit", textAlign: "left",
-                }}
-                  onMouseEnter={e => (e.currentTarget.style.background = C.border)}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  Cosmos Client Log In <span style={{ color: C.gold }}>›</span>
-                </button>
-              </div>
-            )}
-          </div>}
-        </div>
+        <button onClick={onLogin} style={{
+          padding: "9px 20px", fontSize: 12, fontWeight: 500, letterSpacing: "0.02em",
+          background: C.gold, color: "#fff", border: "none", borderRadius: 8,
+          cursor: "pointer", fontFamily: "inherit",
+        }}
+          onMouseEnter={e => (e.currentTarget.style.background = C.goldDim)}
+          onMouseLeave={e => (e.currentTarget.style.background = C.gold)}>
+          Investor Login
+        </button>
       </nav>
 
       {/* HERO */}

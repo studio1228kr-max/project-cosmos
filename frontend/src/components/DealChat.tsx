@@ -64,7 +64,7 @@ export default function DealChat({ dealId, dealName }: { dealId: string; dealNam
   return (
     <div style={{
       display: "flex", flexDirection: "column", height: "100%",
-      background: C.bg, fontFamily: "'Inter', 'Apple SD Gothic Neo', sans-serif",
+      background: C.bg, fontFamily: "'Goldman Sans', 'Apple SD Gothic Neo', sans-serif",
     }}>
 
       {/* 헤더 */}
