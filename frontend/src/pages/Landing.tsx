@@ -74,9 +74,9 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         padding: isMobile ? "12px 20px" : "16px 48px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <img src="/logo.png" width={28} height={28} alt="Cosmos" />
-          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "0.02em", color: C.text }}>Cosmos</span>
+          <span style={{ fontSize: 16, fontWeight: 900, letterSpacing: "0.02em", color: C.text }}>Cosmos</span>
         </div>
         <button onClick={onLogin} style={{
           padding: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.02em",
@@ -104,11 +104,11 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             The Operating System<br />
             for Korean <span style={{ color: C.gold }}>Private Credit.</span>
           </h1>
-          <p style={{ fontSize: 20, fontWeight: 500, color: "#64748B", lineHeight: 1.9, maxWidth: 480, marginBottom: 16 }}>
+          <p style={{ fontSize: 20, fontWeight: 500, color: "#64748B", lineHeight: 1.4, maxWidth: 480, marginBottom: 16 }}>
             In alternative investments such as real estate, private credit, and private lending,
             risk management and stable return generation are among the most important priorities.
           </p>
-          <p style={{ fontSize: 20, fontWeight: 500, color: "#64748B", lineHeight: 1.9, maxWidth: 480, marginBottom: 48 }}>
+          <p style={{ fontSize: 20, fontWeight: 500, color: "#64748B", lineHeight: 1.4, maxWidth: 480, marginBottom: 48 }}>
             The LCM by Cosmos platform supports domestic institutional investors in transparently
             and systematically managing their overall Private Credit portfolios.
           </p>
@@ -139,7 +139,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
 
       {/* 3-CARD CAPABILITIES SECTION */}
-      <div style={{ background: "#080C14", padding: isMobile ? "60px 24px" : "100px 40px", borderTop: "1px solid #1a2535" }}>
+      <div style={{ background: "#080C14", padding: isMobile ? "44px 24px" : "64px 40px", borderTop: "1px solid #1a2535" }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 48 : 72 }}>
           <div style={{ fontSize: 11, color: "#4A5568", letterSpacing: "0.08em", marginBottom: 16, fontWeight: 500 }}>Platform capabilities</div>
           <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 600, color: "#FFFFFF", margin: 0, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
@@ -192,7 +192,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       {/* PHILOSOPHY */}
       <div style={{ background: "#FFFFFF", borderBottom: "1px solid #D9E4EF", padding: isMobile ? "48px 24px" : "64px 80px", textAlign: "center" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <p style={{ fontFamily: "'Goldman Sans', sans-serif", fontSize: isMobile ? 22 : 28, fontWeight: 500, color: "#15213D", lineHeight: 1.5, marginBottom: 16, letterSpacing: "-0.01em" }}>
+          <p style={{ fontFamily: "'Goldman Sans', sans-serif", fontSize: isMobile ? 24 : 32, fontWeight: 600, color: "#15213D", lineHeight: 1.5, marginBottom: 16, letterSpacing: "-0.01em" }}>
             We believe private credit requires disciplined evidence, not optimism.
           </p>
           <p style={{ fontFamily: "'Goldman Sans', sans-serif", fontSize: 16, fontWeight: 400, color: "#5A6B85", lineHeight: 1.9 }}>
