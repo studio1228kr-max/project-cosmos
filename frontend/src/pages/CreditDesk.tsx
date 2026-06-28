@@ -74,7 +74,7 @@ const Panel: React.FC<{ title: string; right?: React.ReactNode; goldLeft?: boole
     borderRadius: 4, padding: "12px 14px", display: "flex", flexDirection: "column", minWidth: 0, ...style,
   }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-      <span style={{ fontSize: 10, fontWeight: 600, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>{title}</span>
+      <span style={{ fontSize: 12, fontWeight: 600, color: T.muted, letterSpacing: "0.08em", textTransform: "uppercase" }}>{title}</span>
       {right}
     </div>
     {children}
@@ -82,7 +82,7 @@ const Panel: React.FC<{ title: string; right?: React.ReactNode; goldLeft?: boole
 );
 
 const Tag: React.FC<{ color: string; children: React.ReactNode }> = ({ color, children }) => (
-  <span style={{ fontSize: 9, fontWeight: 600, color, background: `${color}1A`, border: `1px solid ${color}44`, borderRadius: 3, padding: "1px 6px", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{children}</span>
+  <span style={{ fontSize: 10, fontWeight: 700, color, background: `${color}1A`, border: `1px solid ${color}44`, borderRadius: 3, padding: "2px 7px", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{children}</span>
 );
 
 const Sk: React.FC<{ w?: number | string; h: number; r?: number; style?: React.CSSProperties }> = ({ w = "100%", h, r = 4, style }) => (
@@ -126,7 +126,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
   const [macro, setMacro] = useState<any>({});
   const [cosmosUp, setCosmosUp] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeNav, setActiveNav] = useState("creditdesk");
+  const [activeTab, setActiveTab] = useState("creditdesk");
 
   const load = useCallback(() => {
     Promise.all([
@@ -166,195 +166,120 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
     ["제조업 BSI", "BSI Manufacturing", macro.BSI_MANUFACTURING],
   ];
 
-  const NAV: { id: string; label: string; items: { id: string; label: string; scroll?: string; to?: string }[] }[] = [
-    { id: "today", label: "TODAY", items: [
-      { id: "creditdesk", label: "Credit Desk", scroll: "cd-top" },
-      { id: "triage", label: "Morning Triage", scroll: "cd-brief" },
-      { id: "signalroom", label: "Signal Room", scroll: "cd-signals" },
-    ] },
-    { id: "deal", label: "DEAL", items: [
-      { id: "pipeline", label: "Pipeline", to: "/" },
-      { id: "register", label: "Register", to: "/" },
-    ] },
-    { id: "dd", label: "DUE DILIGENCE", items: [
-      { id: "sdd", label: "SDD", to: "/" },
-      { id: "icmemo", label: "IC Memo", to: "/" },
-      { id: "covenant", label: "Covenant Monitor", scroll: "cd-covenant" },
-    ] },
-    { id: "portfolio", label: "PORTFOLIO", items: [
-      { id: "risk", label: "Risk Monitor", to: "/" },
-    ] },
+  const TABS = [
+    { id: "creditdesk", label: "Credit Desk" },
+    { id: "deals", label: "Deals" },
+    { id: "dd", label: "DD" },
+    { id: "portfolio", label: "Portfolio" },
   ];
-  const handleNav = (item: { id: string; scroll?: string; to?: string }) => {
-    setActiveNav(item.id);
-    if (item.scroll) document.getElementById(item.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    else if (item.to) go(item.to);
-  };
 
   return (
-    <div style={{ background: T.bg, color: T.text, minHeight: "100vh", display: "flex", fontFamily: T.font, fontWeight: 450, fontSize: 12 }}>
+    <div style={{ background: T.bg, color: T.text, minHeight: "100vh", display: "flex", flexDirection: "column", fontFamily: T.font, fontWeight: 450, fontSize: 12 }}>
       <style>{KEYFRAMES}</style>
 
-      {/* ── 사이드바 172px ── */}
-      <div style={{ width: 172, flexShrink: 0, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
-        <div style={{ padding: "18px 16px 22px" }}>
-          <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.12em", color: T.gold }}>COSMOS</div>
-          <div style={{ fontSize: 9, color: T.muted, letterSpacing: "0.18em", marginTop: 2 }}>CREDIT DESK</div>
+      {/* ── 상단 탭바 ── */}
+      <div style={{ height: 54, flexShrink: 0, borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", padding: "0 20px", position: "sticky", top: 0, background: T.bg, zIndex: 20 }}>
+        {/* 좌: 로고 */}
+        <div style={{ flex: 1, display: "flex", alignItems: "baseline", gap: 10 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "0.12em", color: T.gold }}>COSMOS</span>
+          <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.18em", color: T.muted }}>CREDIT DESK</span>
         </div>
-        <div style={{ flex: 1, overflow: "auto" }}>
-          {NAV.map(group => (
-            <div key={group.id} style={{ marginBottom: 6 }}>
-              <div style={{ padding: "12px 16px 4px", fontSize: 9, fontWeight: 600, color: T.muted, letterSpacing: "0.12em" }}>{group.label}</div>
-              {group.items.map(item => {
-                const active = item.id === activeNav;
-                return (
-                  <div key={item.id}
-                    onClick={() => handleNav(item)}
-                    style={{
-                      padding: "7px 16px 7px 22px", cursor: "pointer", fontSize: 12, fontWeight: 500,
-                      color: active ? T.text : T.muted,
-                      borderLeft: active ? `2px solid ${T.gold}` : "2px solid transparent",
-                      background: active ? T.cardHi : "transparent",
-                    }}>
-                    {item.label}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+        {/* 중앙: 탭 */}
+        <div style={{ display: "flex", gap: 4 }}>
+          {TABS.map(t => {
+            const active = t.id === activeTab;
+            return (
+              <div key={t.id} onClick={() => setActiveTab(t.id)}
+                style={{ padding: "8px 16px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: active ? T.text : T.muted, borderBottom: active ? `2px solid ${T.gold}` : "2px solid transparent" }}>
+                {t.label}
+              </div>
+            );
+          })}
         </div>
-        <div onClick={onLogout} style={{ padding: "12px 16px", fontSize: 11, color: T.muted, cursor: "pointer", borderTop: `1px solid ${T.border}` }}>↩ Logout</div>
+        {/* 우: New Deal + 로그아웃 */}
+        <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+          <button onClick={() => go("/")} style={{ padding: "8px 15px", background: T.gold, color: "#0A0E14", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: T.font }}>+ New Deal</button>
+          <span onClick={onLogout} title="로그아웃" style={{ fontSize: 17, color: T.muted, cursor: "pointer", lineHeight: 1 }}>⏻</span>
+        </div>
       </div>
 
-      {/* ── 메인 ── */}
+      {/* ── 콘텐츠 ── */}
       {loading ? <Skeleton /> : (
-        <div id="cd-top" style={{ flex: 1, minWidth: 0, padding: "16px 20px 44px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ flex: 1, minWidth: 0, padding: "16px 20px 44px", display: "flex", flexDirection: "column", gap: 14 }}>
 
-          {/* 상단: 메트릭 6 */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
-            {metrics.map(m => (
-              <div key={m.label} style={{ background: T.card, border: "none", borderTop: `2px solid ${m.top}`, borderRadius: 4, padding: "11px 13px" }}>
-                <div style={{ fontSize: 9, color: T.muted, letterSpacing: "0.08em" }}>{m.label}</div>
-                <div style={{ fontFamily: T.mono, fontSize: 22, fontWeight: 700, color: m.color, marginTop: 5, lineHeight: 1 }}>{m.value}</div>
-                <div style={{ fontSize: 9, color: T.muted, marginTop: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.sub}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* 중단: Signal Room 테이블 */}
-          <Panel id="cd-signals" title="Signal Room" right={<span style={{ fontSize: 9, color: T.muted }}>{cards.length} signals · auto-refresh 60s</span>}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                <thead>
-                  <tr style={{ color: T.muted, fontSize: 9, letterSpacing: "0.06em", textAlign: "left" }}>
-                    {["URGENCY", "ENTITY", "SIGNAL", "Z-SCORE", "ZONE", "ICR", "DEAL TYPE", "SCORE", "AS OF", ""].map((h, i) => (
-                      <th key={i} style={{ padding: "6px 10px", fontWeight: 500, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {cards.length === 0 && (
-                    <tr><td colSpan={10} style={{ padding: "22px 10px", color: T.muted, textAlign: "center" }}>활성 신호 없음</td></tr>
-                  )}
-                  {cards.map(c => {
-                    const u = urgCfg(c.urgency);
-                    const score = c.score || 0;
-                    return (
-                      <tr key={c.id} style={{ borderBottom: `1px solid ${T.border}` }}>
-                        <td style={{ padding: "9px 10px" }}><Tag color={u.color}>{u.label}</Tag></td>
-                        <td style={{ padding: "9px 10px", minWidth: 150 }}>
-                          <div style={{ fontFamily: T.font, fontWeight: 600, color: T.text }}>{c.entity || "—"}</div>
-                          <div style={{ fontFamily: T.mono, color: T.muted, fontSize: 9, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{c.entity_sub || "—"}</div>
-                        </td>
-                        <td style={{ padding: "9px 10px", color: T.text, whiteSpace: "nowrap" }}>{c.signal_type || "—"}</td>
-                        <td style={{ padding: "9px 10px", fontFamily: T.mono, fontWeight: 700, color: c.z_score != null ? T.text : T.muted }}>{c.z_score != null ? Number(c.z_score).toFixed(2) : "—"}</td>
-                        <td style={{ padding: "9px 10px" }}>{c.zone ? <Tag color={zoneColor(c.zone)}>{c.zone}</Tag> : <span style={{ color: T.muted }}>—</span>}</td>
-                        <td style={{ padding: "9px 10px", fontFamily: T.mono, fontWeight: 700, color: c.icr != null ? T.text : T.muted }}>{c.icr != null ? `${Number(c.icr).toFixed(2)}x` : "—"}</td>
-                        <td style={{ padding: "9px 10px", color: T.text, whiteSpace: "nowrap" }}>{c.suggested_deal_type || "—"}</td>
-                        <td style={{ padding: "9px 10px", minWidth: 92 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                            <span style={{ fontFamily: T.mono, color: u.color, fontWeight: 700, minWidth: 22 }}>{score}</span>
-                            <div style={{ flex: 1, height: 4, background: T.border, borderRadius: 2, overflow: "hidden", minWidth: 40 }}>
-                              <div style={{ width: `${Math.min(100, score)}%`, height: "100%", background: u.color }} />
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ padding: "9px 10px", fontFamily: T.mono, color: T.muted, whiteSpace: "nowrap" }}>{fmtTime(c.data_asof)}</td>
-                        <td style={{ padding: "9px 10px" }}>
-                          <span onClick={() => go("/")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>처리 →</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          {/* ════ Credit Desk 탭 ════ */}
+          {activeTab === "creditdesk" && <>
+            {/* 메트릭 6 */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
+              {metrics.map(m => (
+                <div key={m.label} style={{ background: T.card, border: "none", borderTop: `2px solid ${m.top}`, borderRadius: 4, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 500, color: T.muted, letterSpacing: "0.08em" }}>{m.label}</div>
+                  <div style={{ fontFamily: T.mono, fontSize: 28, fontWeight: 700, color: m.color, marginTop: 6, lineHeight: 1 }}>{m.value}</div>
+                  <div style={{ fontSize: 10, color: T.muted, marginTop: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.sub}</div>
+                </div>
+              ))}
             </div>
-          </Panel>
 
-          {/* 하단: 3컬럼 + 우측 패널 */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1.3fr", gap: 12, alignItems: "start" }}>
-
-            {/* Deal Pipeline */}
-            <Panel title="Deal Pipeline">
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontFamily: T.mono, fontSize: 24, fontWeight: 700, color: T.text }}>{deals.length}</span>
-                <span style={{ fontSize: 10, color: T.muted }}>active deals</span>
+            {/* Signal Room 테이블 */}
+            <Panel title="Signal Room" right={<span style={{ fontSize: 10, color: T.muted }}>{cards.length} signals · auto-refresh 60s</span>}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ color: T.muted, letterSpacing: "0.06em", textAlign: "left" }}>
+                      {["URGENCY", "ENTITY", "SIGNAL", "Z-SCORE", "ZONE", "ICR", "DEAL TYPE", "SCORE", "AS OF", ""].map((h, i) => (
+                        <th key={i} style={{ padding: "7px 10px", fontSize: 10, fontWeight: 600, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cards.length === 0 && (
+                      <tr><td colSpan={10} style={{ padding: "24px 10px", color: T.muted, textAlign: "center" }}>활성 신호 없음</td></tr>
+                    )}
+                    {cards.map(c => {
+                      const u = urgCfg(c.urgency);
+                      const score = c.score || 0;
+                      return (
+                        <tr key={c.id} style={{ borderBottom: `1px solid ${T.border}` }}>
+                          <td style={{ padding: "10px" }}><Tag color={u.color}>{u.label}</Tag></td>
+                          <td style={{ padding: "10px", minWidth: 150 }}>
+                            <div style={{ fontFamily: T.font, fontSize: 13, fontWeight: 600, color: T.text }}>{c.entity || "—"}</div>
+                            <div style={{ fontFamily: T.mono, color: T.muted, fontSize: 10, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{c.entity_sub || "—"}</div>
+                          </td>
+                          <td style={{ padding: "10px", color: T.text, whiteSpace: "nowrap" }}>{c.signal_type || "—"}</td>
+                          <td style={{ padding: "10px", fontFamily: T.mono, fontWeight: 700, color: c.z_score != null ? T.text : T.muted }}>{c.z_score != null ? Number(c.z_score).toFixed(2) : "—"}</td>
+                          <td style={{ padding: "10px" }}>{c.zone ? <Tag color={zoneColor(c.zone)}>{c.zone}</Tag> : <span style={{ color: T.muted }}>—</span>}</td>
+                          <td style={{ padding: "10px", fontFamily: T.mono, fontWeight: 700, color: c.icr != null ? T.text : T.muted }}>{c.icr != null ? `${Number(c.icr).toFixed(2)}x` : "—"}</td>
+                          <td style={{ padding: "10px", color: T.text, whiteSpace: "nowrap" }}>{c.suggested_deal_type || "—"}</td>
+                          <td style={{ padding: "10px", minWidth: 96 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                              <span style={{ fontFamily: T.mono, color: u.color, fontWeight: 700, minWidth: 24 }}>{score}</span>
+                              <div style={{ flex: 1, height: 4, background: T.border, borderRadius: 2, overflow: "hidden", minWidth: 40 }}>
+                                <div style={{ width: `${Math.min(100, score)}%`, height: "100%", background: u.color }} />
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: "10px", fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: "nowrap" }}>{fmtTime(c.data_asof)}</td>
+                          <td style={{ padding: "10px" }}>
+                            <span onClick={() => go("/")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>처리 →</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              {deals.length === 0 ? (
-                <div style={{ fontSize: 11, color: T.muted }}>등록된 딜 없음</div>
-              ) : deals.slice(0, 5).map((d: any) => (
-                <div key={d.deal_code} onClick={() => go("/")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${T.border}`, cursor: "pointer" }}>
-                  <span style={{ color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }}>{d.deal_name}</span>
-                  <Tag color={d.final_gate === "HOLD" ? T.watch : d.final_gate === "PASS" ? T.monitor : T.muted}>{d.final_gate || "—"}</Tag>
-                </div>
-              ))}
             </Panel>
 
-            {/* Covenant Monitor — HOLD 딜의 차단 사유 */}
-            <Panel id="cd-covenant" title="Covenant Monitor">
-              {holdDeals.length === 0 ? (
-                <div style={{ fontSize: 11, color: T.muted }}>위반/조건 미달 없음</div>
-              ) : holdDeals.slice(0, 5).map((d: any) => (
-                <div key={d.deal_code} style={{ padding: "6px 0", borderBottom: `1px solid ${T.border}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 110 }}>{d.deal_name}</span>
-                    <Tag color={T.watch}>HOLD</Tag>
-                  </div>
-                  {(d.hold_reasons || [])[0] && <div style={{ fontSize: 9, color: T.muted, marginTop: 3, borderLeft: `2px solid ${T.watch}`, paddingLeft: 6 }}>{(d.hold_reasons || [])[0]}</div>}
-                </div>
-              ))}
-            </Panel>
-
-            {/* Macro Monitor — normalized_macro_series 실데이터 */}
-            <Panel title="Macro Monitor">
-              {macroRows.map(([k, sub, m]) => {
-                const v = fmtMacro(m);
-                return (
-                  <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: `1px solid ${T.border}` }}>
-                    <div>
-                      <div style={{ color: T.text }}>{k}</div>
-                      <div style={{ fontSize: 9, color: T.muted }}>{m?.as_of || sub}</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <span style={{ fontFamily: T.mono, fontWeight: 700, color: v ? T.text : T.muted }}>{v || "—"}</span>
-                      {m?.delta_mom != null && <div style={{ fontFamily: T.mono, fontSize: 9, color: m.delta_mom >= 0 ? T.green : T.critical }}>{m.delta_mom >= 0 ? "▲" : "▼"} {Math.abs(m.delta_mom)}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-              <div style={{ fontSize: 9, color: T.muted, marginTop: 8 }}>ECOS 일간 적재 · 미적재 지표는 연동 대기</div>
-            </Panel>
-
-            {/* 우측 패널: Morning Brief + Quick Actions */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <Panel id="cd-brief" title="Morning Brief" goldLeft right={brief?.run_date ? <span style={{ fontSize: 9, color: T.muted }}>{brief.run_date}</span> : undefined}>
+            {/* Morning Brief + Macro */}
+            <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 12, alignItems: "start" }}>
+              <Panel title="Morning Brief" goldLeft right={brief?.run_date ? <span style={{ fontSize: 10, color: T.muted }}>{brief.run_date}</span> : undefined}>
                 {brief?.brief_text ? (
-                  <div style={{ fontSize: 11, color: T.text, lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 220, overflow: "auto" }}>{brief.brief_text}</div>
+                  <div style={{ fontSize: 12, color: T.text, lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 260, overflow: "auto" }}>{brief.brief_text}</div>
                 ) : (
-                  <div style={{ fontSize: 11, color: T.muted }}>오늘 브리핑 생성 중…<div style={{ fontSize: 9, marginTop: 4 }}>매일 04:00 KST 자동 생성</div></div>
+                  <div style={{ fontSize: 12, color: T.muted }}>오늘 브리핑 생성 중…<div style={{ fontSize: 10, marginTop: 4 }}>매일 04:00 KST 자동 생성</div></div>
                 )}
                 {brief && (
-                  <div style={{ display: "flex", gap: 12, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}`, fontFamily: T.mono, fontSize: 9, color: T.muted }}>
+                  <div style={{ display: "flex", gap: 12, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}`, fontFamily: T.mono, fontSize: 10, color: T.muted }}>
                     <span style={{ color: T.critical }}>C {stats.critical_count ?? brief.critical_count ?? 0}</span>
                     <span style={{ color: T.watch }}>W {stats.watch_count ?? brief.watch_count ?? 0}</span>
                     <span style={{ color: T.monitor }}>M {stats.monitor_count ?? brief.monitor_count ?? 0}</span>
@@ -363,21 +288,100 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                 )}
               </Panel>
 
-              <Panel title="Quick Actions">
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <button onClick={() => go("/")} style={{ padding: "9px 12px", background: T.gold, color: "#0A0E14", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: T.font, textAlign: "left" }}>+ New Deal</button>
-                  {[["Signal Room", "/"], ["Pipeline", "/"], ["Risk Book", "/"]].map(([label, to]) => (
-                    <button key={label} onClick={() => go(to)} style={{ padding: "9px 12px", background: "transparent", color: T.text, border: `1px solid ${T.border}`, borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: T.font, textAlign: "left" }}>{label} →</button>
-                  ))}
-                </div>
+              <Panel title="Macro Monitor">
+                {macroRows.map(([k, sub, m]) => {
+                  const v = fmtMacro(m);
+                  return (
+                    <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
+                      <div>
+                        <div style={{ color: T.text }}>{k}</div>
+                        <div style={{ fontSize: 10, color: T.muted }}>{m?.as_of || sub}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ fontFamily: T.mono, fontWeight: 700, color: v ? T.text : T.muted }}>{v || "—"}</span>
+                        {m?.delta_mom != null && <div style={{ fontFamily: T.mono, fontSize: 10, color: m.delta_mom >= 0 ? T.green : T.critical }}>{m.delta_mom >= 0 ? "▲" : "▼"} {Math.abs(m.delta_mom)}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ fontSize: 10, color: T.muted, marginTop: 8 }}>ECOS 일간 적재 · 미적재 지표는 연동 대기</div>
               </Panel>
             </div>
-          </div>
+          </>}
+
+          {/* ════ Deals 탭 ════ */}
+          {activeTab === "deals" && (
+            <Panel title="Deal Pipeline" right={<span style={{ fontSize: 10, color: T.muted }}>{deals.length} deals · {holdDeals.length} hold</span>}>
+              {deals.length === 0 ? (
+                <div style={{ padding: "28px 10px", fontSize: 12, color: T.muted, textAlign: "center" }}>등록된 딜 없음</div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ color: T.muted, letterSpacing: "0.06em", textAlign: "left" }}>
+                        {["DEAL", "CODE", "GATE", "HOLD REASON", ""].map((h, i) => (
+                          <th key={i} style={{ padding: "7px 10px", fontSize: 10, fontWeight: 600, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deals.map((d: any) => (
+                        <tr key={d.deal_code} style={{ borderBottom: `1px solid ${T.border}` }}>
+                          <td style={{ padding: "10px", fontSize: 13, fontWeight: 600, color: T.text }}>{d.deal_name}</td>
+                          <td style={{ padding: "10px", fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: "nowrap" }}>{d.deal_code}</td>
+                          <td style={{ padding: "10px" }}><Tag color={d.final_gate === "HOLD" ? T.watch : d.final_gate === "PASS" ? T.monitor : T.muted}>{d.final_gate || "—"}</Tag></td>
+                          <td style={{ padding: "10px", color: T.muted }}>{(d.hold_reasons || [])[0] || "—"}</td>
+                          <td style={{ padding: "10px" }}><span onClick={() => go("/")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>열기 →</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+          )}
+
+          {/* ════ DD 탭 ════ */}
+          {activeTab === "dd" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, alignItems: "start" }}>
+              <Panel title="SDD">
+                <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.7 }}>표준 실사(SDD) 체크리스트는 딜 상세에서 진행합니다.</div>
+                <button onClick={() => go("/")} style={{ marginTop: 12, padding: "8px 12px", background: "transparent", color: T.text, border: `1px solid ${T.border}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: T.font, textAlign: "left" }}>딜 목록 열기 →</button>
+              </Panel>
+              <Panel title="IC Memo">
+                <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.7 }}>IC Memo는 SCREENED/ADVANCE 딜에서 생성합니다.</div>
+                <button onClick={() => go("/")} style={{ marginTop: 12, padding: "8px 12px", background: "transparent", color: T.text, border: `1px solid ${T.border}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: T.font, textAlign: "left" }}>딜 목록 열기 →</button>
+              </Panel>
+              <Panel title="Covenant Monitor" right={<span style={{ fontSize: 10, color: T.muted }}>{holdDeals.length} hold</span>}>
+                {holdDeals.length === 0 ? (
+                  <div style={{ fontSize: 12, color: T.muted }}>위반/조건 미달 없음</div>
+                ) : holdDeals.map((d: any) => (
+                  <div key={d.deal_code} style={{ padding: "7px 0", borderBottom: `1px solid ${T.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>{d.deal_name}</span>
+                      <Tag color={T.watch}>HOLD</Tag>
+                    </div>
+                    {(d.hold_reasons || [])[0] && <div style={{ fontSize: 11, color: T.muted, marginTop: 3, borderLeft: `2px solid ${T.watch}`, paddingLeft: 6 }}>{(d.hold_reasons || [])[0]}</div>}
+                  </div>
+                ))}
+              </Panel>
+            </div>
+          )}
+
+          {/* ════ Portfolio 탭 ════ */}
+          {activeTab === "portfolio" && (
+            <Panel title="Risk Monitor">
+              <div style={{ padding: "48px 10px", textAlign: "center" }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>포트폴리오 리스크 모니터</div>
+                <div style={{ fontSize: 12, color: T.muted, marginTop: 8 }}>포트폴리오 데이터 연동 대기 — 클로징된 딜이 편입되면 익스포저·집중도·리스크 지표가 표시됩니다.</div>
+              </div>
+            </Panel>
+          )}
         </div>
       )}
 
       {/* ── 하단 상태바 ── */}
-      <div style={{ position: "fixed", bottom: 0, left: 172, right: 0, height: 28, background: T.card, borderTop: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 18, padding: "0 18px", fontSize: 10, color: T.muted, zIndex: 10 }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 28, background: T.card, borderTop: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 18, padding: "0 18px", fontSize: 11, color: T.muted, zIndex: 10 }}>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: hermesUp ? T.green : T.muted }} />
           HERMES {hermesUp ? "connected" : "idle"}
