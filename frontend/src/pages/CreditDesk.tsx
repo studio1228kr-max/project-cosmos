@@ -216,7 +216,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
         </div>
         {/* 우: New Deal + 로그아웃 */}
         <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
-          <button onClick={() => go("/")} style={{ padding: "8px 15px", background: T.gold, color: "#0A0E14", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: T.font }}>+ New Deal</button>
+          <button onClick={() => go("/app?nav=intake")} style={{ padding: "8px 15px", background: T.gold, color: "#0A0E14", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: T.font }}>+ New Deal</button>
           <span onClick={onLogout} title="로그아웃" style={{ fontSize: 17, color: T.muted, cursor: "pointer", lineHeight: 1 }}>⏻</span>
         </div>
       </div>
@@ -278,7 +278,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                           </td>
                           <td style={{ padding: "10px", fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: "nowrap" }}>{fmtTime(c.data_asof)}</td>
                           <td style={{ padding: "10px" }}>
-                            <span onClick={() => go("/")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>처리 →</span>
+                            <span onClick={() => go("/app?nav=signalroom")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>처리 →</span>
                           </td>
                         </tr>
                       );
@@ -349,7 +349,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                           <td style={{ padding: "10px", fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: "nowrap" }}>{d.deal_code}</td>
                           <td style={{ padding: "10px" }}><Tag color={d.final_gate === "HOLD" ? T.watch : d.final_gate === "PASS" ? T.monitor : T.muted}>{d.final_gate || "—"}</Tag></td>
                           <td style={{ padding: "10px", color: T.muted }}>{(d.hold_reasons || [])[0] || "—"}</td>
-                          <td style={{ padding: "10px" }}><span onClick={() => go("/")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>열기 →</span></td>
+                          <td style={{ padding: "10px" }}><span onClick={() => go("/app?nav=pipeline")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>열기 →</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -364,11 +364,11 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, alignItems: "start" }}>
               <Panel title="SDD">
                 <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.7 }}>표준 실사(SDD) 체크리스트는 딜 상세에서 진행합니다.</div>
-                <button onClick={() => go("/")} style={{ marginTop: 12, padding: "8px 12px", background: "transparent", color: T.text, border: `1px solid ${T.border}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: T.font, textAlign: "left" }}>딜 목록 열기 →</button>
+                <button onClick={() => go("/app?nav=pipeline")} style={{ marginTop: 12, padding: "8px 12px", background: "transparent", color: T.text, border: `1px solid ${T.border}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: T.font, textAlign: "left" }}>딜 목록 열기 →</button>
               </Panel>
               <Panel title="IC Memo">
                 <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.7 }}>IC Memo는 SCREENED/ADVANCE 딜에서 생성합니다.</div>
-                <button onClick={() => go("/")} style={{ marginTop: 12, padding: "8px 12px", background: "transparent", color: T.text, border: `1px solid ${T.border}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: T.font, textAlign: "left" }}>딜 목록 열기 →</button>
+                <button onClick={() => go("/app?nav=pipeline")} style={{ marginTop: 12, padding: "8px 12px", background: "transparent", color: T.text, border: `1px solid ${T.border}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: T.font, textAlign: "left" }}>딜 목록 열기 →</button>
               </Panel>
               <Panel title="Covenant Monitor" right={<span style={{ fontSize: 10, color: T.muted }}>{holdDeals.length} hold</span>}>
                 {holdDeals.length === 0 ? (

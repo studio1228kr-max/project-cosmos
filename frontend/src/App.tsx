@@ -5,8 +5,6 @@ import DealIntake, { RegisteredDeal } from "./pages/DealIntake";
 import KillCheck from "./components/KillCheck";
 import API from "./api";
 import Layout from "./Layout";
-import DashboardCharts from "./components/DashboardCharts";
-import Dashboard from "./components/Dashboard";
 import Pipeline from "./pages/Pipeline";
 import MarketScan from "./pages/MarketScan";
 import SignalRoom from "./pages/SignalRoom";
@@ -830,9 +828,9 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
   const [deals, setDeals] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<string|null>(null);
   const [selectedTab, setSelectedTab] = useState<string|undefined>(undefined);
-  const [currentView, setCurrentView] = useState<"today"|"pipeline">("today");
+  const [currentView, setCurrentView] = useState<"today"|"pipeline">("pipeline");
   const [filter, setFilter] = useState("ALL");
-  const [nav, setNav] = useState("today");
+  const [nav, setNav] = useState("pipeline");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [killCheckDeal, setKillCheckDeal] = useState<RegisteredDeal | null>(null);
@@ -844,6 +842,14 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
   };
 
   useEffect(() => { loadDeals(); }, []);
+
+  // Credit Desk(/dashboard)에서 /app?nav=intake|pipeline|signalroom 등으로 진입 시 해당 화면 오픈
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("nav");
+    if (!p) return;
+    if (p === "pipeline") { setNav("pipeline"); setCurrentView("pipeline"); }
+    else { setNav(p); }
+  }, []);
 
   const needsIC = deals.filter(d => d.status === "SCREENED" || d.status === "ADVANCE").length;
   const hardKillRed = deals.filter(d => d.missing_count === 0 && d.status !== "REJECT").length;
@@ -865,7 +871,7 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
 
   const activePage = nav === "intake" ? "intake" : nav === "sourcing" ? "market" : nav === "signalroom" ? "signalroom" : nav === "diagnostic" ? "diagnostic" : nav === "evidence" ? "evidence" : currentView;
   return (
-    <Layout page={activePage} onNav={(p: string) => { if (p==="creditdesk"){ window.location.href="/dashboard"; return; } if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("sourcing");}else if (p==="signalroom"){setNav("signalroom");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="riskbook"){setNav("diagnostic");}else if (p==="evidence"){setNav("evidence");}else if (p==="today"){setNav("pipeline");setCurrentView("today");}else if (p==="pipeline"){setNav("pipeline");setCurrentView("pipeline");}else{setNav("pipeline");setCurrentView("today");} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr" onCollapsedChange={setSidebarCollapsed}>
+    <Layout page={activePage} onNav={(p: string) => { if (p==="creditdesk"){ window.location.href="/dashboard"; return; } if (p==="intake"){setNav("intake");}else if (p==="market"){setNav("sourcing");}else if (p==="signalroom"){setNav("signalroom");}else if (p==="diagnostic"){setNav("diagnostic");}else if (p==="riskbook"){setNav("diagnostic");}else if (p==="evidence"){setNav("evidence");}else if (p==="today"){setNav("pipeline");setCurrentView("pipeline");}else if (p==="pipeline"){setNav("pipeline");setCurrentView("pipeline");}else{setNav("pipeline");setCurrentView("pipeline");} }} onLogout={onLogout} dealCount={deals.length} userEmail="gp@luska.kr" onCollapsedChange={setSidebarCollapsed}>
       <div style={{ display:"flex", height:"100%", overflow:"hidden" }}>
         {nav === "evidence" ? (
             <EvidenceChecklist />
@@ -874,29 +880,17 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
           ) : nav === "sourcing" ? (
             <MarketScan />
           ) : nav === "signalroom" ? (
-            <SignalRoom onDealRegistered={(deal) => { setKillCheckDeal(deal); setNav("pipeline"); setCurrentView("today"); }} />
+            <SignalRoom onDealRegistered={(deal) => { setKillCheckDeal(deal); setNav("pipeline"); setCurrentView("pipeline"); }} />
           ) : nav === "intake" ? (
           <DealIntake
             onClose={() => setNav("pipeline")}
-            onRegistered={(deal) => { setKillCheckDeal(deal); setNav("pipeline"); setCurrentView("today"); }}
+            onRegistered={(deal) => { setKillCheckDeal(deal); setNav("pipeline"); setCurrentView("pipeline"); }}
           />
         ) : (
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            {currentView === "today" && (
-              <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" }}>
-                <Dashboard key={dashKey} onNavigateDeal={(id: string, action?: string) => {
-                  if (id === "new" || action === "intake") { setNav("intake"); setSelectedId(null); setSelectedTab(undefined); }
-                  else if (id === "pipeline") { setCurrentView("pipeline"); setSelectedId(null); setSelectedTab(undefined); }
-                  else if (action === "checklist" || action === "status" || action === "icpack") { setCurrentView("pipeline"); setSelectedId(id); setSelectedTab(action); }
-                  else { setCurrentView("pipeline"); setSelectedId(id); setSelectedTab(undefined); }
-                }} />
-              </div>
-            )}
-            {currentView === "pipeline" && (
-              <div style={{ flex: 1, overflow: "hidden" }}>
-                <Pipeline onSelectDeal={() => {}} initialDealCode={selectedId} initialTab={selectedTab} />
-              </div>
-            )}
+            <div style={{ flex: 1, overflow: "hidden" }}>
+              <Pipeline onSelectDeal={() => {}} initialDealCode={selectedId} initialTab={selectedTab} />
+            </div>
           </div>
         )}
       </div>
@@ -908,7 +902,7 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
           thesisType={killCheckDeal.dealType}
           dealType={killCheckDeal.dealType}
           declaredKillCriteria={killCheckDeal.killCriteria}
-          onPass={() => { setKillCheckDeal(null); setDashKey(k => k + 1); setCurrentView("today"); loadDeals(); }}
+          onPass={() => { setKillCheckDeal(null); setDashKey(k => k + 1); setCurrentView("pipeline"); loadDeals(); }}
           onDrop={() => setKillCheckDeal(null)}
           onClose={() => setKillCheckDeal(null)}
         />
@@ -932,10 +926,12 @@ function App() {
     }
     return <Landing onLogin={() => { window.location.href = "/login"; }} />;
   }
-  if (window.location.pathname === "/dashboard") {
-    return <CreditDesk onLogout={handleLogout} />;
+  // 레거시 딜 워크플로우(인테이크/파이프라인/실사/시그널룸/리스크북)는 /app 에서
+  if (window.location.pathname.startsWith("/app")) {
+    return <MainApp onLogout={handleLogout} />;
   }
-  return <MainApp onLogout={handleLogout} />;
+  // 루트 / 및 /dashboard → Credit Desk (메인 화면)
+  return <CreditDesk onLogout={handleLogout} />;
 }
 
 // ═══════════════════════════════════════════════════════
