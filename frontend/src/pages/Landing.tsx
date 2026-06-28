@@ -375,16 +375,12 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           padding: isMobile ? "16px" : "40px",
         }}>
           <div style={{
-            background: "#080C14", border: "1px solid #1A2332", borderRadius: 8,
+            background: "transparent", border: "none",
             maxWidth: 560, width: "100%", padding: isMobile ? "28px 24px" : "40px 48px", color: "#E2E8F0",
             fontFamily: "'Inter', sans-serif",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-              <span style={{ fontSize: 11, color: "#C9A84C", letterSpacing: "0.2em", fontWeight: 700 }}>
+            <div style={{ marginBottom: 20 }}>
+              <span style={{ fontSize: 16, color: "#E2E8F0", fontWeight: 500 }}>
                 Investment Scam Warning
               </span>
             </div>
