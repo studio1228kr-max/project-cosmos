@@ -54,12 +54,12 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
         {/* Logo */}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}>
           {/* 검정 로고 → 골드. 흰색으로 원하면 filter: "invert(1)" 로 교체 */}
-          <img src="/logo.png" width={56} height={56} alt="COSMOS"
+          <img src="/logo.png" width={56} height={56} alt="Cosmos"
             style={{ filter: "invert(1) sepia(1) saturate(2) hue-rotate(5deg) brightness(0.9)" }} />
         </div>
 
         {/* Heading */}
-        <h1 style={{ textAlign: "center", fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Log in to COSMOS</h1>
+        <h1 style={{ textAlign: "center", fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Log in to Cosmos</h1>
         <p style={{ textAlign: "center", fontSize: 13, fontWeight: 300, color: "#64748B", margin: "8px 0 36px" }}>Luska Capital Management</p>
 
         {/* Email */}

@@ -76,7 +76,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.2em", color: C.gold }}>Cosmos</span>
-          {!isMobile && <span style={{ fontSize: 10, color: C.textS, letterSpacing: "0.1em" }}>by LuskaCapitalManagement</span>}
+          {!isMobile && <span style={{ fontSize: 10, color: C.textS, letterSpacing: "0.1em" }}>by Luska Capital Management</span>}
         </div>
         <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
           {!isMobile && ["Platform", "Capabilities", "About"].map(item => (
@@ -112,7 +112,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
                 }}
                   onMouseEnter={e => (e.currentTarget.style.background = C.border)}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  COSMOS Client Log In <span style={{ color: C.gold }}>›</span>
+                  Cosmos Client Log In <span style={{ color: C.gold }}>›</span>
                 </button>
               </div>
             )}
@@ -142,7 +142,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             risk management and stable return generation are among the most important priorities.
           </p>
           <p style={{ fontSize: 13, fontWeight: 300, color: "#64748B", lineHeight: 1.9, maxWidth: 480, marginBottom: 48 }}>
-            The LCM by COSMOS platform supports domestic institutional investors in transparently
+            The LCM by Cosmos platform supports domestic institutional investors in transparently
             and systematically managing their overall Private Credit portfolios.
           </p>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -246,7 +246,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       {/* ACCESS STRIP */}
       <div style={{ background: "#0E1E2E", borderTop: "1px solid #1e3a52", borderBottom: "1px solid #1e3a52", padding: isMobile ? "20px 24px" : "20px 80px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
         <span style={{ fontSize: 12, color: "#8FA3BB", letterSpacing: "0.05em", fontFamily: "'Inter', sans-serif" }}>
-          COSMOS is available to institutional investors by invitation only.
+          Cosmos is available to institutional investors by invitation only.
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <button onClick={onLogin} style={{ padding: "8px 20px", fontSize: 10, letterSpacing: "0.15em", background: "#1D4F77", color: "#fff", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}>
@@ -288,7 +288,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             This material is provided for informational purposes only and should not be construed as investment advice, investment recommendation, solicitation, or an offer to buy or sell any securities or adopt any investment strategy. Opinions and information contained in this material are subject to change without notice.
           </p>
           <p style={{ marginBottom: 16 }}>
-            This material is intended to provide general information regarding the COSMOS platform (Cosmos by LuskaCapitalManagement) and is designed to assist in understanding the Private Credit sector, including real estate, private credit, and private lending. We do not guarantee the accuracy or completeness of the information provided. Any investment decision should be based on independent professional advice and your own due diligence.
+            This material is intended to provide general information regarding the Cosmos platform (Cosmos by Luska Capital Management) and is designed to assist in understanding the Private Credit sector, including real estate, private credit, and private lending. We do not guarantee the accuracy or completeness of the information provided. Any investment decision should be based on independent professional advice and your own due diligence.
           </p>
           <p style={{ marginBottom: 16 }}>
             All risk analysis, return analysis, valuation, and other calculations provided through the Cosmos platform are based on assumptions, historical data, user inputs, and other factors, and are not a guarantee of future results. All graphs and screenshots are provided for illustrative purposes only.
@@ -302,7 +302,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
         </div>
         <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20 }}>
           <div style={{ fontSize: 10, color: C.textSS, letterSpacing: "0.08em" }}>
-            © 2025 Cosmos by LuskaCapitalManagement. All Rights Reserved.
+            © 2025 Cosmos by Luska Capital Management. All Rights Reserved.
             <span style={{ margin: "0 12px", color: C.border }}>|</span>
             <span style={{ cursor: "pointer", textDecoration: "underline" }}
               onClick={() => setPrivacyOpen(true)}>
@@ -323,7 +323,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
               <button onClick={() => setPrivacyOpen(false)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}>✕</button>
             </div>
             {[
-              { title:"1. 개인정보 수집·이용 목적", body:`· COSMOS 플랫폼 회원 가입, 본인 확인 및 계정 관리
+              { title:"1. 개인정보 수집·이용 목적", body:`· Cosmos 플랫폼 회원 가입, 본인 확인 및 계정 관리
 · 플랫폼 서비스 제공, 딜 파이프라인·리포트·알림 등 핵심 기능 운영
 · 문의·상담 응대 및 서비스 관련 공지사항 전달
 · 서비스 품질 개선을 위한 이용 통계 분석 (익명·가명 정보 기준)
@@ -375,31 +375,34 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           padding: isMobile ? "16px" : "40px",
         }}>
           <div style={{
-            background: "#FFFFFF", border: "1px solid #1D4F77",
-            maxWidth: 560, width: "100%", padding: isMobile ? "28px 24px" : "40px 48px",
+            background: "#080C14", border: "1px solid #1A2332", borderRadius: 8,
+            maxWidth: 560, width: "100%", padding: isMobile ? "28px 24px" : "40px 48px", color: "#E2E8F0",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-              <span style={{ fontSize: 16 }}>⚠️</span>
-              <span style={{ fontSize: 11, color: "#1D4F77", letterSpacing: "0.2em", fontWeight: 700 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span style={{ fontSize: 11, color: "#C9A84C", letterSpacing: "0.2em", fontWeight: 700 }}>
                 INVESTMENT SCAM WARNING
               </span>
             </div>
-            <p style={{ fontSize: 13, color: "#15213D", lineHeight: 1.9, marginBottom: 16 }}>
-              LuskaCapitalManagement and COSMOS never solicit investments, offer consultations,
+            <p style={{ fontSize: 13, color: "#E2E8F0", lineHeight: 1.9, marginBottom: 16 }}>
+              Luska Capital Management and Cosmos never solicit investments, offer consultations,
               or request money transfers from individual or retail investors.
             </p>
-            <p style={{ fontSize: 13, color: "#5A6B85", lineHeight: 1.9, marginBottom: 28 }}>
+            <p style={{ fontSize: 13, color: "#94A3B8", lineHeight: 1.9, marginBottom: 28 }}>
               Scams impersonating financial companies are on the rise. If you receive any suspicious
-              contact pretending to be from COSMOS or our team, please ignore it and report immediately
+              contact pretending to be from Cosmos or our team, please ignore it and report immediately
               to the police (112) or Financial Supervisory Service (1332).
               We are not liable for any damages caused by such impersonation scams.
             </p>
             <button onClick={() => setScamAlert(false)} style={{
-              width: "100%", padding: "14px", fontSize: 11, letterSpacing: "0.15em",
-              background: "#1D4F77", color: "#fff", border: "none",
-              cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
+              width: "100%", padding: "14px", fontSize: 12, letterSpacing: "0.05em",
+              background: "#C9A84C", color: "#080C14", border: "none", borderRadius: 8,
+              cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
             }}>
-              I UNDERSTAND →
+              I understand →
             </button>
           </div>
         </div>
@@ -418,9 +421,9 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 }}>
               <div>
-                <div style={{ fontSize: 10, color: "#1D4F77", letterSpacing: "0.2em", marginBottom: 12 }}>COSMOS BY LUSKA CAPITAL</div>
+                <div style={{ fontSize: 10, color: "#1D4F77", letterSpacing: "0.2em", marginBottom: 12 }}>Cosmos BY LUSKA CAPITAL</div>
                 <h2 style={{ fontSize: 22, fontWeight: 700, color: "#15213D", margin: 0 }}>
-                  Get in touch to learn more about COSMOS
+                  Get in touch to learn more about Cosmos
                 </h2>
               </div>
               <button onClick={() => setModalOpen(false)} style={{
