@@ -98,7 +98,7 @@ export default function KillCheck({ dealId, dealCode, thesis, dealType, declared
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 480, maxWidth: "90vw", maxHeight: "88vh", display: "flex", flexDirection: "column", background: COLORS.bg, border: `0.5px solid ${COLORS.border}`, borderRadius: 14, overflow: "hidden", color: COLORS.text, fontFamily: "Inter, sans-serif" }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 480, maxWidth: "90vw", maxHeight: "88vh", display: "flex", flexDirection: "column", background: COLORS.bg, border: `0.5px solid ${COLORS.border}`, borderRadius: 14, overflow: "hidden", color: COLORS.text, fontFamily: "'Goldman Sans', sans-serif" }}>
         {/* Nav */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}` }}>
           <button onClick={onClose} style={{ background: "transparent", border: "none", color: COLORS.muted, fontSize: 16, cursor: "pointer" }}>←</button>

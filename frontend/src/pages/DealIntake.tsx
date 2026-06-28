@@ -266,7 +266,7 @@ export default function DealIntake({ onClose, onRegistered, prefill }: { onClose
       <div onClick={e => e.stopPropagation()} style={{
         width: 560, maxHeight: "88vh", display: "flex", flexDirection: "column",
         background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 12,
-        color: COLORS.textPrimary, fontFamily: "Inter, 'ZenSerif', sans-serif", overflow: "hidden",
+        color: COLORS.textPrimary, fontFamily: "'Goldman Sans', sans-serif", overflow: "hidden",
       }}>
             {/* Nav */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}` }}>

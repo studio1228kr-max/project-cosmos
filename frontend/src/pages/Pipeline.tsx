@@ -88,7 +88,7 @@ export default function Pipeline({ onSelectDeal, initialDealCode, initialTab }: 
   return (
     <>
       {deleteTarget && <DeleteModal dealName={deleteTarget.name} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />}
-      <div style={{ display: "flex", height: "100%", background: C.bg, color: C.text, fontFamily: "Inter, sans-serif", overflow: "hidden" }}>
+      <div style={{ display: "flex", height: "100%", background: C.bg, color: C.text, fontFamily: "'Goldman Sans', sans-serif", overflow: "hidden" }}>
 
         {/* 딜 목록 */}
         <div style={{ width: 280, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>

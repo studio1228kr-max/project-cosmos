@@ -86,7 +86,7 @@ export default function SignalRoom({ onDealRegistered }: { onDealRegistered: (de
   );
 
   return (
-    <div style={{ flex: 1, overflow: "auto", background: C.bg, color: C.text, fontFamily: "Inter, sans-serif", padding: "32px 40px" }}>
+    <div style={{ flex: 1, overflow: "auto", background: C.bg, color: C.text, fontFamily: "'Goldman Sans', sans-serif", padding: "32px 40px" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div>

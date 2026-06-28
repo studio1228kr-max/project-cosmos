@@ -72,7 +72,7 @@ export default function IcMemoModal({ dealId, onClose }: Props) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 90, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 760, maxWidth: "96vw", maxHeight: "94vh", display: "flex", flexDirection: "column", background: "#0a0a0a", border: "1px solid #1e1e1e", borderRadius: 14, overflow: "hidden", color: "#d0d0d0", fontFamily: "Inter, sans-serif" }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 760, maxWidth: "96vw", maxHeight: "94vh", display: "flex", flexDirection: "column", background: "#0a0a0a", border: "1px solid #1e1e1e", borderRadius: 14, overflow: "hidden", color: "#d0d0d0", fontFamily: "'Goldman Sans', sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderBottom: "1px solid #1e1e1e" }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "#C9A84C" }}>IC Memo</span>
           {gate && (

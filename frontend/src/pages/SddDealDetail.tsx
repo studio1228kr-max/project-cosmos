@@ -142,7 +142,7 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ width: 680, maxWidth: "94vw", maxHeight: "92vh", display: "flex", flexDirection: "column", background: "#0a0a0a", border: "1px solid #1e1e1e", borderRadius: 14, overflow: "hidden", color: "#d0d0d0", fontFamily: "Inter, sans-serif" }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 680, maxWidth: "94vw", maxHeight: "92vh", display: "flex", flexDirection: "column", background: "#0a0a0a", border: "1px solid #1e1e1e", borderRadius: 14, overflow: "hidden", color: "#d0d0d0", fontFamily: "'Goldman Sans', sans-serif" }}>
         {/* Nav */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", borderBottom: "1px solid #1e1e1e" }}>
           <button onClick={onClose} style={{ background: "transparent", border: "none", color: "#555", fontSize: 16, cursor: "pointer" }}>←</button>

@@ -60,7 +60,7 @@ export default function MarketScan() {
   const allHealthy = dartData !== null && newsData !== null;
 
   return (
-    <div style={{ height: "100%", background: C.bg, color: C.text, fontFamily: "Inter, sans-serif", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100%", background: C.bg, color: C.text, fontFamily: "'Goldman Sans', sans-serif", display: "flex", flexDirection: "column" }}>
 
       {/* 상태 바 */}
       <div style={{ padding: "10px 18px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 14, fontFamily: "'IBM Plex Mono', monospace" }}>
