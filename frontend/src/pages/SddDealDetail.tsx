@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import Spinner from "../components/Spinner";
 import API from "../api";
 import DecisionCard, { GateChip } from "../components/DecisionCard";
 import ObservationPanel from "../components/ObservationPanel";
@@ -152,7 +153,7 @@ export default function SddDealDetail({ dealId, onClose }: Props) {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px" }}>
           {loading && !deal ? (
-            <div style={{ color: "#525C6B", fontSize: 13, padding: 20 }}>로딩 중...</div>
+            <Spinner style={{ padding: 20 }} />
           ) : !deal ? (
             <div style={{ color: "#fb7185", fontSize: 13, padding: 20 }}>딜을 불러올 수 없습니다.</div>
           ) : (

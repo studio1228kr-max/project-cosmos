@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Spinner from "./Spinner";
 import PipelineCard from './DealCard';
 import SddDealDetail from '../pages/SddDealDetail';
 
@@ -52,7 +53,7 @@ export default function Dashboard({ onNavigateDeal }: { onNavigateDeal: (id: str
     actions.forEach(a => priorityActions.push({ dealName: deal.deal_name || deal.deal_code, dealCode: deal.deal_code, action: a.action, color: a.color, tab: a.tab }));
   });
 
-  if (loading) return <div style={{ padding: 48, color: C.textDim, fontSize: 13 }}>로딩 중...</div>;
+  if (loading) return <Spinner style={{ padding: 48 }} />;
 
   return (
     <div style={{ width: '100%', maxWidth: 1400, margin: '0 auto', padding: '24px 40px', boxSizing: 'border-box' }}>

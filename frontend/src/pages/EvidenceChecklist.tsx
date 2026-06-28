@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import Spinner from "../components/Spinner";
 import API from "../api";
 
 const BG = "#111";
@@ -180,7 +181,7 @@ export default function EvidenceChecklist() {
       </div>
 
       {err && <div style={{ color: RED, fontSize: 12, marginBottom: 12 }}>{err}</div>}
-      {loading && <div style={{ color: TEXT_DIM, fontSize: 12 }}>로딩중...</div>}
+      {loading && <Spinner />}
 
       {checklist.length > 0 && (
         <div style={{ background: PANEL, border: `1px solid ${BORDER}`, marginBottom: 20 }}>

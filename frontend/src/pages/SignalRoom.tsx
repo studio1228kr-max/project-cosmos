@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import Spinner from "../components/Spinner";
 import API from "../api";
 import SignalCard, { Signal, parseReasons } from "../components/SignalCard";
 import DealIntake, { RegisteredDeal, IntakePrefill } from "./DealIntake";
@@ -142,7 +143,7 @@ export default function SignalRoom({ onDealRegistered }: { onDealRegistered: (de
 
         {err && <div style={{ fontSize: 12, color: C.red, marginBottom: 12 }}>{err}</div>}
         {loading ? (
-          <div style={{ color: C.textDim, fontSize: 13, padding: 40 }}>로딩 중...</div>
+          <Spinner style={{ padding: 40 }} />
         ) : filtered.length === 0 ? (
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "48px 24px", textAlign: "center" }}>
             <div style={{ fontSize: 14, color: C.textDim }}>{active.length === 0 ? "신규 신호 없음" : "필터에 해당하는 신호 없음"}</div>

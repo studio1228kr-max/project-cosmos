@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import Spinner from "./Spinner";
 import API from '../api';
 
 interface ChecklistItem {
@@ -115,7 +116,7 @@ export default function ChecklistPanel({ dealCode }: { dealCode: string }) {
         <span style={{ fontSize: 11, color: '#999' }}>티어 {level}</span>
       </div>
 
-      {loading && <div style={{ color: '#999', fontSize: 13 }}>로딩 중...</div>}
+      {loading && <Spinner filter="none" />}
       {!loading && items.length === 0 && (
         <div style={{ color: '#999', fontSize: 13 }}>이 티어에 해당하는 체크리스트 항목이 없습니다.</div>
       )}

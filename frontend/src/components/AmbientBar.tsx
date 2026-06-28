@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Spinner from "./Spinner";
 import { getAmbient } from "../api";
 
 const LEVEL_COLOR: Record<string, string> = {
@@ -18,7 +19,7 @@ export default function AmbientBar() {
 
   if (!data) return (
     <div style={{ height: 36, background: "#111", borderBottom: "1px solid #1e1e1e", display: "flex", alignItems: "center", padding: "0 20px" }}>
-      <span style={{ fontSize: 11, color: "#333" }}>Loading...</span>
+      <Spinner filter="none" size={16} style={{ padding: 0 }} />
     </div>
   );
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import Spinner from "./Spinner";
 import API from "../api";
 
 interface Props {
@@ -92,7 +93,7 @@ export default function IcMemoModal({ dealId, onClose }: Props) {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "18px 22px" }}>
           {loading ? (
-            <div style={{ color: "#525C6B", fontSize: 13 }}>로딩 중…</div>
+            <Spinner />
           ) : (
             <>
               {/* WEAK Gate 배너 */}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import Spinner from "../components/Spinner";
 import DealDetail from './DealDetail';
 import API from "../api";
 
@@ -96,7 +97,7 @@ export default function Pipeline({ onSelectDeal, initialDealCode, initialTab }: 
             <span style={{ fontSize: 10, color: C.textDim }}>{deals.length} 전체</span>
           </div>
           <div style={{ flex: 1, overflow: "auto" }}>
-            {loading ? <div style={{ padding: 20, color: C.textDim, fontSize: 12 }}>로딩 중...</div> :
+            {loading ? <Spinner style={{ padding: 20 }} /> :
               deals.length === 0 ? <div style={{ padding: 20, color: C.textDim, fontSize: 12 }}>딜 없음</div> :
               deals.map((d: any) => {
                 const isSel = selected?.deal_code === d.deal_code;

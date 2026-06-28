@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Spinner from "../components/Spinner";
 import API from "../api";
 
 const C = {
@@ -76,7 +77,7 @@ export default function MarketScan() {
         {/* 좌측: Collection Feed */}
         <div style={{ flex: 1.4, borderRight: `1px solid ${C.border}`, overflow: "auto", padding: "14px 18px" }}>
           <div style={{ fontSize: 10, color: C.textDim, letterSpacing: "0.06em", marginBottom: 10 }}>수집 피드 — 뭐가 들어왔나</div>
-          {loading ? <div style={{ fontSize: 12, color: C.textDim }}>로딩 중...</div> :
+          {loading ? <Spinner /> :
             feed.length === 0 ? <div style={{ fontSize: 12, color: C.textDim }}>오늘 수집된 신호 없음</div> :
             feed.map((item, i) => (
               <a key={i} href={item.link} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>

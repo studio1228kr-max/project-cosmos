@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Spinner from "../components/Spinner";
 import axios from "axios";
 
 const API = "https://project-cosmos-production.up.railway.app";
@@ -100,9 +101,7 @@ export default function RiskBook() {
       </div>
 
       {loading && (
-        <div style={{ padding: 64, textAlign: "center", color: C.textS, fontSize: 11, letterSpacing: "0.15em" }}>
-          LOADING DIAGNOSTIC DATA...
-        </div>
+<Spinner label="LOADING DIAGNOSTIC DATA" style={{ padding: 64 }} />
       )}
 
       {!loading && deal && (

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import API from "../api";
+import Spinner from "../components/Spinner";
 
 // ── 디자인 토큰 ──────────────────────────────────────────────
 // 골드(#C9A84C)는 4곳만: 로고 / 활성 사이드바 border / Primary 버튼 / Morning Brief border-left
@@ -297,7 +298,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                 {brief?.brief_text ? (
                   <div style={{ fontSize: 12, fontWeight: 500, color: T.text, lineHeight: 1.7, maxHeight: 260, overflow: "auto" }}>{renderBrief(brief.brief_text)}</div>
                 ) : (
-                  <div style={{ fontSize: 12, color: T.muted }}>오늘 브리핑 생성 중…<div style={{ fontSize: 10, marginTop: 4 }}>매일 04:00 KST 자동 생성</div></div>
+                  <Spinner label="오늘 브리핑 생성 중…" style={{ padding: "8px 0" }} />
                 )}
                 {brief && (
                   <div style={{ display: "flex", gap: 12, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}`, fontFamily: T.mono, fontSize: 10, color: T.muted }}>

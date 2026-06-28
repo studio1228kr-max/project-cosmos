@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import Spinner from "./Spinner";
 import API from '../api';
 
 const REC_COLOR: any = {
@@ -69,7 +70,7 @@ export default function ICPackPanel({ dealCode }: { dealCode: string }) {
     catch { setSaveMsg('저장 실패'); } finally { setSaving(false); }
   };
 
-  if (loading) return <div style={{color:'#999',fontSize:13,padding:20}}>불러오는 중...</div>;
+  if (loading) return <Spinner filter="none" style={{padding:20}} />;
 
   if (!pack) return (
     <div style={{textAlign:'center',padding:40}}>

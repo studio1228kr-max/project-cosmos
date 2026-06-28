@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import Spinner from "./components/Spinner";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
 import DealIntake, { RegisteredDeal } from "./pages/DealIntake";
@@ -74,7 +75,7 @@ function EvidencePanel({ dealId }: { dealId: string }) {
     load();
   };
 
-  if (loading) return <div style={{ padding: 24, color: "#bbb", fontSize: 13 }}>로딩 중...</div>;
+  if (loading) return <Spinner filter="none" style={{ padding: 24 }} />;
 
   const confirmed = items.filter(i => i.doc_status === "CONFIRMED").length;
 
@@ -160,7 +161,7 @@ function DealPanel({ dealId, onClose }: { dealId: string; onClose: () => void })
     API.get(`/deals/${dealId}`).then(r => { setDeal(r.data); setStatus(r.data.status); });
   }, [dealId]);
 
-  if (!deal) return <div style={{ padding: 32, color: "#999", fontSize: 13 }}>불러오는 중...</div>;
+  if (!deal) return <Spinner filter="none" style={{ padding: 32 }} />;
 
   if (showMemo) {
     if (!generating && !memo) generateMemo();
@@ -179,7 +180,7 @@ function DealPanel({ dealId, onClose }: { dealId: string; onClose: () => void })
           <div style={{ flex: 1, overflow: "auto", padding: "24px 28px" }}>
             {generating ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center", paddingTop: 60 }}>
-                <div style={{ fontSize: 13, color: "#999" }}>IC Memo 생성 중...</div>
+                <Spinner filter="none" label="IC Memo 생성 중" />
                 <div style={{ fontSize: 11, color: "#bbb" }}>루스카 Canon 기준 적용 중</div>
               </div>
             ) : (
@@ -448,7 +449,7 @@ function ActivityPanel({ dealId, deals }: { dealId: string; deals: any[] }) {
         <div style={{ flex: 1, overflow: "auto", padding: "24px 28px" }}>
           {generating ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center", paddingTop: 60 }}>
-              <div style={{ fontSize: 13, color: "#999" }}>IC Memo 생성 중...</div>
+              <Spinner filter="none" label="IC Memo 생성 중" />
               <div style={{ fontSize: 11, color: "#bbb" }}>루스카 Canon 기준 적용</div>
             </div>
           ) : (
@@ -636,7 +637,7 @@ function TodayView({ onNavigateDeal, fullWidth }: { onNavigateDeal: (id: string,
   const maturity = repDeal?.maturity_date ? new Date(repDeal.maturity_date) : null;
   const dday = maturity && !isNaN(maturity.getTime()) ? Math.ceil((maturity.getTime() - Date.now()) / 86400000) : null;
 
-  if (loading) return <div style={{ padding: 48, color: "#999", fontSize: 13 }}>로딩 중...</div>;
+  if (loading) return <Spinner filter="none" style={{ padding: 48 }} />;
 
   const C = { surface: "#11161D", border: "#1E2630", text: "#E4E7EB", textMid: "#8B95A3", textDim: "#525C6B", amber: "#F0A93B", red: "#E5484D", green: "#2BC48A" };
 
