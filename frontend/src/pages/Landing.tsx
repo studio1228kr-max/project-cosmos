@@ -385,11 +385,11 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
                 <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
               <span style={{ fontSize: 11, color: "#C9A84C", letterSpacing: "0.2em", fontWeight: 700 }}>
-                INVESTMENT SCAM WARNING
+                Investment Scam Warning
               </span>
             </div>
             <p style={{ fontSize: 13, color: "#E2E8F0", lineHeight: 1.9, marginBottom: 16 }}>
-              Luska Capital Management and Cosmos never solicit investments, offer consultations,
+              LuskaCapitalManagement and Cosmos never solicit investments, offer consultations,
               or request money transfers from individual or retail investors.
             </p>
             <p style={{ fontSize: 13, color: "#94A3B8", lineHeight: 1.9, marginBottom: 28 }}>
