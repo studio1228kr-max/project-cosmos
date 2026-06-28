@@ -130,7 +130,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           overflow: "hidden", minHeight: "100vh", padding: 40, boxSizing: "border-box",
         }}>
           <img src="/dashboard-preview.png" alt="Cosmos dashboard"
-            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8, boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }} />
+            style={{ width: "90%", maxHeight: 600, objectFit: "contain", margin: "auto", borderRadius: 8, boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }} />
         </div>}
 
 
