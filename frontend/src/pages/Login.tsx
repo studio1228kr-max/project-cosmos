@@ -53,9 +53,8 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
 
         {/* Logo */}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 22 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 12, background: "#141414", border: "1px solid #2A2A2A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ color: GOLD, fontWeight: 700, fontSize: 22, letterSpacing: "0.04em" }}>C</span>
-          </div>
+          {/* 흰색 로고면 invert(0) 유지 / 검은 로고를 흰색으로 보이게 하려면 invert(1) */}
+          <img src="/logo.png" width={64} height={64} alt="COSMOS" style={{ filter: "invert(0)" }} />
         </div>
 
         {/* Heading */}
