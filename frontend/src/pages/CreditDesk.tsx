@@ -5,7 +5,7 @@ import API from "../api";
 // 골드(#C9A84C)는 4곳만: 로고 / 활성 사이드바 border / Primary 버튼 / Morning Brief border-left
 const T = {
   bg: "#080C14",
-  card: "#0B1019",
+  card: "#0D1421",
   cardHi: "#0E1420",
   gold: "#C9A84C",
   text: "#E2E8F0",
@@ -15,7 +15,8 @@ const T = {
   watch: "#F59E0B",
   monitor: "#3B82F6",
   green: "#22C55E",
-  font: "'IBM Plex Mono', ui-monospace, monospace",
+  font: "'Satoshi', sans-serif",            // 본문 전체
+  mono: "'IBM Plex Mono', ui-monospace, monospace", // 숫자/코드값만
 };
 
 const URG: Record<string, { label: string; color: string }> = {
@@ -150,12 +151,12 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
 
   const metricVal = (m: any) => fmtMacro(m);
   const metrics = [
-    { label: "ACTIVE SIGNALS", value: String(cards.length), sub: `${cnt("CRITICAL_72H")} critical`, color: cnt("CRITICAL_72H") > 0 ? T.critical : T.text },
-    { label: "BASE RATE", value: metricVal(macro.BASE_RATE) || "—", sub: macro.BASE_RATE?.as_of || "연동 대기", color: macro.BASE_RATE?.value != null ? T.text : T.muted },
-    { label: "CREDIT SPREAD", value: metricVal(macro.CREDIT_SPREAD) || "—", sub: macro.CREDIT_SPREAD?.as_of || "연동 대기", color: macro.CREDIT_SPREAD?.value != null ? T.text : T.muted },
-    { label: "BSI MFG", value: metricVal(macro.BSI_MANUFACTURING) || "—", sub: macro.BSI_MANUFACTURING?.as_of || "연동 대기", color: macro.BSI_MANUFACTURING?.value != null ? T.text : T.muted },
-    { label: "DEALS", value: String(deals.length), sub: `${deals.filter((d: any) => d.final_gate === "HOLD").length} hold`, color: T.text },
-    { label: "LAST SCAN", value: fmtRel(lastScan), sub: hermesUp ? "HERMES live" : "대기", color: hermesUp ? T.monitor : T.muted },
+    { label: "ACTIVE SIGNALS", value: String(cards.length), sub: `${cnt("CRITICAL_72H")} critical`, color: cnt("CRITICAL_72H") > 0 ? T.critical : T.text, top: "#EF4444" },
+    { label: "BASE RATE", value: metricVal(macro.BASE_RATE) || "—", sub: macro.BASE_RATE?.as_of || "연동 대기", color: macro.BASE_RATE?.value != null ? T.text : T.muted, top: "#10B981" },
+    { label: "CREDIT SPREAD", value: metricVal(macro.CREDIT_SPREAD) || "—", sub: macro.CREDIT_SPREAD?.as_of || "연동 대기", color: macro.CREDIT_SPREAD?.value != null ? T.text : T.muted, top: "#C9A84C" },
+    { label: "BSI MFG", value: metricVal(macro.BSI_MANUFACTURING) || "—", sub: macro.BSI_MANUFACTURING?.as_of || "연동 대기", color: macro.BSI_MANUFACTURING?.value != null ? T.text : T.muted, top: "#F59E0B" },
+    { label: "DEALS", value: String(deals.length), sub: `${deals.filter((d: any) => d.final_gate === "HOLD").length} hold`, color: T.text, top: "#3B82F6" },
+    { label: "LAST SCAN", value: fmtRel(lastScan), sub: hermesUp ? "HERMES live" : "대기", color: hermesUp ? T.monitor : T.muted, top: "#4A5568" },
   ];
 
   const holdDeals = deals.filter((d: any) => d.final_gate === "HOLD");
@@ -209,9 +210,9 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
           {/* 상단: 메트릭 6 */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
             {metrics.map(m => (
-              <div key={m.label} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 4, padding: "11px 13px" }}>
+              <div key={m.label} style={{ background: T.card, border: "none", borderTop: `2px solid ${m.top}`, borderRadius: 4, padding: "11px 13px" }}>
                 <div style={{ fontSize: 9, color: T.muted, letterSpacing: "0.08em" }}>{m.label}</div>
-                <div style={{ fontSize: 22, fontWeight: 500, color: m.color, marginTop: 5, lineHeight: 1 }}>{m.value}</div>
+                <div style={{ fontFamily: T.mono, fontSize: 22, fontWeight: 500, color: m.color, marginTop: 5, lineHeight: 1 }}>{m.value}</div>
                 <div style={{ fontSize: 9, color: T.muted, marginTop: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.sub}</div>
               </div>
             ))}
@@ -239,23 +240,23 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                       <tr key={c.id} style={{ borderBottom: `1px solid ${T.border}` }}>
                         <td style={{ padding: "9px 10px" }}><Tag color={u.color}>{u.label}</Tag></td>
                         <td style={{ padding: "9px 10px", minWidth: 150 }}>
-                          <div style={{ color: T.text, fontWeight: 500 }}>{c.entity || "—"}</div>
-                          <div style={{ color: T.muted, fontSize: 9, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{c.entity_sub || "—"}</div>
+                          <div style={{ fontFamily: T.font, fontWeight: 500, color: T.text }}>{c.entity || "—"}</div>
+                          <div style={{ fontFamily: T.mono, color: T.muted, fontSize: 9, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{c.entity_sub || "—"}</div>
                         </td>
                         <td style={{ padding: "9px 10px", color: T.text, whiteSpace: "nowrap" }}>{c.signal_type || "—"}</td>
-                        <td style={{ padding: "9px 10px", color: c.z_score != null ? T.text : T.muted }}>{c.z_score != null ? Number(c.z_score).toFixed(2) : "—"}</td>
+                        <td style={{ padding: "9px 10px", fontFamily: T.mono, color: c.z_score != null ? T.text : T.muted }}>{c.z_score != null ? Number(c.z_score).toFixed(2) : "—"}</td>
                         <td style={{ padding: "9px 10px" }}>{c.zone ? <Tag color={zoneColor(c.zone)}>{c.zone}</Tag> : <span style={{ color: T.muted }}>—</span>}</td>
-                        <td style={{ padding: "9px 10px", color: c.icr != null ? T.text : T.muted }}>{c.icr != null ? `${Number(c.icr).toFixed(2)}x` : "—"}</td>
+                        <td style={{ padding: "9px 10px", fontFamily: T.mono, color: c.icr != null ? T.text : T.muted }}>{c.icr != null ? `${Number(c.icr).toFixed(2)}x` : "—"}</td>
                         <td style={{ padding: "9px 10px", color: T.text, whiteSpace: "nowrap" }}>{c.suggested_deal_type || "—"}</td>
                         <td style={{ padding: "9px 10px", minWidth: 92 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                            <span style={{ color: u.color, fontWeight: 600, minWidth: 22 }}>{score}</span>
+                            <span style={{ fontFamily: T.mono, color: u.color, fontWeight: 600, minWidth: 22 }}>{score}</span>
                             <div style={{ flex: 1, height: 4, background: T.border, borderRadius: 2, overflow: "hidden", minWidth: 40 }}>
                               <div style={{ width: `${Math.min(100, score)}%`, height: "100%", background: u.color }} />
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: "9px 10px", color: T.muted, whiteSpace: "nowrap" }}>{fmtTime(c.data_asof)}</td>
+                        <td style={{ padding: "9px 10px", fontFamily: T.mono, color: T.muted, whiteSpace: "nowrap" }}>{fmtTime(c.data_asof)}</td>
                         <td style={{ padding: "9px 10px" }}>
                           <span onClick={() => go("/")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>처리 →</span>
                         </td>
@@ -273,7 +274,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
             {/* Deal Pipeline */}
             <Panel title="Deal Pipeline">
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 24, fontWeight: 500, color: T.text }}>{deals.length}</span>
+                <span style={{ fontFamily: T.mono, fontSize: 24, fontWeight: 500, color: T.text }}>{deals.length}</span>
                 <span style={{ fontSize: 10, color: T.muted }}>active deals</span>
               </div>
               {deals.length === 0 ? (
@@ -312,8 +313,8 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                       <div style={{ fontSize: 9, color: T.muted }}>{m?.as_of || sub}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <span style={{ color: v ? T.text : T.muted }}>{v || "—"}</span>
-                      {m?.delta_mom != null && <div style={{ fontSize: 9, color: m.delta_mom >= 0 ? T.green : T.critical }}>{m.delta_mom >= 0 ? "▲" : "▼"} {Math.abs(m.delta_mom)}</div>}
+                      <span style={{ fontFamily: T.mono, color: v ? T.text : T.muted }}>{v || "—"}</span>
+                      {m?.delta_mom != null && <div style={{ fontFamily: T.mono, fontSize: 9, color: m.delta_mom >= 0 ? T.green : T.critical }}>{m.delta_mom >= 0 ? "▲" : "▼"} {Math.abs(m.delta_mom)}</div>}
                     </div>
                   </div>
                 );
@@ -330,7 +331,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                   <div style={{ fontSize: 11, color: T.muted }}>오늘 브리핑 생성 중…<div style={{ fontSize: 9, marginTop: 4 }}>매일 04:00 KST 자동 생성</div></div>
                 )}
                 {brief && (
-                  <div style={{ display: "flex", gap: 12, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}`, fontSize: 9, color: T.muted }}>
+                  <div style={{ display: "flex", gap: 12, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}`, fontFamily: T.mono, fontSize: 9, color: T.muted }}>
                     <span style={{ color: T.critical }}>C {stats.critical_count ?? brief.critical_count ?? 0}</span>
                     <span style={{ color: T.watch }}>W {stats.watch_count ?? brief.watch_count ?? 0}</span>
                     <span style={{ color: T.monitor }}>M {stats.monitor_count ?? brief.monitor_count ?? 0}</span>
@@ -362,7 +363,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: cosmosUp ? T.green : cosmosUp === false ? T.critical : T.muted }} />
           COSMOS {cosmosUp ? "connected" : cosmosUp === false ? "down" : "…"}
         </span>
-        <span style={{ marginLeft: "auto" }}>LAST SCAN · {fmtTime(lastScan)} ({fmtRel(lastScan)})</span>
+        <span style={{ marginLeft: "auto" }}>LAST SCAN · <span style={{ fontFamily: T.mono }}>{fmtTime(lastScan)} ({fmtRel(lastScan)})</span></span>
       </div>
     </div>
   );
