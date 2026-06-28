@@ -6,6 +6,7 @@ import API from "../api";
 const T = {
   bg: "#080C14",
   card: "#0D1421",
+  card2: "#0A1020",
   cardHi: "#0E1420",
   gold: "#C9A84C",
   text: "#E2E8F0",
@@ -85,11 +86,13 @@ interface Card {
 const go = (p: string) => { window.location.href = p; };
 
 // ── 빌딩블록 ─────────────────────────────────────────────────
-const Panel: React.FC<{ title: string; right?: React.ReactNode; goldLeft?: boolean; children: React.ReactNode; style?: React.CSSProperties; id?: string }> = ({ title, right, goldLeft, children, style, id }) => (
+const Panel: React.FC<{ title: string; right?: React.ReactNode; goldLeft?: boolean; children: React.ReactNode; style?: React.CSSProperties; id?: string; bare?: boolean }> = ({ title, right, goldLeft, children, style, id, bare }) => (
   <div id={id} style={{
-    background: T.card, border: `1px solid ${T.border}`,
-    borderLeft: goldLeft ? `3px solid ${T.gold}` : `1px solid ${T.border}`,
-    borderRadius: 4, padding: "12px 14px", display: "flex", flexDirection: "column", minWidth: 0, ...style,
+    background: bare ? "transparent" : T.card2,
+    borderTop: bare ? `1px solid ${T.border}` : undefined,
+    borderLeft: goldLeft ? `3px solid ${T.gold}` : undefined,
+    borderRadius: bare ? 0 : 4, padding: bare ? "14px 0 4px" : "12px 14px",
+    display: "flex", flexDirection: "column", minWidth: 0, ...style,
   }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
       <span style={{ fontSize: 12, fontWeight: 600, color: T.muted, letterSpacing: "0.08em", textTransform: "uppercase" }}>{title}</span>
@@ -134,7 +137,7 @@ function Skeleton() {
   );
 }
 
-const KEYFRAMES = "@keyframes cdpulse{0%,100%{opacity:0.5}50%{opacity:1}}";
+const KEYFRAMES = "@keyframes cdpulse{0%,100%{opacity:0.5}50%{opacity:1}}.cd-row{transition:background .12s}.cd-row:hover{background:rgba(255,255,255,0.02)}";
 
 // ── 메인 ─────────────────────────────────────────────────────
 export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
@@ -208,7 +211,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
             const active = t.id === activeTab;
             return (
               <div key={t.id} onClick={() => setActiveTab(t.id)}
-                style={{ padding: "8px 16px", cursor: "pointer", fontSize: 13, fontWeight: 500, color: active ? T.text : T.muted, borderBottom: active ? `2px solid ${T.gold}` : "2px solid transparent" }}>
+                style={{ padding: "8px 16px", cursor: "pointer", fontSize: 13, fontWeight: 700, color: active ? T.text : T.muted, borderBottom: active ? `2px solid ${T.gold}` : "2px solid transparent" }}>
                 {t.label}
               </div>
             );
@@ -239,13 +242,13 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
             </div>
 
             {/* Signal Room 테이블 */}
-            <Panel title="Signal Room" right={<span style={{ fontSize: 10, color: T.muted }}>{cards.length} signals · auto-refresh 60s</span>}>
+            <Panel title="Signal Room" bare style={{ margin: "0 -20px", padding: "14px 20px 4px" }} right={<span style={{ fontSize: 10, color: T.muted }}>{cards.length} signals · auto-refresh 60s</span>}>
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                   <thead>
                     <tr style={{ color: T.muted, letterSpacing: "0.06em", textAlign: "left" }}>
                       {["URGENCY", "ENTITY", "SIGNAL", "Z-SCORE", "ZONE", "ICR", "DEAL TYPE", "SCORE", "AS OF", ""].map((h, i) => (
-                        <th key={i} style={{ padding: "7px 10px", fontSize: 10, fontWeight: 600, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{h}</th>
+                        <th key={i} style={{ padding: "7px 10px", fontSize: 10, fontWeight: 700, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -257,18 +260,18 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                       const u = urgCfg(c.urgency);
                       const score = c.score || 0;
                       return (
-                        <tr key={c.id} style={{ borderBottom: `1px solid ${T.border}` }}>
-                          <td style={{ padding: "10px" }}><Tag color={u.color}>{u.label}</Tag></td>
-                          <td style={{ padding: "10px", minWidth: 150 }}>
-                            <div style={{ fontFamily: T.font, fontSize: 13, fontWeight: 600, color: T.text }}>{c.entity || "—"}</div>
+                        <tr key={c.id} className="cd-row" style={{ borderBottom: `1px solid ${T.border}` }}>
+                          <td style={{ padding: "6px 10px" }}><Tag color={u.color}>{u.label}</Tag></td>
+                          <td style={{ padding: "6px 10px", minWidth: 150 }}>
+                            <div style={{ fontFamily: T.font, fontSize: 13, fontWeight: 700, color: T.text }}>{c.entity || "—"}</div>
                             <div style={{ fontFamily: T.mono, color: T.muted, fontSize: 10, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{c.entity_sub || "—"}</div>
                           </td>
-                          <td style={{ padding: "10px", color: T.text, whiteSpace: "nowrap" }}>{c.signal_type || "—"}</td>
-                          <td style={{ padding: "10px", fontFamily: T.mono, fontWeight: 700, color: c.z_score != null ? T.text : T.muted }}>{c.z_score != null ? Number(c.z_score).toFixed(2) : "—"}</td>
-                          <td style={{ padding: "10px" }}>{c.zone ? <Tag color={zoneColor(c.zone)}>{c.zone}</Tag> : <span style={{ color: T.muted }}>—</span>}</td>
-                          <td style={{ padding: "10px", fontFamily: T.mono, fontWeight: 700, color: c.icr != null ? T.text : T.muted }}>{c.icr != null ? `${Number(c.icr).toFixed(2)}x` : "—"}</td>
-                          <td style={{ padding: "10px", color: T.text, whiteSpace: "nowrap" }}>{c.suggested_deal_type || "—"}</td>
-                          <td style={{ padding: "10px", minWidth: 96 }}>
+                          <td style={{ padding: "6px 10px", color: T.text, whiteSpace: "nowrap" }}>{c.signal_type || "—"}</td>
+                          <td style={{ padding: "6px 10px", fontFamily: T.mono, fontWeight: 700, color: c.z_score != null ? T.text : T.muted }}>{c.z_score != null ? Number(c.z_score).toFixed(2) : "—"}</td>
+                          <td style={{ padding: "6px 10px" }}>{c.zone ? <Tag color={zoneColor(c.zone)}>{c.zone}</Tag> : <span style={{ color: T.muted }}>—</span>}</td>
+                          <td style={{ padding: "6px 10px", fontFamily: T.mono, fontWeight: 700, color: c.icr != null ? T.text : T.muted }}>{c.icr != null ? `${Number(c.icr).toFixed(2)}x` : "—"}</td>
+                          <td style={{ padding: "6px 10px", color: T.text, whiteSpace: "nowrap" }}>{c.suggested_deal_type || "—"}</td>
+                          <td style={{ padding: "6px 10px", minWidth: 96 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                               <span style={{ fontFamily: T.mono, color: u.color, fontWeight: 700, minWidth: 24 }}>{score}</span>
                               <div style={{ flex: 1, height: 4, background: T.border, borderRadius: 2, overflow: "hidden", minWidth: 40 }}>
@@ -276,8 +279,8 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                               </div>
                             </div>
                           </td>
-                          <td style={{ padding: "10px", fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: "nowrap" }}>{fmtTime(c.data_asof)}</td>
-                          <td style={{ padding: "10px" }}>
+                          <td style={{ padding: "6px 10px", fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: "nowrap" }}>{fmtTime(c.data_asof)}</td>
+                          <td style={{ padding: "6px 10px" }}>
                             <span onClick={() => go("/app?nav=signalroom")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>처리 →</span>
                           </td>
                         </tr>
@@ -292,7 +295,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
             <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 12, alignItems: "start" }}>
               <Panel title="Morning Brief" goldLeft right={brief?.run_date ? <span style={{ fontSize: 10, color: T.muted }}>{brief.run_date}</span> : undefined}>
                 {brief?.brief_text ? (
-                  <div style={{ fontSize: 12, color: T.text, lineHeight: 1.7, maxHeight: 260, overflow: "auto" }}>{renderBrief(brief.brief_text)}</div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: T.text, lineHeight: 1.7, maxHeight: 260, overflow: "auto" }}>{renderBrief(brief.brief_text)}</div>
                 ) : (
                   <div style={{ fontSize: 12, color: T.muted }}>오늘 브리핑 생성 중…<div style={{ fontSize: 10, marginTop: 4 }}>매일 04:00 KST 자동 생성</div></div>
                 )}
@@ -338,18 +341,18 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                     <thead>
                       <tr style={{ color: T.muted, letterSpacing: "0.06em", textAlign: "left" }}>
                         {["DEAL", "CODE", "GATE", "HOLD REASON", ""].map((h, i) => (
-                          <th key={i} style={{ padding: "7px 10px", fontSize: 10, fontWeight: 600, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{h}</th>
+                          <th key={i} style={{ padding: "7px 10px", fontSize: 10, fontWeight: 700, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {deals.map((d: any) => (
-                        <tr key={d.deal_code} style={{ borderBottom: `1px solid ${T.border}` }}>
-                          <td style={{ padding: "10px", fontSize: 13, fontWeight: 600, color: T.text }}>{d.deal_name}</td>
-                          <td style={{ padding: "10px", fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: "nowrap" }}>{d.deal_code}</td>
-                          <td style={{ padding: "10px" }}><Tag color={d.final_gate === "HOLD" ? T.watch : d.final_gate === "PASS" ? T.monitor : T.muted}>{d.final_gate || "—"}</Tag></td>
-                          <td style={{ padding: "10px", color: T.muted }}>{(d.hold_reasons || [])[0] || "—"}</td>
-                          <td style={{ padding: "10px" }}><span onClick={() => go("/app?nav=pipeline")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>열기 →</span></td>
+                        <tr key={d.deal_code} className="cd-row" style={{ borderBottom: `1px solid ${T.border}` }}>
+                          <td style={{ padding: "6px 10px", fontSize: 13, fontWeight: 700, color: T.text }}>{d.deal_name}</td>
+                          <td style={{ padding: "6px 10px", fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: "nowrap" }}>{d.deal_code}</td>
+                          <td style={{ padding: "6px 10px" }}><Tag color={d.final_gate === "HOLD" ? T.watch : d.final_gate === "PASS" ? T.monitor : T.muted}>{d.final_gate || "—"}</Tag></td>
+                          <td style={{ padding: "6px 10px", color: T.muted }}>{(d.hold_reasons || [])[0] || "—"}</td>
+                          <td style={{ padding: "6px 10px" }}><span onClick={() => go("/app?nav=pipeline")} style={{ color: T.monitor, cursor: "pointer", whiteSpace: "nowrap" }}>열기 →</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -376,7 +379,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                 ) : holdDeals.map((d: any) => (
                   <div key={d.deal_code} style={{ padding: "7px 0", borderBottom: `1px solid ${T.border}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>{d.deal_name}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>{d.deal_name}</span>
                       <Tag color={T.watch}>HOLD</Tag>
                     </div>
                     {(d.hold_reasons || [])[0] && <div style={{ fontSize: 11, color: T.muted, marginTop: 3, borderLeft: `2px solid ${T.watch}`, paddingLeft: 6 }}>{(d.hold_reasons || [])[0]}</div>}
@@ -399,7 +402,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
       )}
 
       {/* ── 하단 상태바 ── */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 28, background: T.card, borderTop: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 18, padding: "0 18px", fontSize: 11, color: T.muted, zIndex: 10 }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 28, background: "#05080E", borderTop: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 18, padding: "0 18px", fontSize: 11, color: T.muted, zIndex: 10 }}>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: hermesUp ? T.green : T.muted }} />
           HERMES {hermesUp ? "connected" : "idle"}
