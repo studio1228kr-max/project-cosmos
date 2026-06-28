@@ -34,7 +34,7 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
   };
 
   const labelRow: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 };
-  const label: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: "#94A3B8" };
+  const label: React.CSSProperties = { fontSize: 13, fontWeight: 400, color: "#94A3B8" };
 
   return (
     <div style={{
@@ -44,7 +44,7 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
       fontFamily: "'Goldman Sans', sans-serif", color: "#E2E8F0", padding: 24, position: "relative",
     }}>
       <style>{`
-        .login-input{ width:100%; background:#141414; border:1px solid #2A2A2A; border-radius:8px; color:#E2E8F0; padding:13px 14px; font-size:14px; outline:none; box-sizing:border-box; font-family:'Goldman Sans',sans-serif; transition:border-color .15s; }
+        .login-input{ width:100%; background:#141414; border:1px solid #2A2A2A; border-radius:4px; color:#E2E8F0; padding:13px 14px; font-size:14px; outline:none; box-sizing:border-box; font-family:'Goldman Sans',sans-serif; transition:border-color .15s; }
         .login-input::placeholder{ color:#4A5568; }
         .login-input:focus{ border-color:${GOLD}; }
       `}</style>
@@ -59,8 +59,7 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
         </div>
 
         {/* Heading */}
-        <h1 style={{ textAlign: "center", fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Log in to Cosmos</h1>
-        <p style={{ textAlign: "center", fontSize: 13, fontWeight: 300, color: "#64748B", margin: "8px 0 36px" }}>Luska Capital Management</p>
+        <h1 style={{ textAlign: "center", fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", margin: "0 0 36px" }}>Log in to Cosmos</h1>
 
         {/* Email */}
         <div style={{ marginBottom: 18 }}>
@@ -79,7 +78,6 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
         <div style={{ marginBottom: 22 }}>
           <div style={labelRow}>
             <span style={label}>Password</span>
-            <span style={{ fontSize: 12, fontWeight: 500, color: "#64748B", cursor: "pointer" }}>Forgot your password?</span>
           </div>
           <div style={{ position: "relative" }}>
             <input
@@ -106,7 +104,7 @@ export default function Login({ onLogin }: { onLogin: (t: string) => void }) {
           disabled={loading}
           style={{
             width: "100%", background: loading ? "#3a341f" : GOLD, color: loading ? "#8a7d52" : "#050505",
-            border: "none", borderRadius: 8, padding: "13px", fontSize: 14, fontWeight: 600,
+            border: "none", borderRadius: 4, padding: "13px", fontSize: 14, fontWeight: 600,
             cursor: loading ? "default" : "pointer", fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "0.01em",
           }}>
           {loading ? "Authenticating…" : "Sign In"}
