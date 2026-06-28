@@ -79,13 +79,11 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "0.02em", color: C.text }}>Cosmos</span>
         </div>
         <button onClick={onLogin} style={{
-          padding: "9px 20px", fontSize: 12, fontWeight: 500, letterSpacing: "0.02em",
-          background: C.gold, color: "#fff", border: "none", borderRadius: 8,
+          padding: 0, fontSize: 12, fontWeight: 500, letterSpacing: "0.02em",
+          background: "transparent", color: "#1A2A3A", border: "none",
           cursor: "pointer", fontFamily: "inherit",
-        }}
-          onMouseEnter={e => (e.currentTarget.style.background = C.goldDim)}
-          onMouseLeave={e => (e.currentTarget.style.background = C.gold)}>
-          Investor Login
+        }}>
+          Investor Login →
         </button>
       </nav>
 
@@ -98,7 +96,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             Private credit portfolio management
           </div>
           <h1 style={{
-            fontSize: isMobile ? "clamp(28px, 8vw, 40px)" : "clamp(28px, 3.5vw, 52px)", fontWeight: 700,
+            fontSize: isMobile ? "clamp(28px, 8vw, 40px)" : "clamp(28px, 3.5vw, 52px)", fontWeight: 600,
             lineHeight: 1.15, letterSpacing: "-0.02em",
             margin: "0 0 28px", color: C.text,
             fontFamily: "'Goldman Sans', sans-serif",
@@ -127,13 +125,12 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
         {/* RIGHT — image placeholder */}
         {!isMobile && <div style={{
-          background: C.surface,
-          borderLeft: `1px solid ${C.border}`,
+          background: "transparent",
           display: "flex", alignItems: "center", justifyContent: "center",
           overflow: "hidden", minHeight: "100vh", padding: 40, boxSizing: "border-box",
         }}>
           <img src="/dashboard-preview.png" alt="Cosmos dashboard"
-            style={{ width: "100%", borderRadius: 8, boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }} />
+            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8, boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }} />
         </div>}
 
 
