@@ -67,14 +67,14 @@ interface Card {
 const go = (p: string) => { window.location.href = p; };
 
 // ── 빌딩블록 ─────────────────────────────────────────────────
-const Panel: React.FC<{ title: string; right?: React.ReactNode; goldLeft?: boolean; children: React.ReactNode; style?: React.CSSProperties }> = ({ title, right, goldLeft, children, style }) => (
-  <div style={{
+const Panel: React.FC<{ title: string; right?: React.ReactNode; goldLeft?: boolean; children: React.ReactNode; style?: React.CSSProperties; id?: string }> = ({ title, right, goldLeft, children, style, id }) => (
+  <div id={id} style={{
     background: T.card, border: `1px solid ${T.border}`,
     borderLeft: goldLeft ? `3px solid ${T.gold}` : `1px solid ${T.border}`,
     borderRadius: 4, padding: "12px 14px", display: "flex", flexDirection: "column", minWidth: 0, ...style,
   }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-      <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>{title}</span>
+      <span style={{ fontSize: 10, fontWeight: 600, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>{title}</span>
       {right}
     </div>
     {children}
@@ -126,7 +126,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
   const [macro, setMacro] = useState<any>({});
   const [cosmosUp, setCosmosUp] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeNav, setActiveNav] = useState("today");
+  const [activeNav, setActiveNav] = useState("creditdesk");
 
   const load = useCallback(() => {
     Promise.all([
@@ -166,15 +166,33 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
     ["제조업 BSI", "BSI Manufacturing", macro.BSI_MANUFACTURING],
   ];
 
-  const navItems = [
-    { id: "today", label: "Today", to: "/dashboard" },
-    { id: "sourcing", label: "Sourcing", to: "/" },
-    { id: "dd", label: "Due Diligence", to: "/" },
-    { id: "portfolio", label: "Portfolio", to: "/" },
+  const NAV: { id: string; label: string; items: { id: string; label: string; scroll?: string; to?: string }[] }[] = [
+    { id: "today", label: "TODAY", items: [
+      { id: "creditdesk", label: "Credit Desk", scroll: "cd-top" },
+      { id: "triage", label: "Morning Triage", scroll: "cd-brief" },
+      { id: "signalroom", label: "Signal Room", scroll: "cd-signals" },
+    ] },
+    { id: "deal", label: "DEAL", items: [
+      { id: "pipeline", label: "Pipeline", to: "/" },
+      { id: "register", label: "Register", to: "/" },
+    ] },
+    { id: "dd", label: "DUE DILIGENCE", items: [
+      { id: "sdd", label: "SDD", to: "/" },
+      { id: "icmemo", label: "IC Memo", to: "/" },
+      { id: "covenant", label: "Covenant Monitor", scroll: "cd-covenant" },
+    ] },
+    { id: "portfolio", label: "PORTFOLIO", items: [
+      { id: "risk", label: "Risk Monitor", to: "/" },
+    ] },
   ];
+  const handleNav = (item: { id: string; scroll?: string; to?: string }) => {
+    setActiveNav(item.id);
+    if (item.scroll) document.getElementById(item.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    else if (item.to) go(item.to);
+  };
 
   return (
-    <div style={{ background: T.bg, color: T.text, minHeight: "100vh", display: "flex", fontFamily: T.font, fontSize: 12 }}>
+    <div style={{ background: T.bg, color: T.text, minHeight: "100vh", display: "flex", fontFamily: T.font, fontWeight: 450, fontSize: 12 }}>
       <style>{KEYFRAMES}</style>
 
       {/* ── 사이드바 172px ── */}
@@ -183,43 +201,48 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
           <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "0.12em", color: T.gold }}>COSMOS</div>
           <div style={{ fontSize: 9, color: T.muted, letterSpacing: "0.18em", marginTop: 2 }}>CREDIT DESK</div>
         </div>
-        <div style={{ flex: 1 }}>
-          {navItems.map(n => {
-            const active = n.id === activeNav;
-            return (
-              <div key={n.id}
-                onClick={() => { setActiveNav(n.id); if (n.to !== "/dashboard") go(n.to); }}
-                style={{
-                  padding: "10px 16px", cursor: "pointer", fontSize: 12,
-                  color: active ? T.text : T.muted,
-                  borderLeft: active ? `2px solid ${T.gold}` : "2px solid transparent",
-                  background: active ? T.cardHi : "transparent",
-                }}>
-                {n.label}
-              </div>
-            );
-          })}
+        <div style={{ flex: 1, overflow: "auto" }}>
+          {NAV.map(group => (
+            <div key={group.id} style={{ marginBottom: 6 }}>
+              <div style={{ padding: "12px 16px 4px", fontSize: 9, fontWeight: 600, color: T.muted, letterSpacing: "0.12em" }}>{group.label}</div>
+              {group.items.map(item => {
+                const active = item.id === activeNav;
+                return (
+                  <div key={item.id}
+                    onClick={() => handleNav(item)}
+                    style={{
+                      padding: "7px 16px 7px 22px", cursor: "pointer", fontSize: 12, fontWeight: 500,
+                      color: active ? T.text : T.muted,
+                      borderLeft: active ? `2px solid ${T.gold}` : "2px solid transparent",
+                      background: active ? T.cardHi : "transparent",
+                    }}>
+                    {item.label}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
         <div onClick={onLogout} style={{ padding: "12px 16px", fontSize: 11, color: T.muted, cursor: "pointer", borderTop: `1px solid ${T.border}` }}>↩ Logout</div>
       </div>
 
       {/* ── 메인 ── */}
       {loading ? <Skeleton /> : (
-        <div style={{ flex: 1, minWidth: 0, padding: "16px 20px 44px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div id="cd-top" style={{ flex: 1, minWidth: 0, padding: "16px 20px 44px", display: "flex", flexDirection: "column", gap: 14 }}>
 
           {/* 상단: 메트릭 6 */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
             {metrics.map(m => (
               <div key={m.label} style={{ background: T.card, border: "none", borderTop: `2px solid ${m.top}`, borderRadius: 4, padding: "11px 13px" }}>
                 <div style={{ fontSize: 9, color: T.muted, letterSpacing: "0.08em" }}>{m.label}</div>
-                <div style={{ fontFamily: T.mono, fontSize: 22, fontWeight: 500, color: m.color, marginTop: 5, lineHeight: 1 }}>{m.value}</div>
+                <div style={{ fontFamily: T.mono, fontSize: 22, fontWeight: 700, color: m.color, marginTop: 5, lineHeight: 1 }}>{m.value}</div>
                 <div style={{ fontSize: 9, color: T.muted, marginTop: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.sub}</div>
               </div>
             ))}
           </div>
 
           {/* 중단: Signal Room 테이블 */}
-          <Panel title="Signal Room" right={<span style={{ fontSize: 9, color: T.muted }}>{cards.length} signals · auto-refresh 60s</span>}>
+          <Panel id="cd-signals" title="Signal Room" right={<span style={{ fontSize: 9, color: T.muted }}>{cards.length} signals · auto-refresh 60s</span>}>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
                 <thead>
@@ -240,17 +263,17 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                       <tr key={c.id} style={{ borderBottom: `1px solid ${T.border}` }}>
                         <td style={{ padding: "9px 10px" }}><Tag color={u.color}>{u.label}</Tag></td>
                         <td style={{ padding: "9px 10px", minWidth: 150 }}>
-                          <div style={{ fontFamily: T.font, fontWeight: 500, color: T.text }}>{c.entity || "—"}</div>
+                          <div style={{ fontFamily: T.font, fontWeight: 600, color: T.text }}>{c.entity || "—"}</div>
                           <div style={{ fontFamily: T.mono, color: T.muted, fontSize: 9, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{c.entity_sub || "—"}</div>
                         </td>
                         <td style={{ padding: "9px 10px", color: T.text, whiteSpace: "nowrap" }}>{c.signal_type || "—"}</td>
-                        <td style={{ padding: "9px 10px", fontFamily: T.mono, color: c.z_score != null ? T.text : T.muted }}>{c.z_score != null ? Number(c.z_score).toFixed(2) : "—"}</td>
+                        <td style={{ padding: "9px 10px", fontFamily: T.mono, fontWeight: 700, color: c.z_score != null ? T.text : T.muted }}>{c.z_score != null ? Number(c.z_score).toFixed(2) : "—"}</td>
                         <td style={{ padding: "9px 10px" }}>{c.zone ? <Tag color={zoneColor(c.zone)}>{c.zone}</Tag> : <span style={{ color: T.muted }}>—</span>}</td>
-                        <td style={{ padding: "9px 10px", fontFamily: T.mono, color: c.icr != null ? T.text : T.muted }}>{c.icr != null ? `${Number(c.icr).toFixed(2)}x` : "—"}</td>
+                        <td style={{ padding: "9px 10px", fontFamily: T.mono, fontWeight: 700, color: c.icr != null ? T.text : T.muted }}>{c.icr != null ? `${Number(c.icr).toFixed(2)}x` : "—"}</td>
                         <td style={{ padding: "9px 10px", color: T.text, whiteSpace: "nowrap" }}>{c.suggested_deal_type || "—"}</td>
                         <td style={{ padding: "9px 10px", minWidth: 92 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                            <span style={{ fontFamily: T.mono, color: u.color, fontWeight: 600, minWidth: 22 }}>{score}</span>
+                            <span style={{ fontFamily: T.mono, color: u.color, fontWeight: 700, minWidth: 22 }}>{score}</span>
                             <div style={{ flex: 1, height: 4, background: T.border, borderRadius: 2, overflow: "hidden", minWidth: 40 }}>
                               <div style={{ width: `${Math.min(100, score)}%`, height: "100%", background: u.color }} />
                             </div>
@@ -274,7 +297,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
             {/* Deal Pipeline */}
             <Panel title="Deal Pipeline">
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontFamily: T.mono, fontSize: 24, fontWeight: 500, color: T.text }}>{deals.length}</span>
+                <span style={{ fontFamily: T.mono, fontSize: 24, fontWeight: 700, color: T.text }}>{deals.length}</span>
                 <span style={{ fontSize: 10, color: T.muted }}>active deals</span>
               </div>
               {deals.length === 0 ? (
@@ -288,7 +311,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
             </Panel>
 
             {/* Covenant Monitor — HOLD 딜의 차단 사유 */}
-            <Panel title="Covenant Monitor">
+            <Panel id="cd-covenant" title="Covenant Monitor">
               {holdDeals.length === 0 ? (
                 <div style={{ fontSize: 11, color: T.muted }}>위반/조건 미달 없음</div>
               ) : holdDeals.slice(0, 5).map((d: any) => (
@@ -313,7 +336,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
                       <div style={{ fontSize: 9, color: T.muted }}>{m?.as_of || sub}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <span style={{ fontFamily: T.mono, color: v ? T.text : T.muted }}>{v || "—"}</span>
+                      <span style={{ fontFamily: T.mono, fontWeight: 700, color: v ? T.text : T.muted }}>{v || "—"}</span>
                       {m?.delta_mom != null && <div style={{ fontFamily: T.mono, fontSize: 9, color: m.delta_mom >= 0 ? T.green : T.critical }}>{m.delta_mom >= 0 ? "▲" : "▼"} {Math.abs(m.delta_mom)}</div>}
                     </div>
                   </div>
@@ -324,7 +347,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
 
             {/* 우측 패널: Morning Brief + Quick Actions */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <Panel title="Morning Brief" goldLeft right={brief?.run_date ? <span style={{ fontSize: 9, color: T.muted }}>{brief.run_date}</span> : undefined}>
+              <Panel id="cd-brief" title="Morning Brief" goldLeft right={brief?.run_date ? <span style={{ fontSize: 9, color: T.muted }}>{brief.run_date}</span> : undefined}>
                 {brief?.brief_text ? (
                   <div style={{ fontSize: 11, color: T.text, lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 220, overflow: "auto" }}>{brief.brief_text}</div>
                 ) : (
