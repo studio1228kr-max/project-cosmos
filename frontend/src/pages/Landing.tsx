@@ -116,13 +116,10 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </p>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <button onClick={() => setModalOpen(true)} style={{
-              padding: "13px 30px", fontSize: 12, letterSpacing: "0.05em",
-              background: "transparent", color: "#1A2A3A",
-              border: "1px solid #1A2A3A", borderRadius: 2,
+              padding: 0, fontSize: 12, letterSpacing: "0.05em",
+              background: "transparent", color: "#1A2A3A", border: "none",
               cursor: "pointer", fontFamily: "'Goldman Sans', sans-serif", fontWeight: 500,
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#1A2A3A"; e.currentTarget.style.color = "#fff"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#1A2A3A"; }}>
+            }}>
               Learn More →
             </button>
           </div>
@@ -365,9 +362,9 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
               We are not liable for any damages caused by such impersonation scams.
             </p>
             <button onClick={() => setScamAlert(false)} style={{
-              width: "100%", padding: "14px", fontSize: 12, letterSpacing: "0.05em",
-              background: "#C9A84C", color: "#080C14", border: "none", borderRadius: 4,
-              cursor: "pointer", fontFamily: "inherit", fontWeight: 600,
+              padding: 0, fontSize: 12, letterSpacing: "0.05em",
+              background: "transparent", color: "#C9A84C", border: "none",
+              cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
             }}>
               I understand →
             </button>
