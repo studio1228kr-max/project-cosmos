@@ -41,6 +41,32 @@ def health():
     return {"status": "ok", "service": "hermes-data-pipeline"}
 
 
+@app.post("/admin/run")
+async def admin_run(mode: str = "scan_brief", x_internal_key: str = Header(None)):
+    """수동 트리거 (X-Internal-Key). mode: scan | brief | scan_brief.
+    클라우드 런타임에서 run_scan()/generate_morning_brief()를 백그라운드 실행."""
+    if not INTERNAL_API_KEY or x_internal_key != INTERNAL_API_KEY:
+        raise HTTPException(status_code=401, detail="unauthorized")
+    if mode not in ("scan", "brief", "scan_brief"):
+        raise HTTPException(status_code=400, detail="mode must be scan|brief|scan_brief")
+
+    async def _job():
+        try:
+            if mode in ("scan", "scan_brief"):
+                from main import run_scan
+                r = await run_scan()
+                print(f"[admin_run] scan done: { {k: v for k, v in r.items() if k != 'hits'} }")
+            if mode in ("brief", "scan_brief"):
+                from brief.morning_brief import generate_morning_brief
+                b = await generate_morning_brief()
+                print(f"[admin_run] brief done: date={b.get('date')} cards={b.get('stats', {}).get('total_cards')}")
+        except Exception as e:
+            print(f"[admin_run] error: {e}")
+
+    asyncio.create_task(_job())
+    return {"status": "started", "mode": mode}
+
+
 @app.post("/facts/{corp_code}")
 async def get_facts(corp_code: str, x_internal_key: str = Header(None)):
     """COSMOS sdd_auto가 호출하는 facts API (3계층: COSMOS→HERMES→DART)."""
