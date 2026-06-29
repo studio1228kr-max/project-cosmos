@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import API from "../api";
+import DealExecution from "./DealExecution";
 
 // ── 디자인 토큰 ──────────────────────────────────────────────
 const T = {
@@ -393,36 +394,8 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
         </>
       )}
 
-      {/* ── Deals 탭 ── */}
-      {activeTab === "deals" && (
-        <div style={{ borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ padding: "10px 20px 4px", display: "flex", justifyContent: "space-between" }}>
-            <span style={labelStyle}>Deal Pipeline</span>
-            <span style={{ fontSize: 10, color: T.muted }}>{deals.length} deals · {holdDeals.length} hold</span>
-          </div>
-          {deals.length === 0 ? (
-            <div style={{ padding: "48px 20px", textAlign: "center", color: T.muted, fontSize: 12 }}>등록된 딜 없음</div>
-          ) : (
-            <div style={{ overflowX: "auto", padding: "0 8px 8px" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead><tr style={{ color: T.muted, textAlign: "left" }}>
-                  {["Deal", "Code", "Gate", "Hold reason"].map((h, i) => <th key={i} style={{ padding: "7px 12px", fontSize: 10, fontWeight: 400, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{h}</th>)}
-                </tr></thead>
-                <tbody>
-                  {deals.map((d: any) => (
-                    <tr key={d.deal_code} style={{ borderBottom: `1px solid ${T.border}` }}>
-                      <td style={{ padding: "9px 12px", color: T.text }}>{d.deal_name}</td>
-                      <td style={{ padding: "9px 12px", fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: "nowrap" }}>{d.deal_code}</td>
-                      <td style={{ padding: "9px 12px" }}><span style={{ fontSize: 10, color: d.final_gate === "HOLD" ? T.watch : T.muted, border: `1px solid ${T.border}`, borderRadius: 3, padding: "2px 7px" }}>{d.final_gate || "—"}</span></td>
-                      <td style={{ padding: "9px 12px", color: T.muted }}>{(d.hold_reasons || [])[0] || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+      {/* ── Deals 탭 — Deal Execution ── */}
+      {activeTab === "deals" && <DealExecution deals={deals} />}
 
       {/* ── DD 탭 ── */}
       {activeTab === "dd" && (
