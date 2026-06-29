@@ -14,6 +14,7 @@ import EvidenceChecklist from "./pages/EvidenceChecklist";
 import CreditDesk from "./pages/CreditDesk";
 import DealExecution from "./pages/DealExecution";
 import ClosingPage from "./pages/ClosingPage";
+import PortfolioPage from "./pages/PortfolioPage";
 
 const STATUS_COLOR: any = { INTAKE: "#888", SCREENED: "#185FA5", WATCHLIST: "#854F0B", ADVANCE: "#3B6D11", REJECT: "#A32D2D" };
 const STATUS_BG: any = { INTAKE: "#F1EFE8", SCREENED: "#E6F1FB", WATCHLIST: "#FAEEDA", ADVANCE: "#EAF3DE", REJECT: "#FCEBEB" };
@@ -974,7 +975,7 @@ function ScrollDeck({ onLogout }: { onLogout: () => void }) {
         <section id="page-1" style={{ ...sec, paddingTop: TOPBAR_H }}><CreditDesk onLogout={onLogout} /></section>
         <section id="page-2" style={{ ...sec, display: "flex", flexDirection: "column" }}><DealExecution deals={deals} /></section>
         <section id="page-3" style={{ ...sec, display: "flex", flexDirection: "column" }}><ClosingPage deals={deals} /></section>
-        <section id="page-4" style={ph}>준비 중</section>
+        <section id="page-4" style={{ ...sec, display: "flex", flexDirection: "column" }}><PortfolioPage deals={deals} /></section>
         <section id="page-5" style={ph}>준비 중</section>
         <section id="page-6" style={ph}>준비 중</section>
         <section id="page-7" style={ph}>준비 중</section>
