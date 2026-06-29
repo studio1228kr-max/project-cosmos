@@ -19,6 +19,7 @@ import FundAccountingPage from "./pages/FundAccountingPage";
 import LPRelationsPage from "./pages/LPRelationsPage";
 import RiskCompliancePage from "./pages/RiskCompliancePage";
 import SourcingPage from "./pages/SourcingPage";
+import SetupPolicyPage from "./pages/SetupPolicyPage";
 
 const STATUS_COLOR: any = { INTAKE: "#888", SCREENED: "#185FA5", WATCHLIST: "#854F0B", ADVANCE: "#3B6D11", REJECT: "#A32D2D" };
 const STATUS_BG: any = { INTAKE: "#F1EFE8", SCREENED: "#E6F1FB", WATCHLIST: "#FAEEDA", ADVANCE: "#EAF3DE", REJECT: "#FCEBEB" };
@@ -984,6 +985,7 @@ function ScrollDeck({ onLogout }: { onLogout: () => void }) {
         <section id="page-6" style={{ ...sec, display: "flex", flexDirection: "column" }}><LPRelationsPage deals={deals} /></section>
         <section id="page-7" style={{ ...sec, display: "flex", flexDirection: "column" }}><RiskCompliancePage deals={deals} /></section>
         <section id="page-8" style={{ ...sec, display: "flex", flexDirection: "column" }}><SourcingPage deals={deals} /></section>
+        <section id="page-9" style={{ ...sec, display: "flex", flexDirection: "column" }}><SetupPolicyPage deals={deals} /></section>
       </div>
     </>
   );
