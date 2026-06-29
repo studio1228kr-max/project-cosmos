@@ -5,7 +5,8 @@ import os, re, sys, psycopg2
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ORDER = ["001_foundation.sql", "002_history_table.sql", "003_validate_checks.sql",
-         "004_indexes_concurrently.sql", "005_drop_old_unique_constraint.sql"]
+         "004_indexes_concurrently.sql", "005_drop_old_unique_constraint.sql",
+         "006_ontology_core.sql"]
 
 
 def split_statements(sql: str):
