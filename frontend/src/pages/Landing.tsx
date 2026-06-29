@@ -146,11 +146,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
 
       {/* COUNTDOWN SECTION */}
-      <div style={{ background: "#080C14", padding: isMobile ? "56px 24px" : "88px 40px", borderTop: "1px solid #1a2535", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ fontSize: 11, color: "#C9A84C", letterSpacing: "0.18em", marginBottom: isMobile ? 40 : 56, fontWeight: 400, fontFamily: "'Goldman Sans', sans-serif", textTransform: "lowercase" }}>
-          cosmos — luska capital
-        </div>
-
+      <div style={{ background: "#000000", padding: isMobile ? "56px 24px" : "88px 40px", borderTop: "1px solid #1a2535", display: "flex", flexDirection: "column", alignItems: "center" }}>
         {[
           { target: new Date("2026-07-20T00:00:00+09:00").getTime(), label: "Demo Access", date: "2026.07.20" },
           { target: new Date("2026-08-15T00:00:00+09:00").getTime(), label: "Product Launch", date: "2026.08.15" },
@@ -179,24 +175,24 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
                       {i > 0 && (
                         <div style={{
                           fontFamily: "'Goldman Sans', sans-serif", fontWeight: 300,
-                          fontSize: "clamp(36px, 5vw, 56px)", color: "#1e3050",
+                          fontSize: "clamp(36px, 5vw, 56px)", color: "rgba(255,255,255,0.2)",
                           margin: "0 8px", lineHeight: 1,
                         }}>:</div>
                       )}
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                         <div style={{
-                          fontFamily: "'IBM Plex Mono', monospace", fontWeight: 300,
-                          fontSize: "clamp(36px, 5vw, 56px)", color: "#c8d4e0",
+                          fontFamily: "'Goldman Sans', sans-serif", fontWeight: 900,
+                          fontSize: "clamp(36px, 5vw, 56px)", color: "#ffffff",
                           lineHeight: 1, fontVariantNumeric: "tabular-nums",
                         }}>{u.val}</div>
-                        <div style={{ fontSize: 9, color: "#2a4060", letterSpacing: "0.15em", marginTop: 10, fontFamily: "'Goldman Sans', sans-serif" }}>{u.unit}</div>
+                        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", letterSpacing: "0.15em", marginTop: 10, fontWeight: 300, fontFamily: "'Goldman Sans', sans-serif" }}>{u.unit}</div>
                       </div>
                     </React.Fragment>
                   ))}
                 </div>
                 <div style={{ marginTop: 28, textAlign: "center" }}>
-                  <div style={{ fontSize: 13, color: "#7A9ABF", letterSpacing: "0.08em", fontFamily: "'Goldman Sans', sans-serif" }}>{label}</div>
-                  <div style={{ fontSize: 11, color: "#2a4060", letterSpacing: "0.1em", marginTop: 6, fontFamily: "'Goldman Sans', sans-serif" }}>{date}</div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em", fontWeight: 300, fontFamily: "'Goldman Sans', sans-serif" }}>{label}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", letterSpacing: "0.1em", marginTop: 6, fontWeight: 300, fontFamily: "'Goldman Sans', sans-serif" }}>{date}</div>
                 </div>
               </div>
             </React.Fragment>
