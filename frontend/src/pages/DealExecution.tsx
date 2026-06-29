@@ -107,9 +107,6 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
   const [activity, setActivity] = useState<any[]>([]);
   const [vote, setVote] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!selId && deals.length) setSelId(deals[0].deal_code || String(deals[0].id));
-  }, [deals, selId]);
 
   const load = useCallback((id: string | null) => {
     if (!id) return;
@@ -177,6 +174,11 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
 
       {/* ── 메인 ── */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {!selId ? (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#2A3A52", fontFamily: T.font }}>
+            딜을 선택하세요
+          </div>
+        ) : <>
         {/* 딜 헤더 (고정) */}
         <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -377,6 +379,7 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
             );
           })}
         </div>
+        </>}
       </div>
 
       {/* ── 우측 고정 패널 ── */}
