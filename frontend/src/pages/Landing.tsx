@@ -147,7 +147,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
       {/* COUNTDOWN SECTION */}
       <div style={{ background: "#080C14", padding: isMobile ? "56px 24px" : "88px 40px", borderTop: "1px solid #1a2535", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ fontSize: 11, color: "#C9A84C", letterSpacing: "0.18em", marginBottom: isMobile ? 40 : 56, fontWeight: 400, fontFamily: "'IBM Plex Mono', monospace", textTransform: "lowercase" }}>
+        <div style={{ fontSize: 11, color: "#C9A84C", letterSpacing: "0.18em", marginBottom: isMobile ? 40 : 56, fontWeight: 400, fontFamily: "'Goldman Sans', sans-serif", textTransform: "lowercase" }}>
           cosmos — luska capital
         </div>
 
@@ -178,7 +178,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
                     <React.Fragment key={u.unit}>
                       {i > 0 && (
                         <div style={{
-                          fontFamily: "'IBM Plex Mono', monospace", fontWeight: 300,
+                          fontFamily: "'Goldman Sans', sans-serif", fontWeight: 300,
                           fontSize: "clamp(36px, 5vw, 56px)", color: "#1e3050",
                           margin: "0 8px", lineHeight: 1,
                         }}>:</div>
@@ -189,14 +189,14 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
                           fontSize: "clamp(36px, 5vw, 56px)", color: "#c8d4e0",
                           lineHeight: 1, fontVariantNumeric: "tabular-nums",
                         }}>{u.val}</div>
-                        <div style={{ fontSize: 9, color: "#2a4060", letterSpacing: "0.15em", marginTop: 10, fontFamily: "'IBM Plex Mono', monospace" }}>{u.unit}</div>
+                        <div style={{ fontSize: 9, color: "#2a4060", letterSpacing: "0.15em", marginTop: 10, fontFamily: "'Goldman Sans', sans-serif" }}>{u.unit}</div>
                       </div>
                     </React.Fragment>
                   ))}
                 </div>
                 <div style={{ marginTop: 28, textAlign: "center" }}>
-                  <div style={{ fontSize: 13, color: "#7A9ABF", letterSpacing: "0.08em", fontFamily: "'IBM Plex Mono', monospace" }}>{label}</div>
-                  <div style={{ fontSize: 11, color: "#2a4060", letterSpacing: "0.1em", marginTop: 6, fontFamily: "'IBM Plex Mono', monospace" }}>{date}</div>
+                  <div style={{ fontSize: 13, color: "#7A9ABF", letterSpacing: "0.08em", fontFamily: "'Goldman Sans', sans-serif" }}>{label}</div>
+                  <div style={{ fontSize: 11, color: "#2a4060", letterSpacing: "0.1em", marginTop: 6, fontFamily: "'Goldman Sans', sans-serif" }}>{date}</div>
                 </div>
               </div>
             </React.Fragment>
