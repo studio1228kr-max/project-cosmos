@@ -147,6 +147,13 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
       {/* COUNTDOWN SECTION */}
       <div style={{ background: "#000000", padding: isMobile ? "56px 24px" : "88px 40px", borderTop: "1px solid #1a2535", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <img
+          src="/luska-logo.png"
+          alt="Luska"
+          width={48}
+          height={48}
+          style={{ filter: "invert(1)", animation: "spin 15s linear infinite", marginBottom: isMobile ? 40 : 56 }}
+        />
         {[
           { target: new Date("2026-07-20T00:00:00+09:00").getTime(), label: "Demo Access", date: "2026.07.20" },
           { target: new Date("2026-08-15T00:00:00+09:00").getTime(), label: "Product Launch", date: "2026.08.15" },
