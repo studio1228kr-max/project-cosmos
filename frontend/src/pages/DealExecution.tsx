@@ -4,422 +4,47 @@ import API from "../api";
 // ── 디자인 시스템 (CreditDesk와 동일) ───────────────────────
 const T = {
   bg: "#080C14",
+  surface1: "#0D1826",
   gold: "#C9A84C",
-  blue: "#4A90D9",
+  blue: "#4A90D9",        // AUTO
+  purple: "#8B5CF6",      // HEPHAESTUS
   green: "#2ACA70",
   red: "#FF5555",
   orange: "#FF8833",
+  watch: "#F59E0B",
   text: "#E2E8F0",
   muted: "#4A6080",
+  dim: "#2A3A52",
   border: "#1A2332",
   font: "'Goldman Sans', sans-serif",
   mono: "'IBM Plex Mono', ui-monospace, monospace",
 };
 
-const dash = (v: any) => (v === null || v === undefined || v === "" ? "—" : v);
+const dash = (v: any) => (v === null || v === undefined || v === "") ? "—" : v;
 
-// 상태 → 색상
 const STATUS_COLOR: Record<string, string> = {
-  PASS: T.green, DONE: T.green, COMPLETE: T.green, CONFIRMED: T.green, OK: T.green,
+  PASS: T.green, DONE: T.green, COMPLETE: T.green, CONFIRMED: T.green, OK: T.green, 완료: T.green,
   FLAG: T.orange, WEAK: T.orange, HOLD: T.orange, WARN: T.orange,
-  BLOCK: T.red, KILL: T.red, BROKEN: T.red, FAIL: T.red,
-  PENDING: T.muted, IDLE: T.muted, WAIT: T.muted, "대기": T.muted,
+  BLOCK: T.red, KILL: T.red, BROKEN: T.red, FAIL: T.red, CRITICAL: T.red,
+  PENDING: T.muted, IDLE: T.muted, WAIT: T.muted, 대기: T.muted,
 };
-const sc = (s?: string) => STATUS_COLOR[(s || "").toUpperCase()] || T.muted;
+const sc = (s?: string) => STATUS_COLOR[(s || "").toUpperCase()] || STATUS_COLOR[s || ""] || T.muted;
 
 const labelStyle: React.CSSProperties = { fontSize: 10, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" };
 
 const Badge = ({ status, big }: { status?: string; big?: boolean }) => {
   if (!status) return <span style={{ color: T.muted }}>—</span>;
   const c = sc(status);
-  return (
-    <span style={{
-      fontSize: big ? 13 : 10, color: c, background: `${c}1A`, border: `1px solid ${c}44`,
-      borderRadius: 3, padding: big ? "3px 10px" : "2px 7px", letterSpacing: big ? "2px" : "0.04em", whiteSpace: "nowrap",
-    }}>{status}</span>
-  );
+  return <span style={{ fontSize: big ? 13 : 10, color: c, background: `${c}1A`, border: `1px solid ${c}44`, borderRadius: 3, padding: big ? "3px 10px" : "2px 7px", letterSpacing: big ? "2px" : "0.04em", whiteSpace: "nowrap" }}>{status}</span>;
 };
-
-const AutoTag = ({ by = "AUTO" }: { by?: string }) => (
-  <span style={{ fontSize: 9, color: T.blue, border: `1px solid ${T.blue}44`, borderRadius: 3, padding: "1px 6px", letterSpacing: "0.06em" }}>{by}</span>
+const Tag = ({ label, color }: { label: string; color: string }) => (
+  <span style={{ fontSize: 9, color, border: `1px solid ${color}44`, borderRadius: 3, padding: "1px 6px", letterSpacing: "0.06em" }}>{label}</span>
 );
 
-const Divider = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0 12px" }}>
-    <span style={{ fontSize: 10, color: T.muted, letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{children}</span>
-    <span style={{ flex: 1, height: 1, background: T.border }} />
-  </div>
-);
-
-// 스텝 카드 아이콘: done=초록체크 / active=골드화살표 / flag=오렌지느낌표 / pending=회색
-function StepIcon({ kind }: { kind: "done" | "active" | "flag" | "pending" | "block" }) {
-  const map = { done: [T.green, "✓"], active: [T.gold, "→"], flag: [T.orange, "!"], block: [T.red, "×"], pending: [T.muted, "•"] } as const;
+function StepIcon({ kind }: { kind: "done" | "active" | "pending" }) {
+  const map = { done: [T.green, "✓"], active: [T.gold, "→"], pending: [T.muted, "•"] } as const;
   const [c, g] = map[kind];
   return <span style={{ width: 20, height: 20, flexShrink: 0, borderRadius: "50%", border: `1px solid ${c}55`, color: c, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>{g}</span>;
-}
-
-function StepCard({ icon, title, auto, badge, desc, meta, active, blocked, action }: {
-  icon: "done" | "active" | "flag" | "pending" | "block"; title: string; auto?: string; badge?: string;
-  desc?: string; meta?: string; active?: boolean; blocked?: boolean; action?: React.ReactNode;
-}) {
-  return (
-    <div style={{
-      padding: "14px 16px", borderBottom: `1px solid ${T.border}`,
-      background: active ? "#0D1826" : "transparent",
-      opacity: blocked ? 0.38 : 1,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <StepIcon kind={icon} />
-        <span style={{ color: T.text }}>{title}</span>
-        {auto && <AutoTag by={auto} />}
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-          {badge && <Badge status={badge} />}
-          {action}
-        </span>
-      </div>
-      {(desc || meta) && (
-        <div style={{ marginLeft: 30, marginTop: 6 }}>
-          {desc && <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6 }}>{desc}</div>}
-          {meta && <div style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: T.mono }}>{meta}</div>}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const TABS = [
-  { id: "intake", n: "01", label: "Intake & Gating" },
-  { id: "diligence", n: "02", label: "Diligence" },
-  { id: "analysis", n: "03", label: "Analysis" },
-  { id: "evidence", n: "04", label: "Evidence" },
-  { id: "icpack", n: "05", label: "IC Pack" },
-];
-
-export default function DealExecution({ deals = [] }: { deals?: any[] }) {
-  const [selId, setSelId] = useState<string | null>(null);
-  const [active, setActive] = useState("intake");
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-  const [deal, setDeal] = useState<any>(null);
-  const [gates, setGates] = useState<any>({});
-  const [docs, setDocs] = useState<any[]>([]);
-  const [irr, setIrr] = useState<any>({});
-  const [narrative, setNarrative] = useState<any>(null);
-  const [activity, setActivity] = useState<any[]>([]);
-  const [vote, setVote] = useState<string | null>(null);
-
-
-  const load = useCallback((id: string | null) => {
-    if (!id) return;
-    API.get(`/api/deals/${id}`).then(r => setDeal(r.data)).catch(() => setDeal(null));
-    API.get(`/api/deals/${id}/gates`).then(r => setGates(r.data || {})).catch(() => setGates({}));
-    API.get(`/api/deals/${id}/documents`).then(r => setDocs(r.data?.documents || r.data || [])).catch(() => setDocs([]));
-    API.get(`/api/deals/${id}/irr`).then(r => setIrr(r.data || {})).catch(() => setIrr({}));
-    API.get(`/api/deals/${id}/narrative`).then(r => setNarrative(r.data || null)).catch(() => setNarrative(null));
-    API.get(`/api/deals/${id}/activity`).then(r => setActivity(r.data?.activity || r.data || [])).catch(() => setActivity([]));
-  }, []);
-  useEffect(() => { load(selId); }, [selId, load]);
-
-  // 스크롤 위치로 현재 섹션 감지 → 푸터 탭 active
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root) return;
-    const obs = new IntersectionObserver(
-      entries => entries.forEach(e => { if (e.isIntersecting) setActive(e.target.id); }),
-      { root, threshold: 0, rootMargin: "0px 0px -65% 0px" }
-    );
-    TABS.forEach(t => { const el = document.getElementById(t.id); if (el) obs.observe(el); });
-    return () => obs.disconnect();
-  }, [selId]);
-
-  const goSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-  const listDeal = deals.find((d: any) => (d.deal_code || String(d.id)) === selId) || {};
-  const D = { ...listDeal, ...(deal || {}) };
-
-  const g = (k: string) => gates?.[k] || {};
-  const progress = D.progress ?? gates?.progress ?? null;
-  const solo = D.source_replicability || D.competition || (D.is_solo ? "단독" : null);
-
-  // 문서 카운트
-  const docCount = (s: string) => docs.filter((d: any) => (d.status || "").toUpperCase().includes(s)).length;
-  const recv = docs.filter((d: any) => ["RECEIVED", "수령", "DONE"].some(x => (d.status || "").toUpperCase().includes(x.toUpperCase()))).length;
-  const review = docs.filter((d: any) => ["REVIEW", "검토"].some(x => (d.status || "").toUpperCase().includes(x.toUpperCase()))).length;
-  const missing = docs.filter((d: any) => ["MISSING", "미수령", "PENDING"].some(x => (d.status || "").toUpperCase().includes(x.toUpperCase()))).length;
-
-  const irrCell = (key: string) => irr?.[key]?.value ?? irr?.[key] ?? null;
-
-  return (
-    <div style={{ display: "flex", flex: 1, minHeight: 0, fontFamily: T.font, fontWeight: 400, color: T.text }}>
-
-      {/* ── 좌측: 활성 딜 리스트 ── */}
-      <div style={{ width: 200, flexShrink: 0, borderRight: `1px solid ${T.border}`, overflowY: "auto" }}>
-        <div style={{ padding: "12px 16px 6px", ...labelStyle }}>Active Deals</div>
-        {deals.length === 0 ? (
-          <div style={{ padding: "16px", fontSize: 11, color: T.muted }}>등록된 딜 없음</div>
-        ) : deals.map((d: any) => {
-          const id = d.deal_code || String(d.id);
-          const active = id === selId;
-          return (
-            <div key={id} onClick={() => setSelId(id)} style={{
-              padding: "10px 16px", cursor: "pointer", borderBottom: `1px solid ${T.border}`,
-              borderLeft: active ? `2px solid ${T.gold}` : "2px solid transparent",
-              background: active ? "#0D1826" : "transparent",
-            }}>
-              <div style={{ fontSize: 12, color: active ? T.text : T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dash(d.deal_name)}</div>
-              <div style={{ fontSize: 9, color: T.muted, marginTop: 3, fontFamily: T.mono }}>{dash(d.deal_code)}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── 메인 ── */}
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {!selId ? (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#2A3A52", fontFamily: T.font }}>
-            딜을 선택하세요
-          </div>
-        ) : <>
-        {/* 딜 헤더 (고정) */}
-        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 16, color: T.text }}>{dash(D.deal_name)}</span>
-            {D.deal_type && <span style={{ fontSize: 10, color: T.gold, border: `1px solid ${T.gold}44`, borderRadius: 3, padding: "2px 8px" }}>{D.deal_type}</span>}
-            {solo && <span style={{ fontSize: 10, color: T.blue, border: `1px solid ${T.blue}44`, borderRadius: 3, padding: "2px 8px" }}>{solo}</span>}
-            <span style={{ marginLeft: "auto", fontSize: 10, color: T.muted, fontFamily: T.mono }}>{dash(D.created_at ? String(D.created_at).slice(0, 10) : null)}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
-            <div style={{ flex: 1, height: 4, background: T.border, borderRadius: 2, overflow: "hidden" }}>
-              <div style={{ width: `${progress != null ? Math.min(100, progress) : 0}%`, height: "100%", background: T.gold }} />
-            </div>
-            <span style={{ fontSize: 11, color: T.muted, fontFamily: T.mono, minWidth: 36 }}>{progress != null ? `${progress}%` : "—"}</span>
-          </div>
-        </div>
-
-        {/* 세로 스크롤 컨텐츠 (5개 섹션) */}
-        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto" }}>
-
-          {/* ── 01 Intake & Gating ── */}
-          <section id="intake">
-            <SectionHeader n="01" name="INTAKE & GATING" desc="딜 등록 · COI · Kill · ESG" />
-            <StepCard icon="done" title="① 딜 등록" badge="DONE"
-              desc={`딜타입 ${dash(D.deal_type)} · ${dash(solo)}`} meta={D.created_at ? `등록 ${String(D.created_at).slice(0, 16).replace("T", " ")}` : undefined} />
-            <StepCard icon={g("coi").status ? (sc(g("coi").status) === T.red ? "block" : sc(g("coi").status) === T.orange ? "flag" : "done") : "pending"}
-              title="② COI 체크" auto="AUTO" badge={g("coi").status || "—"}
-              desc={dash(g("coi").detail)} meta={g("coi").ran_at ? `${String(g("coi").ran_at).slice(0, 16).replace("T", " ")} · ${dash(g("coi").ran_by || "SYSTEM")}` : undefined} />
-            <StepCard icon={g("kill").status ? (sc(g("kill").status) === T.red ? "block" : sc(g("kill").status) === T.orange ? "flag" : "done") : "pending"}
-              title="③ Kill Check" auto="AUTO" badge={g("kill").status || "—"}
-              desc={dash(g("kill").detail)} meta={g("kill").ran_at ? `${String(g("kill").ran_at).slice(0, 16).replace("T", " ")} · ${dash(g("kill").ran_by || "SYSTEM")}` : undefined} />
-            <StepCard icon={g("esg").status ? (sc(g("esg").status) === T.orange ? "flag" : "done") : "pending"}
-              title="④ ESG 스크리닝" auto="AUTO" badge={g("esg").status || "—"}
-              desc={dash(g("esg").detail)} meta={g("esg").ran_at ? `${String(g("esg").ran_at).slice(0, 16).replace("T", " ")} · ${dash(g("esg").ran_by || "SYSTEM")}` : undefined} />
-          </section>
-
-          {/* ── 02 Diligence ── */}
-          <section id="diligence">
-            <SectionHeader n="02" name="DILIGENCE" desc="SDD · Valuation · CDD · 문서" />
-            <StepCard icon={g("sdd").status ? "done" : "pending"} title="⑤ SDD" auto="HERMES" badge={g("sdd").status || "—"} desc={dash(g("sdd").detail)} />
-            <StepCard icon={g("valuation").status ? "done" : "pending"} title="⑥ Valuation Gate" badge={g("valuation").status || "—"}
-              desc={g("valuation").ltv != null ? `LTV ${g("valuation").ltv}%` : dash(g("valuation").detail)} />
-            <StepCard icon={g("cdd").status ? (sc(g("cdd").status) === T.green ? "done" : "active") : "active"} title="⑦ CDD (정량)" badge={g("cdd").status || "진행 중"} active
-              desc={dash(g("cdd").detail)}
-              action={g("cdd").progress != null ? <span style={{ fontFamily: T.mono, fontSize: 11, color: T.gold }}>{g("cdd").progress}%</span> : undefined} />
-            {/* Document Tracker */}
-            <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
-                <span style={labelStyle}>Document Tracker</span>
-                <span style={{ marginLeft: "auto", fontSize: 10, color: T.muted, fontFamily: T.mono }}>
-                  <span style={{ color: T.green }}>수령 {recv}</span> · <span style={{ color: T.orange }}>검토중 {review}</span> · <span style={{ color: T.muted }}>미수령 {missing}</span>
-                </span>
-              </div>
-              {docs.length === 0 ? <div style={{ fontSize: 11, color: T.muted }}>—</div> : docs.map((doc: any, i: number) => {
-                const c = sc(doc.status);
-                return (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: `1px solid ${T.border}` }}>
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />
-                    <span style={{ fontSize: 12, color: T.text }}>{dash(doc.name || doc.doc_name)}</span>
-                    <span style={{ marginLeft: "auto" }}><Badge status={doc.status} /></span>
-                  </div>
-                );
-              })}
-            </div>
-            <StepCard icon="block" title="⑧ EDD" badge="BLOCK" blocked desc="CDD 완료 후 진행 가능" />
-            <Divider>정성 실사 2.5 · CDD PASS 후 병행</Divider>
-            <div style={{ padding: "0 16px 16px", opacity: 0.38 }}>
-              <div style={{ fontSize: 11, color: T.muted }}>정성 실사 항목 — CDD PASS 후 활성화</div>
-            </div>
-          </section>
-
-          {/* ── 03 Analysis ── */}
-          <section id="analysis">
-            <SectionHeader n="03" name="ANALYSIS" desc="IRR · Merton · ECL · Narrative" />
-            {/* IRR Scenario Pack */}
-            <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
-              <div style={{ marginBottom: 12 }}><span style={labelStyle}>IRR Scenario Pack</span></div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-                {[["Base", "base", T.green], ["Downside", "downside", T.gold], ["Severe", "severe", T.red]].map(([name, key, color]) => {
-                  const v = irrCell(key as string);
-                  return (
-                    <div key={key as string} style={{ padding: "12px 14px", borderBottom: `2px solid ${color as string}` }}>
-                      <div style={{ fontSize: 7, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>{name}</div>
-                      <div style={{ fontSize: 13, fontFamily: T.mono, color: color as string, marginTop: 6 }}>{v != null ? `${v}%` : "—"}</div>
-                      <div style={{ fontSize: 7, color: T.muted, marginTop: 6 }}>{dash(irr?.[key as string]?.note)}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <StepCard icon={g("merton").status ? "done" : "pending"} title="Merton KMV" auto="HEPHAESTUS" badge={g("merton").status || "대기"}
-              desc={`PD ${dash(g("merton").pd)} · DD ${dash(g("merton").dd)}`} />
-            <StepCard icon={g("ecl").status ? "done" : "pending"} title="ECL / IFRS9" auto="HEPHAESTUS" badge={g("ecl").status || "대기"} desc={dash(g("ecl").detail)} />
-            {/* Narrative Gate */}
-            <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ color: T.text }}>Narrative Gate</span>
-              <span style={{ marginLeft: "auto" }}><Badge status={narrative?.result || narrative?.status} big /></span>
-            </div>
-          </section>
-
-          {/* ── 04 Evidence ── */}
-          <section id="evidence">
-            <SectionHeader n="04" name="EVIDENCE" desc="근거 · Override · Activity" />
-            {[["COI", "coi"], ["Kill Check", "kill"], ["ESG", "esg"]].map(([title, key]) => {
-              const gg = g(key);
-              return (
-                <div key={key} style={{ padding: "12px 16px", borderBottom: `1px solid ${T.border}` }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: T.text }}>{title}</span>
-                    <span style={{ marginLeft: "auto" }}><Badge status={gg.status} /></span>
-                  </div>
-                  <div style={{ fontSize: 11, color: T.muted, marginTop: 6, lineHeight: 1.6 }}>{dash(gg.detail)}</div>
-                  {gg.source && <div style={{ fontSize: 10, color: T.muted, marginTop: 4, fontFamily: T.mono }}>출처: {gg.source}</div>}
-                </div>
-              );
-            })}
-            <Divider>예외 &amp; Override</Divider>
-            <div style={{ margin: "0 16px 16px", padding: "12px 14px", background: "#0D0A08", borderBottom: `1px solid ${T.border}` }}>
-              {(gates?.overrides || []).length === 0 ? (
-                <div style={{ fontSize: 11, color: T.muted }}>Override 없음</div>
-              ) : (gates.overrides as any[]).map((o, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0" }}>
-                  <span style={{ fontSize: 10, color: T.orange, border: `1px solid ${T.orange}44`, borderRadius: 3, padding: "2px 7px" }}>OVERRIDE</span>
-                  <span style={{ fontSize: 11, color: T.text }}>{dash(o.detail)}</span>
-                </div>
-              ))}
-            </div>
-            <Divider>Activity Feed</Divider>
-            <div style={{ padding: "0 16px 16px" }}>
-              {activity.length === 0 ? <div style={{ fontSize: 11, color: T.muted }}>—</div> : activity.map((a: any, i: number) => (
-                <div key={i} style={{ display: "flex", gap: 12, padding: "5px 0", borderBottom: `1px solid ${T.border}` }}>
-                  <span style={{ minWidth: 32, fontSize: 10, color: T.muted, fontFamily: T.mono }}>{dash(a.time ? String(a.time).slice(11, 16) : null)}</span>
-                  <span style={{ fontSize: 11, color: T.muted }}>{dash(a.text || a.message)}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ── 05 IC Pack ── */}
-          <section id="icpack">
-            <SectionHeader n="05" name="IC PACK" desc="Memo · Risks · Voting · Carry-forward" />
-            {/* IC Memo 초안 */}
-            <div style={{ margin: "14px 16px", padding: "14px 16px", background: "#0A0F1A", borderLeft: `2px solid #C9A84C33` }}>
-              <div style={{ marginBottom: 8 }}><span style={labelStyle}>IC Memo 초안</span></div>
-              <div style={{ fontSize: 12, color: T.text, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{dash(D.ic_memo || D.memo)}</div>
-            </div>
-            {/* Key Risks */}
-            <div style={{ padding: "0 16px 14px" }}>
-              <div style={{ marginBottom: 8 }}><span style={labelStyle}>Key Risks</span></div>
-              {(D.key_risks || []).length === 0 ? <div style={{ fontSize: 11, color: T.muted }}>—</div> : (D.key_risks as any[]).map((r, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 0" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.red, marginTop: 5, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: T.text, lineHeight: 1.6 }}>{typeof r === "string" ? r : r.text}</span>
-                </div>
-              ))}
-            </div>
-            {/* IC Voting */}
-            <div style={{ padding: "14px 16px", borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
-              <div style={{ marginBottom: 10 }}><span style={labelStyle}>IC Voting</span></div>
-              <div style={{ display: "flex", gap: 8 }}>
-                {[["승인", T.green], ["조건부승인", T.gold], ["부결", T.red]].map(([label, color]) => {
-                  const on = vote === label;
-                  return (
-                    <button key={label as string} onClick={() => setVote(label as string)} style={{
-                      flex: 1, padding: "10px", fontSize: 12, cursor: "pointer", fontFamily: T.font,
-                      color: on ? "#080C14" : (color as string), background: on ? (color as string) : "transparent",
-                      border: `1px solid ${color as string}`, borderRadius: 4,
-                    }}>{label}</button>
-                  );
-                })}
-              </div>
-            </div>
-            {/* Carry-forward */}
-            <div style={{ padding: "14px 16px" }}>
-              <div style={{ marginBottom: 8 }}><span style={labelStyle}>Carry-forward</span></div>
-              {(D.carry_forward || ["—", "—", "—", "—"]).slice(0, 4).map((c: any, i: number) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 0" }}>
-                  <span style={{ fontFamily: T.mono, fontSize: 11, color: T.gold, flexShrink: 0 }}>C{i + 1}</span>
-                  <span style={{ fontSize: 12, color: T.muted, lineHeight: 1.6 }}>{typeof c === "string" ? c : (c.text || "—")}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        {/* 푸터 탭바 (하단 고정) */}
-        <div style={{ flexShrink: 0, display: "flex", borderTop: `1px solid ${T.border}`, background: T.bg }}>
-          {TABS.map(t => {
-            const on = t.id === active;
-            return (
-              <button key={t.id} onClick={() => goSection(t.id)} style={{
-                flex: 1, padding: "10px 8px", cursor: "pointer", background: on ? "#0D1826" : "transparent",
-                border: "none", borderTop: on ? `2px solid ${T.gold}` : "2px solid transparent",
-                display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6, fontFamily: T.font,
-              }}>
-                <span style={{ fontFamily: T.mono, fontSize: 11, color: on ? T.gold : T.muted }}>{t.n}</span>
-                <span style={{ fontSize: 11, color: on ? T.text : T.muted, whiteSpace: "nowrap" }}>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        </>}
-      </div>
-
-      {/* ── 우측 고정 패널 ── */}
-      <div style={{ width: 260, flexShrink: 0, borderLeft: `1px solid ${T.border}`, overflowY: "auto", padding: "0 0 20px", position: "sticky", top: 0, alignSelf: "flex-start", maxHeight: "100%" }}>
-        <PanelSection title="딜 현황">
-          <Row k="진행률" v={progress != null ? `${progress}%` : "—"} mono />
-          <Row k="현재 단계" v={dash(D.stage)} />
-          <Row k="자동 대기" v={dash(gates?.auto_pending)} mono />
-          <Row k="경과" v={dash(gates?.elapsed)} mono />
-          <Row k="마감" v={dash(D.maturity_date ? String(D.maturity_date).slice(0, 10) : null)} mono />
-        </PanelSection>
-        <PanelSection title="게이트 요약">
-          {[["COI", "coi"], ["Kill", "kill"], ["ESG", "esg"], ["SDD", "sdd"], ["CDD", "cdd"], ["Narrative", null]].map(([label, key]) => (
-            <div key={label as string} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${T.border}` }}>
-              <span style={{ fontSize: 11, color: T.muted }}>{label}</span>
-              <Badge status={key ? g(key as string).status : (narrative?.result || narrative?.status)} />
-            </div>
-          ))}
-        </PanelSection>
-        <PanelSection title="문서">
-          <Row k="수령" v={String(recv)} mono color={T.green} />
-          <Row k="검토중" v={String(review)} mono color={T.orange} />
-          <Row k="미수령" v={String(missing)} mono color={T.muted} />
-        </PanelSection>
-        <PanelSection title="IRR">
-          <Row k="Base" v={irrCell("base") != null ? `${irrCell("base")}%` : "—"} mono color={T.green} />
-          <Row k="Downside" v={irrCell("downside") != null ? `${irrCell("downside")}%` : "—"} mono color={T.gold} />
-          <Row k="Severe" v={irrCell("severe") != null ? `${irrCell("severe")}%` : "—"} mono color={T.red} />
-        </PanelSection>
-        <PanelSection title="범례">
-          {[["완료", T.green], ["진행중", T.gold], ["자동", T.blue], ["FLAG", T.orange], ["대기", T.muted]].map(([l, c]) => (
-            <div key={l as string} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 0" }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: c as string }} />
-              <span style={{ fontSize: 11, color: T.muted }}>{l}</span>
-            </div>
-          ))}
-        </PanelSection>
-      </div>
-    </div>
-  );
 }
 
 function SectionHeader({ n, name, desc }: { n: string; name: string; desc: string }) {
@@ -432,19 +57,288 @@ function SectionHeader({ n, name, desc }: { n: string; name: string; desc: strin
   );
 }
 
-function PanelSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
-      <div style={{ marginBottom: 10, fontSize: 10, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>{title}</div>
-      {children}
+export default function DealExecution({ deals = [] }: { deals?: any[] }) {
+  const [selId, setSelId] = useState<string | null>(null);
+  const [deal, setDeal] = useState<any>(null);
+  const [gates, setGates] = useState<any>({});
+  const [docs, setDocs] = useState<any[]>([]);
+  const [irr, setIrr] = useState<any>({});
+  const [narrative, setNarrative] = useState<any>(null);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState("ALL");
+
+  // 딜 리스트 진입 시 첫 딜 자동 선택 (단일 딜 실행 뷰)
+  useEffect(() => { if (deals.length) setSelId(prev => prev || (deals[0].deal_code || String(deals[0].id))); }, [deals]);
+
+  const load = useCallback((id: string | null) => {
+    if (!id) return;
+    API.get(`/api/deals/${id}`).then(r => setDeal(r.data)).catch(() => setDeal(null));
+    API.get(`/api/deals/${id}/gates`).then(r => setGates(r.data || {})).catch(() => setGates({}));
+    API.get(`/api/deals/${id}/documents`).then(r => setDocs(r.data?.documents || r.data || [])).catch(() => setDocs([]));
+    API.get(`/api/deals/${id}/irr`).then(r => setIrr(r.data || {})).catch(() => setIrr({}));
+    API.get(`/api/deals/${id}/narrative`).then(r => setNarrative(r.data || null)).catch(() => setNarrative(null));
+    API.get(`/api/deals/${id}/qualitative-tasks`).then(r => setTasks(r.data?.tasks || r.data || [])).catch(() => setTasks([]));
+  }, []);
+  useEffect(() => { load(selId); }, [selId, load]);
+
+  const listDeal = deals.find((d: any) => (d.deal_code || String(d.id)) === selId) || {};
+  const D = { ...listDeal, ...(deal || {}) };
+  const g = (k: string) => gates?.[k] || {};
+  const solo = D.source_replicability || (D.is_solo ? "단독딜" : null);
+  const irrCell = (k: string) => irr?.[k]?.value ?? irr?.[k] ?? null;
+
+  // 진행률 (Pre-IC 9단계)
+  const STEP_KEYS = ["coi", "kill", "esg", "sdd", "valuation", "cdd", "irr", "merton", "narrative"];
+  const doneCount = 1 + STEP_KEYS.filter(k => sc(g(k).status) === T.green).length; // 1 = 딜 등록
+  const progressPct = Math.round((Math.min(doneCount, 9) / 9) * 100);
+
+  // 문서 카운트
+  const has = (d: any, ...keys: string[]) => keys.some(k => (d.status || "").toUpperCase().includes(k));
+  const recv = docs.filter(d => has(d, "RECEIV", "DONE", "수령")).length;
+  const review = docs.filter(d => has(d, "REVIEW", "검토")).length;
+  const missing = docs.filter(d => has(d, "MISSING", "PENDING", "미수령")).length;
+
+  // 정성 태스크
+  const LV_ORDER: any = { CRITICAL: 0, WATCH: 1, OPTIONAL: 2 };
+  const lv = (t: any) => (t.level || "OPTIONAL").toUpperCase();
+  const isDone = (t: any) => completed.has(String(t.id ?? t.title));
+  const toggle = (t: any) => {
+    const key = String(t.id ?? t.title);
+    setCompleted(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
+  };
+  const filtered = tasks
+    .filter(t => filter === "ALL" || (filter === "CRITICAL" ? lv(t) === "CRITICAL" : (t.source || "").toUpperCase() === filter.toUpperCase()))
+    .sort((a, b) => (LV_ORDER[lv(a)] ?? 3) - (LV_ORDER[lv(b)] ?? 3));
+  const criticalOpen = tasks.filter(t => lv(t) === "CRITICAL" && !isDone(t)).length;
+  const icEnabled = criticalOpen === 0;
+
+  const QualBadge = ({ source, critical }: { source: string; critical?: boolean }) => {
+    const hasCrit = critical || tasks.some(t => (t.source || "").toUpperCase() === source.toUpperCase() && lv(t) === "CRITICAL" && !isDone(t));
+    const c = hasCrit ? T.red : T.muted;
+    const n = tasks.filter(t => (t.source || "").toUpperCase() === source.toUpperCase()).length;
+    return <span onClick={() => setFilter(source)} style={{ fontSize: 9, color: c, border: `1px solid ${c}44`, borderRadius: 3, padding: "1px 6px", cursor: "pointer", marginTop: 6, display: "inline-block" }}>정성 {source}{n ? ` · ${n}` : ""}</span>;
+  };
+
+  const StepCard = ({ icon, title, tags, badge, children, dimmed, blocked }: {
+    icon: "done" | "active" | "pending"; title: string; tags?: React.ReactNode; badge?: string;
+    children?: React.ReactNode; dimmed?: boolean; blocked?: boolean;
+  }) => (
+    <div style={{
+      padding: "14px 16px", borderBottom: `1px solid ${T.border}`,
+      background: icon === "active" ? T.surface1 : "transparent",
+      borderRadius: icon === "active" ? 6 : 0,
+      opacity: blocked ? 0.35 : 1,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <StepIcon kind={icon} />
+        <span style={{ color: dimmed ? T.muted : T.text }}>{title}</span>
+        {tags}
+        {badge && <span style={{ marginLeft: "auto" }}><Badge status={badge} /></span>}
+      </div>
+      {children && <div style={{ marginLeft: 30, marginTop: 6 }}>{children}</div>}
     </div>
   );
-}
-function Row({ k, v, mono, color }: { k: string; v: string; mono?: boolean; color?: string }) {
+
+  const AUTO = <Tag label="AUTO" color={T.blue} />;
+  const HEPH = <Tag label="HEPHAESTUS" color={T.purple} />;
+
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "4px 0" }}>
-      <span style={{ fontSize: 11, color: T.muted }}>{k}</span>
-      <span style={{ fontSize: 12, color: color || T.text, fontFamily: mono ? T.mono : T.font }}>{v}</span>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, fontFamily: T.font, fontWeight: 400, color: T.text, background: T.bg }}>
+
+      {/* ── 딜 헤더 (상단 고정) ── */}
+      <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 16 }}>{dash(D.deal_name)}</span>
+          <Tag label={D.deal_type || "DIRECT LENDING"} color={T.gold} />
+          {solo && <Tag label={solo} color={T.blue} />}
+          <Tag label="CDD-lite 진행중" color={T.watch} />
+          <span style={{ marginLeft: "auto", fontSize: 10, color: T.muted, fontFamily: T.mono }}>
+            경과 {dash(gates?.elapsed)} · 담당 {dash(D.owner || gates?.owner)}
+          </span>
+        </div>
+        {/* 진행률 바 (Pre-IC 9단계) */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+          <div style={{ flex: 1, display: "flex", gap: 3 }}>
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i < doneCount ? T.gold : T.border }} />
+            ))}
+          </div>
+          <span style={{ fontSize: 11, color: T.muted, fontFamily: T.mono, minWidth: 64 }}>{progressPct}% · Pre-IC</span>
+        </div>
+      </div>
+
+      {/* ── 본문: 좌 파이프라인 + 우 Qualitative Queue ── */}
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+
+        {/* 좌측: 정량 파이프라인 */}
+        <div style={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
+
+          {/* 01 INTAKE & GATING */}
+          <SectionHeader n="01" name="INTAKE & GATING" desc="딜 등록 · COI · Kill · ESG" />
+          <StepCard icon="done" dimmed title="① 딜 등록" badge="완료" />
+          <StepCard icon={sc(g("coi").status) === T.green ? "done" : "pending"} dimmed={sc(g("coi").status) === T.green} title="② COI 체크" tags={AUTO} badge={g("coi").status || "—"} />
+          <StepCard icon={sc(g("kill").status) === T.green ? "done" : "pending"} dimmed={sc(g("kill").status) === T.green} title="③ Kill Check" tags={AUTO} badge={g("kill").status || "—"} />
+          <StepCard icon={sc(g("esg").status) === T.green ? "done" : "pending"} title="④ ESG 스크리닝" tags={AUTO} badge={g("esg").status || "—"}>
+            {sc(g("esg").status) === T.orange && <QualBadge source="ESG" />}
+          </StepCard>
+
+          {/* 02 DILIGENCE */}
+          <SectionHeader n="02" name="DILIGENCE" desc="SDD · Valuation · CDD-lite" />
+          <StepCard icon={sc(g("sdd").status) === T.green ? "done" : "pending"} title="⑤ SDD" tags={HEPH} badge={g("sdd").status || "—"}>
+            <QualBadge source="SDD" />
+          </StepCard>
+          <StepCard icon={sc(g("valuation").status) === T.green ? "done" : "pending"} dimmed={sc(g("valuation").status) === T.green} title="⑥ Valuation Gate" badge={g("valuation").status || "—"}>
+            <div style={{ fontSize: 11, color: T.muted, fontFamily: T.mono }}>LTV {g("valuation").ltv != null ? `${g("valuation").ltv}%` : "—"}</div>
+          </StepCard>
+          <StepCard icon="active" title="⑦ CDD-lite (Core DD)" badge={g("cdd").status || "진행 중"}>
+            <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6 }}>IC Memo 초안 생성에 충분한 수준까지만 진행</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+              <div style={{ flex: 1, height: 3, background: T.border, borderRadius: 2, overflow: "hidden" }}>
+                <div style={{ width: `${g("cdd").progress != null ? g("cdd").progress : 0}%`, height: "100%", background: T.gold }} />
+              </div>
+              <span style={{ fontFamily: T.mono, fontSize: 11, color: T.gold }}>{g("cdd").progress != null ? `${g("cdd").progress}%` : "—"}</span>
+            </div>
+            <div><QualBadge source="CDD" /></div>
+            {/* Document Tracker */}
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <span style={labelStyle}>Document Tracker</span>
+                <span style={{ marginLeft: "auto", fontSize: 10, fontFamily: T.mono }}>
+                  <span style={{ color: T.green }}>수령 {recv}</span> · <span style={{ color: T.orange }}>검토중 {review}</span> · <span style={{ color: T.muted }}>미수령 {missing}</span>
+                </span>
+              </div>
+              {docs.length === 0 ? <div style={{ fontSize: 11, color: T.muted }}>—</div> : docs.map((doc: any, i: number) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0", borderBottom: `1px solid ${T.border}` }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: sc(doc.status) }} />
+                  <span style={{ fontSize: 12 }}>{dash(doc.name || doc.doc_name)}</span>
+                  <span style={{ marginLeft: "auto" }}><Badge status={doc.status} /></span>
+                </div>
+              ))}
+            </div>
+          </StepCard>
+
+          {/* 03 ANALYSIS & ENGINE */}
+          <SectionHeader n="03" name="ANALYSIS & ENGINE" desc="IRR · Merton · ECL · Narrative" />
+          <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ marginBottom: 12 }}><span style={labelStyle}>IRR Scenario Pack</span></div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+              {[["Base", "base", T.green], ["Downside", "downside", T.gold], ["Severe", "severe", T.red]].map(([name, key, color]) => {
+                const v = irrCell(key as string);
+                return (
+                  <div key={key as string} style={{ padding: "12px 14px", borderBottom: `2px solid ${color as string}` }}>
+                    <div style={{ fontSize: 7, color: T.muted, letterSpacing: "0.1em", textTransform: "uppercase" }}>{name}</div>
+                    <div style={{ fontSize: 13, fontFamily: T.mono, color: color as string, marginTop: 6 }}>{v != null ? `${v}%` : "—"}</div>
+                    <div style={{ fontSize: 7, color: T.muted, marginTop: 6 }}>{dash(irr?.[key as string]?.note)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <StepCard icon="pending" blocked title="Merton KMV" tags={HEPH} badge={g("merton").status || "CDD 완료 후 대기"} />
+          <StepCard icon="pending" blocked title="ECL / IFRS9" tags={HEPH} badge={g("ecl").status || "대기"} />
+          <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span>Narrative Gate</span>
+              <span style={{ marginLeft: "auto" }}><Badge status={narrative?.result || narrative?.status} big /></span>
+            </div>
+            <QualBadge source="Narrative" />
+          </div>
+
+          {/* 04 IC MEMO 초안 */}
+          <SectionHeader n="04" name="IC MEMO 초안" desc="생성 대기 · S1~S8" />
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ border: `1px dashed ${T.border}`, borderRadius: 6, padding: "14px 16px" }}>
+              <div style={{ fontSize: 11, color: T.muted, marginBottom: 10 }}>IC Memo 초안 생성 대기</div>
+              {["S1 거래 개요", "S2 차주/스폰서", "S3 담보/구조", "S4 상환재원", "S5 재무분석", "S6 시나리오", "S7 리스크", "S8 권고"].map((s, i) => {
+                const filled = (D.ic_memo_sections || {})[`s${i + 1}`];
+                const written = i < 4 && filled !== undefined ? filled : (i < 4 ? null : null);
+                return (
+                  <div key={s} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${T.border}` }}>
+                    <span style={{ fontSize: 11, color: i < 4 ? T.text : T.muted }}>{s}</span>
+                    <span style={{ fontSize: 11, color: written ? T.green : T.muted, fontFamily: T.mono }}>{written ? "작성됨" : "—"}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {criticalOpen > 0 && (
+              <div style={{ marginTop: 12, padding: "10px 14px", background: "#1A0A0A", border: `1px solid ${T.red}44`, borderRadius: 6 }}>
+                <span style={{ fontSize: 11, color: T.red }}>⚠ CRITICAL 정성 태스크 {criticalOpen}건 미해소 — IC 제출 불가</span>
+              </div>
+            )}
+
+            <button
+              disabled={!icEnabled}
+              onClick={() => { if (icEnabled) document.getElementById("page-3")?.scrollIntoView({ behavior: "smooth" }); }}
+              style={{
+                width: "100%", marginTop: 12, padding: "12px", fontSize: 13, fontFamily: T.font, borderRadius: 4,
+                cursor: icEnabled ? "pointer" : "default",
+                background: icEnabled ? T.gold : "transparent",
+                color: icEnabled ? "#080C14" : T.muted,
+                border: icEnabled ? "none" : `1px solid ${T.border}`,
+              }}>
+              {icEnabled ? "IC 제출 →" : "CRITICAL 해소 후 제출 가능"}
+            </button>
+          </div>
+        </div>
+
+        {/* 우측: Qualitative Queue (sticky) */}
+        <div style={{ width: 300, flexShrink: 0, borderLeft: `1px solid ${T.border}`, overflowY: "auto", position: "sticky", top: 0, alignSelf: "flex-start", maxHeight: "100%" }}>
+          <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={labelStyle}>Qualitative Queue</span>
+            <span style={{ marginLeft: "auto", fontSize: 11, fontFamily: T.mono, color: T.muted }}>{tasks.filter(t => !isDone(t)).length}/{tasks.length}</span>
+          </div>
+          {/* 필터 */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: "10px 16px", borderBottom: `1px solid ${T.border}` }}>
+            {["ALL", "CRITICAL", "CDD", "SDD", "ESG", "Narrative"].map(f => {
+              const on = filter === f;
+              return (
+                <span key={f} onClick={() => setFilter(f)} style={{
+                  fontSize: 10, cursor: "pointer", padding: "3px 8px", borderRadius: 3,
+                  color: on ? "#080C14" : T.muted, background: on ? T.gold : "transparent", border: `1px solid ${on ? T.gold : T.border}`,
+                }}>{f === "ALL" ? "전체" : f}</span>
+              );
+            })}
+          </div>
+          {/* 태스크 카드 */}
+          <div style={{ padding: "4px 0" }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "24px 16px", textAlign: "center", fontSize: 11, color: T.muted }}>정성 태스크 없음</div>
+            ) : filtered.map((t: any, i: number) => {
+              const level = lv(t);
+              const lc = level === "CRITICAL" ? T.red : level === "WATCH" ? T.watch : T.muted;
+              const done = isDone(t);
+              return (
+                <div key={t.id ?? i} style={{ padding: "12px 16px", borderBottom: `1px solid ${T.border}`, opacity: done ? 0.5 : 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Tag label={level} color={lc} />
+                    <span style={{ fontSize: 10, color: T.muted }}>{dash(t.source)}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: T.text, marginTop: 6, lineHeight: 1.6 }}>{dash(t.title || t.desc)}</div>
+                  {t.action && <div style={{ fontSize: 10, color: T.muted, marginTop: 4 }}>{t.action}</div>}
+                  <button onClick={() => toggle(t)} style={{
+                    marginTop: 8, padding: "4px 10px", fontSize: 10, cursor: "pointer", borderRadius: 3, fontFamily: T.font,
+                    color: done ? T.green : T.muted, background: "transparent", border: `1px solid ${done ? T.green : T.border}`,
+                  }}>{done ? "완료 ✓" : "진행 중"}</button>
+                </div>
+              );
+            })}
+          </div>
+          {/* 하단 요약 */}
+          <div style={{ padding: "14px 16px" }}>
+            {criticalOpen > 0 ? (
+              <div style={{ padding: "10px 12px", background: "#1A0A0A", border: `1px solid ${T.red}44`, borderRadius: 6, fontSize: 11, color: T.red }}>
+                CRITICAL 미완료 {criticalOpen}건
+              </div>
+            ) : (
+              <div style={{ padding: "10px 12px", background: "#0A1A10", border: `1px solid ${T.green}44`, borderRadius: 6, fontSize: 11, color: T.green }}>
+                CRITICAL 전부 완료 ✓
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
