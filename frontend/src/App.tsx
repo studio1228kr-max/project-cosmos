@@ -12,6 +12,7 @@ import SignalRoom from "./pages/SignalRoom";
 import RiskBook from "./pages/RiskBook";
 import EvidenceChecklist from "./pages/EvidenceChecklist";
 import CreditDesk from "./pages/CreditDesk";
+import DealExecution from "./pages/DealExecution";
 
 const STATUS_COLOR: any = { INTAKE: "#888", SCREENED: "#185FA5", WATCHLIST: "#854F0B", ADVANCE: "#3B6D11", REJECT: "#A32D2D" };
 const STATUS_BG: any = { INTAKE: "#F1EFE8", SCREENED: "#E6F1FB", WATCHLIST: "#FAEEDA", ADVANCE: "#EAF3DE", REJECT: "#FCEBEB" };
@@ -912,6 +913,76 @@ function MainApp({ onLogout }: { onLogout: () => void }) {
   );
 }
 
+// ── 단일 스크롤 스냅 데크 (1~8페이지) ──────────────────────
+const DECK_TABS = [
+  { id: "page-1", label: "Credit Desk" },
+  { id: "page-2", label: "Deals" },
+  { id: "page-3", label: "DD" },
+  { id: "page-4", label: "Portfolio" },
+];
+function ScrollDeck({ onLogout }: { onLogout: () => void }) {
+  const D = { bg: "#080C14", gold: "#C9A84C", border: "#1A2332", text: "#E2E8F0", muted: "#4A6080" };
+  const TOPBAR_H = 88; // Alert(24) + 탑바(36) + 에이전트바(28)
+  const [active, setActive] = useState("page-1");
+  const [deals, setDeals] = useState<any[]>([]);
+  const deckRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    API.get("/api/risk-book/deals").then(r => setDeals(r.data || [])).catch(() => setDeals([]));
+  }, []);
+
+  useEffect(() => {
+    const root = deckRef.current;
+    if (!root) return;
+    const obs = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) setActive(e.target.id); }),
+      { root, threshold: 0.5 }
+    );
+    DECK_TABS.forEach(t => { const el = document.getElementById(t.id); if (el) obs.observe(el); });
+    return () => obs.disconnect();
+  }, []);
+
+  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const sec: React.CSSProperties = { minHeight: "100vh", scrollSnapAlign: "start", overflowY: "auto" };
+  const ph: React.CSSProperties = { ...sec, background: D.bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#1A2235", fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" };
+
+  return (
+    <>
+      {/* 고정 탑바 */}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, height: 54, background: D.bg, borderBottom: `1px solid ${D.border}`, display: "flex", alignItems: "center", padding: "0 20px", fontFamily: "'Goldman Sans', sans-serif" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
+          <img src="/logo.png" width={24} height={24} alt="Cosmos" style={{ filter: "invert(1) sepia(1) saturate(2) hue-rotate(5deg) brightness(0.9)" }} />
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.06em", color: D.gold }}>COSMOS</span>
+        </div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {DECK_TABS.map(t => {
+            const on = t.id === active;
+            return (
+              <div key={t.id} onClick={() => go(t.id)} style={{ padding: "8px 16px", cursor: "pointer", fontSize: 13, color: on ? D.text : D.muted, borderBottom: on ? `2px solid ${D.gold}` : "2px solid transparent" }}>{t.label}</div>
+            );
+          })}
+        </div>
+        <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+          <button onClick={() => { window.location.href = "/app?nav=intake"; }} style={{ padding: "8px 15px", background: "transparent", color: D.gold, border: `1px solid ${D.gold}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>+ New Deal</button>
+          <span onClick={onLogout} title="로그아웃" style={{ fontSize: 17, color: D.muted, cursor: "pointer", lineHeight: 1 }}>⏻</span>
+        </div>
+      </div>
+
+      {/* 스크롤 스냅 컨테이너 */}
+      <div ref={deckRef} style={{ height: "100vh", overflowY: "scroll", scrollSnapType: "y mandatory", scrollBehavior: "smooth", background: D.bg }}>
+        <section id="page-1" style={{ ...sec, paddingTop: TOPBAR_H }}><CreditDesk onLogout={onLogout} /></section>
+        <section id="page-2" style={{ ...sec, display: "flex", flexDirection: "column" }}><DealExecution deals={deals} /></section>
+        <section id="page-3" style={ph}>준비 중</section>
+        <section id="page-4" style={ph}>준비 중</section>
+        <section id="page-5" style={ph}>준비 중</section>
+        <section id="page-6" style={ph}>준비 중</section>
+        <section id="page-7" style={ph}>준비 중</section>
+        <section id="page-8" style={ph}>준비 중</section>
+      </div>
+    </>
+  );
+}
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || "");
 
@@ -931,8 +1002,8 @@ function App() {
   if (window.location.pathname.startsWith("/app")) {
     return <MainApp onLogout={handleLogout} />;
   }
-  // 루트 / 및 /dashboard → Credit Desk (메인 화면)
-  return <CreditDesk onLogout={handleLogout} />;
+  // 루트 / 및 /dashboard → 단일 스크롤 스냅 데크 (1~8페이지)
+  return <ScrollDeck onLogout={handleLogout} />;
 }
 
 // ═══════════════════════════════════════════════════════
