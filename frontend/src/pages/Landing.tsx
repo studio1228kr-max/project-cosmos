@@ -29,6 +29,13 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [form, setForm] = useState({ name: "", company: "", email: "", role: "", message: "", interests: [] as string[] });
 
+  // Live clock for countdowns — ticks every second
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const INTERESTS = [
     "Overall Private Credit Portfolio Management",
     "Integrated Management of Real Estate, Private Credit & Private Lending",
@@ -138,30 +145,63 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
 
 
 
-      {/* 3-CARD CAPABILITIES SECTION */}
-      <div style={{ background: "#080C14", padding: isMobile ? "44px 24px" : "64px 40px", borderTop: "1px solid #1a2535" }}>
-        <div style={{ textAlign: "center", marginBottom: isMobile ? 48 : 72 }}>
-          <div style={{ fontSize: 11, color: "#4A5568", letterSpacing: "0.08em", marginBottom: 16, fontWeight: 500 }}>Platform capabilities</div>
-          <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 600, color: "#FFFFFF", margin: 0, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "-0.01em" }}>
-            Built for the Full Deal Lifecycle
-          </h2>
+      {/* COUNTDOWN SECTION */}
+      <div style={{ background: "#080C14", padding: isMobile ? "56px 24px" : "88px 40px", borderTop: "1px solid #1a2535", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ fontSize: 11, color: "#C9A84C", letterSpacing: "0.18em", marginBottom: isMobile ? 40 : 56, fontWeight: 400, fontFamily: "'IBM Plex Mono', monospace", textTransform: "lowercase" }}>
+          cosmos — luska capital
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: isMobile ? 36 : 56, maxWidth: 1200, margin: "0 auto" }}>
-          {[
-            { title: "Origination", sub: "Surface relevant opportunities and track pipeline momentum." },
-            { title: "Underwriting", sub: "Transform raw deal evidence into structured underwriting judgment." },
-            { title: "Monitoring", sub: "Track portfolio risk, covenant signals, and execution drift over time." },
-          ].map(({ title, sub }) => (
-            <div key={title} style={{
-              borderLeft: "2px solid #1A2332",
-              padding: isMobile ? "6px 24px" : "10px 32px",
-              display: "flex", flexDirection: "column",
-            }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: "#FFFFFF", marginBottom: 20, fontFamily: "'Goldman Sans', sans-serif", letterSpacing: "0.01em" }}>{title}</div>
-              <div style={{ fontSize: 14, color: "#7A9ABF", lineHeight: 1.9, fontFamily: "'Goldman Sans', sans-serif" }}>{sub}</div>
-            </div>
-          ))}
-        </div>
+
+        {[
+          { target: new Date("2026-07-20T00:00:00+09:00").getTime(), label: "Demo Access", date: "2026.07.20" },
+          { target: new Date("2026-08-15T00:00:00+09:00").getTime(), label: "Product Launch", date: "2026.08.15" },
+        ].map(({ target, label, date }, idx) => {
+          const diff = Math.max(0, target - now);
+          const days = Math.floor(diff / 86400000);
+          const hrs  = Math.floor((diff % 86400000) / 3600000);
+          const min  = Math.floor((diff % 3600000) / 60000);
+          const sec  = Math.floor((diff % 60000) / 1000);
+          const pad = (n: number) => String(n).padStart(2, "0");
+          const units = [
+            { val: pad(days), unit: "DAYS" },
+            { val: pad(hrs),  unit: "HRS" },
+            { val: pad(min),  unit: "MIN" },
+            { val: pad(sec),  unit: "SEC" },
+          ];
+          return (
+            <React.Fragment key={label}>
+              {idx > 0 && (
+                <div style={{ width: isMobile ? 200 : 320, height: 1, background: "#1e3050", margin: isMobile ? "40px 0" : "56px 0" }} />
+              )}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+                  {units.map((u, i) => (
+                    <React.Fragment key={u.unit}>
+                      {i > 0 && (
+                        <div style={{
+                          fontFamily: "'IBM Plex Mono', monospace", fontWeight: 300,
+                          fontSize: "clamp(36px, 5vw, 56px)", color: "#1e3050",
+                          margin: "0 8px", lineHeight: 1,
+                        }}>:</div>
+                      )}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{
+                          fontFamily: "'IBM Plex Mono', monospace", fontWeight: 300,
+                          fontSize: "clamp(36px, 5vw, 56px)", color: "#c8d4e0",
+                          lineHeight: 1, fontVariantNumeric: "tabular-nums",
+                        }}>{u.val}</div>
+                        <div style={{ fontSize: 9, color: "#2a4060", letterSpacing: "0.15em", marginTop: 10, fontFamily: "'IBM Plex Mono', monospace" }}>{u.unit}</div>
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+                <div style={{ marginTop: 28, textAlign: "center" }}>
+                  <div style={{ fontSize: 13, color: "#7A9ABF", letterSpacing: "0.08em", fontFamily: "'IBM Plex Mono', monospace" }}>{label}</div>
+                  <div style={{ fontSize: 11, color: "#2a4060", letterSpacing: "0.1em", marginTop: 6, fontFamily: "'IBM Plex Mono', monospace" }}>{date}</div>
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        })}
       </div>
 
       {/* ACCESS STRIP */}
