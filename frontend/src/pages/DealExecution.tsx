@@ -97,7 +97,8 @@ const TABS = [
 
 export default function DealExecution({ deals = [] }: { deals?: any[] }) {
   const [selId, setSelId] = useState<string | null>(null);
-  const [tab, setTab] = useState("intake");
+  const [active, setActive] = useState("intake");
+  const scrollRef = React.useRef<HTMLDivElement>(null);
   const [deal, setDeal] = useState<any>(null);
   const [gates, setGates] = useState<any>({});
   const [docs, setDocs] = useState<any[]>([]);
@@ -120,6 +121,20 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
     API.get(`/api/deals/${id}/activity`).then(r => setActivity(r.data?.activity || r.data || [])).catch(() => setActivity([]));
   }, []);
   useEffect(() => { load(selId); }, [selId, load]);
+
+  // 스크롤 위치로 현재 섹션 감지 → 푸터 탭 active
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) return;
+    const obs = new IntersectionObserver(
+      entries => entries.forEach(e => { if (e.isIntersecting) setActive(e.target.id); }),
+      { root, threshold: 0, rootMargin: "0px 0px -65% 0px" }
+    );
+    TABS.forEach(t => { const el = document.getElementById(t.id); if (el) obs.observe(el); });
+    return () => obs.disconnect();
+  }, [selId]);
+
+  const goSection = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const listDeal = deals.find((d: any) => (d.deal_code || String(d.id)) === selId) || {};
   const D = { ...listDeal, ...(deal || {}) };
@@ -178,28 +193,12 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
           </div>
         </div>
 
-        {/* 5탭 블록 네비게이션 */}
-        <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, flexShrink: 0, overflowX: "auto" }}>
-          {TABS.map(t => {
-            const active = t.id === tab;
-            return (
-              <div key={t.id} onClick={() => setTab(t.id)} style={{
-                padding: "10px 18px", cursor: "pointer", display: "flex", alignItems: "baseline", gap: 8,
-                borderRight: `1px solid ${T.border}`, borderBottom: active ? `2px solid ${T.gold}` : "2px solid transparent",
-                background: active ? "#0D1826" : "transparent", whiteSpace: "nowrap",
-              }}>
-                <span style={{ fontFamily: T.mono, fontSize: 11, color: active ? T.gold : T.muted }}>{t.n}</span>
-                <span style={{ fontSize: 12, color: active ? T.text : T.muted }}>{t.label}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 탭 컨텐츠 */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+        {/* 세로 스크롤 컨텐츠 (5개 섹션) */}
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto" }}>
 
           {/* ── 01 Intake & Gating ── */}
-          {tab === "intake" && <>
+          <section id="intake">
+            <SectionHeader n="01" name="INTAKE & GATING" desc="딜 등록 · COI · Kill · ESG" />
             <StepCard icon="done" title="① 딜 등록" badge="DONE"
               desc={`딜타입 ${dash(D.deal_type)} · ${dash(solo)}`} meta={D.created_at ? `등록 ${String(D.created_at).slice(0, 16).replace("T", " ")}` : undefined} />
             <StepCard icon={g("coi").status ? (sc(g("coi").status) === T.red ? "block" : sc(g("coi").status) === T.orange ? "flag" : "done") : "pending"}
@@ -211,10 +210,11 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
             <StepCard icon={g("esg").status ? (sc(g("esg").status) === T.orange ? "flag" : "done") : "pending"}
               title="④ ESG 스크리닝" auto="AUTO" badge={g("esg").status || "—"}
               desc={dash(g("esg").detail)} meta={g("esg").ran_at ? `${String(g("esg").ran_at).slice(0, 16).replace("T", " ")} · ${dash(g("esg").ran_by || "SYSTEM")}` : undefined} />
-          </>}
+          </section>
 
           {/* ── 02 Diligence ── */}
-          {tab === "diligence" && <>
+          <section id="diligence">
+            <SectionHeader n="02" name="DILIGENCE" desc="SDD · Valuation · CDD · 문서" />
             <StepCard icon={g("sdd").status ? "done" : "pending"} title="⑤ SDD" auto="HERMES" badge={g("sdd").status || "—"} desc={dash(g("sdd").detail)} />
             <StepCard icon={g("valuation").status ? "done" : "pending"} title="⑥ Valuation Gate" badge={g("valuation").status || "—"}
               desc={g("valuation").ltv != null ? `LTV ${g("valuation").ltv}%` : dash(g("valuation").detail)} />
@@ -245,10 +245,11 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
             <div style={{ padding: "0 16px 16px", opacity: 0.38 }}>
               <div style={{ fontSize: 11, color: T.muted }}>정성 실사 항목 — CDD PASS 후 활성화</div>
             </div>
-          </>}
+          </section>
 
           {/* ── 03 Analysis ── */}
-          {tab === "analysis" && <>
+          <section id="analysis">
+            <SectionHeader n="03" name="ANALYSIS" desc="IRR · Merton · ECL · Narrative" />
             {/* IRR Scenario Pack */}
             <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
               <div style={{ marginBottom: 12 }}><span style={labelStyle}>IRR Scenario Pack</span></div>
@@ -273,10 +274,11 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
               <span style={{ color: T.text }}>Narrative Gate</span>
               <span style={{ marginLeft: "auto" }}><Badge status={narrative?.result || narrative?.status} big /></span>
             </div>
-          </>}
+          </section>
 
           {/* ── 04 Evidence ── */}
-          {tab === "evidence" && <>
+          <section id="evidence">
+            <SectionHeader n="04" name="EVIDENCE" desc="근거 · Override · Activity" />
             {[["COI", "coi"], ["Kill Check", "kill"], ["ESG", "esg"]].map(([title, key]) => {
               const gg = g(key);
               return (
@@ -310,10 +312,11 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
                 </div>
               ))}
             </div>
-          </>}
+          </section>
 
           {/* ── 05 IC Pack ── */}
-          {tab === "icpack" && <>
+          <section id="icpack">
+            <SectionHeader n="05" name="IC PACK" desc="Memo · Risks · Voting · Carry-forward" />
             {/* IC Memo 초안 */}
             <div style={{ margin: "14px 16px", padding: "14px 16px", background: "#0A0F1A", borderLeft: `2px solid #C9A84C33` }}>
               <div style={{ marginBottom: 8 }}><span style={labelStyle}>IC Memo 초안</span></div>
@@ -355,12 +358,29 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
                 </div>
               ))}
             </div>
-          </>}
+          </section>
+        </div>
+
+        {/* 푸터 탭바 (하단 고정) */}
+        <div style={{ flexShrink: 0, display: "flex", borderTop: `1px solid ${T.border}`, background: T.bg }}>
+          {TABS.map(t => {
+            const on = t.id === active;
+            return (
+              <button key={t.id} onClick={() => goSection(t.id)} style={{
+                flex: 1, padding: "10px 8px", cursor: "pointer", background: on ? "#0D1826" : "transparent",
+                border: "none", borderTop: on ? `2px solid ${T.gold}` : "2px solid transparent",
+                display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6, fontFamily: T.font,
+              }}>
+                <span style={{ fontFamily: T.mono, fontSize: 11, color: on ? T.gold : T.muted }}>{t.n}</span>
+                <span style={{ fontSize: 11, color: on ? T.text : T.muted, whiteSpace: "nowrap" }}>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* ── 우측 고정 패널 ── */}
-      <div style={{ width: 260, flexShrink: 0, borderLeft: `1px solid ${T.border}`, overflowY: "auto", padding: "0 0 20px" }}>
+      <div style={{ width: 260, flexShrink: 0, borderLeft: `1px solid ${T.border}`, overflowY: "auto", padding: "0 0 20px", position: "sticky", top: 0, alignSelf: "flex-start", maxHeight: "100%" }}>
         <PanelSection title="딜 현황">
           <Row k="진행률" v={progress != null ? `${progress}%` : "—"} mono />
           <Row k="현재 단계" v={dash(D.stage)} />
@@ -395,6 +415,16 @@ export default function DealExecution({ deals = [] }: { deals?: any[] }) {
           ))}
         </PanelSection>
       </div>
+    </div>
+  );
+}
+
+function SectionHeader({ n, name, desc }: { n: string; name: string; desc: string }) {
+  return (
+    <div style={{ background: "#060A11", borderTop: "2px solid #1A2235", padding: "8px 16px", display: "flex", alignItems: "baseline", gap: 8 }}>
+      <span style={{ fontSize: 8, color: T.gold, fontFamily: T.mono }}>{n}</span>
+      <span style={{ fontSize: 10, color: "#8A9BB5", letterSpacing: "0.08em" }}>{name}</span>
+      <span style={{ fontSize: 8, color: "#3A4A62" }}>{desc}</span>
     </div>
   );
 }
