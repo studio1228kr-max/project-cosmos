@@ -148,7 +148,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
       {/* COUNTDOWN SECTION */}
       <div style={{ background: "#000000", padding: isMobile ? "56px 24px" : "88px 40px", borderTop: "1px solid #1a2535", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <img
-          src="/luska-logo.png"
+          src="/Luska-logo.png"
           alt="Luska"
           width={48}
           height={48}
