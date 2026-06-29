@@ -101,7 +101,7 @@ function Agent({ name, kind, state }: { name: string; kind: "hermes" | "hephaest
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px", background: "#C9A84C11", border: "1px solid #C9A84C22", borderRadius: 4 }}>
         <span style={{ position: "relative", width: 10, height: 10, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ position: "absolute", width: 10, height: 10, borderRadius: "50%", border: "1px solid #C9A84C", animation: "ping-anim 1.5s ease-out infinite" }} />
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#C9A84C" }} />
+          <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#C9A84C" }} />
         </span>
         <span style={{ fontSize: 11, color: "#C9A84C", letterSpacing: "0.04em" }}>{name}</span>
         {state === "scanning" && <span style={{ fontSize: 9, color: T.muted }}>scanning…</span>}
@@ -195,15 +195,23 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
     ["제조업 BSI", macro.BSI_MANUFACTURING],
   ];
 
-  const alertItems = sorted.filter(c => c.urgency === "CRITICAL_72H" || c.urgency === "WATCH_2W").slice(0, 20);
+  const ALERTS: { t: string; c: string }[] = [
+    { t: "▲ RAS: 부동산 PF 익스포저 90% 도달 — 한도 점검 필요", c: T.watch },
+    { t: "|", c: T.muted },
+    { t: "● AML: STR 1건 자동 초안 생성됨 — 7페이지 확인", c: T.blue },
+    { t: "|", c: T.muted },
+    { t: "▲ Stress Test: 금리 +200bp — 포트폴리오 ECL +18%", c: T.watch },
+    { t: "|", c: T.muted },
+    { t: "● Compliance: FSC 정기보고 D-7", c: T.blue },
+  ];
 
   const kpis = [
-    { label: "Active signals", value: String(cards.length), color: T.text },
-    { label: "Critical", value: String(cnt("CRITICAL_72H")), color: cnt("CRITICAL_72H") > 0 ? T.critical : T.muted },
-    { label: "Watch", value: String(cnt("WATCH_2W")), color: cnt("WATCH_2W") > 0 ? T.watch : T.muted },
-    { label: "Monitor", value: String(cnt("MONITOR")), color: cnt("MONITOR") > 0 ? T.monitor : T.muted },
-    { label: "Deals", value: String(deals.length), color: T.text },
-    { label: "Last scan", value: fmtRel(lastScan), color: hermesUp ? T.monitor : T.muted },
+    { label: "SIGNALS", value: String(cards.length), color: cnt("CRITICAL_72H") > 0 ? T.critical : T.text },
+    { label: "BASE RATE", value: fmtMacro(macro.BASE_RATE) || "—", color: macro.BASE_RATE?.value != null ? T.text : T.muted },
+    { label: "SPREAD", value: fmtMacro(macro.CREDIT_SPREAD) || "—", color: macro.CREDIT_SPREAD?.value != null ? T.text : T.muted },
+    { label: "BSI MFG", value: fmtMacro(macro.BSI_MANUFACTURING) || "—", color: macro.BSI_MANUFACTURING?.value != null ? T.text : T.muted },
+    { label: "DEALS", value: String(deals.length), color: T.text },
+    { label: "포트폴리오", value: "—", color: T.muted },
   ];
 
   const TABS = [
@@ -245,46 +253,36 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
         </div>
       </div>
 
-      {/* ── 2. 에이전트 바 ── */}
+      {/* ── Alert Strip (최상단 티커) ── */}
+      <div className="alert-strip">
+        <div className="alert-track">
+          {ALERTS.map((a, i) => (
+            <span key={i} style={{ fontSize: 11, color: a.c }}>{a.t}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 에이전트 상태 바 ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 20px", borderBottom: `1px solid ${T.border}` }}>
         <span style={labelStyle}>Agents</span>
         <Agent name="HERMES" kind="hermes" state={hermesState} />
         <Agent name="HEPHAESTUS" kind="hephaestus" state={hephState} />
         <Agent name="KRONOS" kind="kronos" state={kronosState} />
-      </div>
-
-      {/* ── Alert Strip (티커) ── */}
-      <div className="alert-strip">
-        {alertItems.length === 0 ? (
-          <span style={{ paddingLeft: 20, fontSize: 11, color: T.muted }}>활성 알림 없음 — HERMES 수집 대기</span>
-        ) : (
-          <div className="alert-track">
-            {alertItems.map(c => {
-              const u = urgCfg(c.urgency);
-              return (
-                <span key={c.id} style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11 }}>
-                  <span style={{ color: u.color }}>[{u.label}]</span>
-                  <span style={{ color: T.gold }}>{c.entity}</span>
-                  <span style={{ color: T.muted }}>{c.signal_type || "—"}{c.score != null ? ` · ${c.score}` : ""}</span>
-                </span>
-              );
-            })}
-          </div>
-        )}
+        <span style={{ marginLeft: "auto", fontSize: 9, color: "#2A3A52" }}>Last sync · {fmtRel(lastScan)}</span>
       </div>
 
       {/* ── Credit Desk 탭 ── */}
       {activeTab === "creditdesk" && (
         <>
           {/* 3. KPI 바 (한 줄, 32px) */}
-          <div style={{ height: 32, flexShrink: 0, display: "flex", alignItems: "center", gap: 16, padding: "0 20px", borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
+          <div style={{ height: 32, flexShrink: 0, display: "flex", alignItems: "stretch", borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
             {kpis.map(k => (
-              <span key={k.label} style={{ display: "inline-flex", alignItems: "baseline", gap: 5, whiteSpace: "nowrap", flexShrink: 0 }}>
+              <span key={k.label} style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", flexShrink: 0, padding: "0 14px", borderRight: "1px solid #0F1824" }}>
                 <span style={{ fontSize: 10, color: T.muted, whiteSpace: "nowrap" }}>{k.label}</span>
                 <span style={{ fontFamily: T.mono, color: k.color, whiteSpace: "nowrap" }}>{k.value}</span>
               </span>
             ))}
-            <span style={{ marginLeft: "auto", fontSize: 10, color: T.muted, whiteSpace: "nowrap", flexShrink: 0 }}>auto-refresh 60s</span>
+            <span style={{ marginLeft: "auto", alignSelf: "center", fontSize: 10, color: T.muted, whiteSpace: "nowrap", flexShrink: 0, paddingRight: 14 }}>auto-refresh 60s</span>
           </div>
 
           {/* 4. Signal Room 테이블 */}
@@ -352,7 +350,7 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
           </div>
 
           {/* 5. 하단 — Morning Brief (좌) + Macro Monitor (우) */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 240px" }}>
             <section style={{ padding: "14px 20px", borderRight: `1px solid ${T.border}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                 <span style={{ ...labelStyle, borderLeft: `2px solid ${T.gold}`, paddingLeft: 8 }}>Morning Brief</span>
@@ -424,13 +422,13 @@ export default function CreditDesk({ onLogout }: { onLogout?: () => void }) {
       )}
 
       {/* ── 6. 푸터 — 시스템 상태 ── */}
-      <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 16, padding: "8px 20px", borderTop: `1px solid ${T.border}`, fontSize: 10, color: T.muted }}>
+      <div style={{ marginTop: "auto", height: 22, flexShrink: 0, display: "flex", alignItems: "center", gap: 16, padding: "0 20px", borderTop: `1px solid ${T.border}`, fontSize: 10, color: T.muted }}>
         {([["COSMOS", cosmosOk], ["HERMES", hermesOk], ["HEPHAESTUS", hephOk]] as [string, boolean][]).map(([n, ok]) => (
           <span key={n} style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: ok ? T.okDot : T.warnDot }} />{n}
           </span>
         ))}
-        <span style={{ marginLeft: "auto" }}>Luska Capital Management · cosmos.luskacapital.com</span>
+        <span style={{ marginLeft: "auto" }}>LuskaCapitalManagement · cosmos.luskacapital.com</span>
       </div>
     </div>
   );
