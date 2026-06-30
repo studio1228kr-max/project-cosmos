@@ -30,6 +30,14 @@ P0 confidence_min 게이트 (게이트 evaluation 전에 먼저 수행):
 스킵(차후 8~12 단계에서 처리):
   - "... < threshold(...)" 형태(임계값 참조)는 일단 건너뛴다.
 그 외 인식 불가 조건 / 값 누락 → fail-closed: HOLD.
+
+computed_p0_whitelist (threshold.all 기반, 최소버전 — Phase 4 에서 완성):
+  valuation.<method>.primary_case 조건 평가 직전에 threshold.all 로 검사:
+    - distressed_special_overrides[path].eligibility == 'adopted_or_external_only'
+        → confidence 무관 영구 HOLD. Phase 4(AdoptComputedValue) 구현 전까지
+          adopted_or_external_only 경로는 '항상' 막힌다.
+    - computed_eligible_paths 에 path 가 없으면 → HOLD.
+  threshold.all 룰이 없으면 이 검사는 스킵(하위호환).
 """
 from __future__ import annotations
 
@@ -134,6 +142,9 @@ class GateEvaluator:
                 evaluation = (rule.rule_body or {}).get("evaluation") or []
                 ordered = sorted(evaluation, key=lambda r: r.get("priority", 1_000_000))
 
+                # computed_p0_whitelist 검사용 (없으면 None → 검사 스킵, 하위호환)
+                thresholds = self._get_thresholds()
+
                 skipped = 0
                 for entry in ordered:
                     priority = entry.get("priority")
@@ -214,6 +225,12 @@ class GateEvaluator:
                     if mv is not None:
                         method = mv.group("method")
                         op = mv.group("op")
+                        path = f"valuation.{method}.primary_case"
+
+                        # computed_p0_whitelist 검사 (threshold.all 기반; 없으면 스킵)
+                        wl_block = self._check_computed_whitelist(path, thresholds)
+                        if wl_block is not None:
+                            return self._result("HOLD", wl_block, matched)
 
                         # 1~3. method 와 일치하는 valuation 찾기 (없으면 fail-closed)
                         found = None
@@ -356,6 +373,42 @@ class GateEvaluator:
 
         # 기타 경로(borrower.* 등) → 스킵 (TODO)
         return _SKIP
+
+    # ── computed_p0_whitelist (threshold.all 기반, 최소버전) ──
+    def _get_thresholds(self):
+        """threshold.all 의 rule_body(dict) 또는 None."""
+        tr = PolicyRule.get_active("threshold.all")
+        if tr is None:
+            return None
+        with tr:
+            return tr.rule_body
+
+    def _check_computed_whitelist(self, path, thresholds):
+        """
+        path 의 computed_p0_whitelist 검사. 차단 사유(str) 또는 None(통과/스킵).
+
+          a. distressed_special_overrides[path].eligibility=='adopted_or_external_only'
+             → 영구 HOLD (Phase 4 전까지, confidence 무관)
+          b. computed_eligible_paths 에 없으면 → HOLD
+          c. 화이트리스트에 있으면 → None (기존 로직 진행)
+        threshold.all 없으면 None (검사 스킵, 하위호환).
+        """
+        if not thresholds:
+            return None
+
+        overrides = thresholds.get("distressed_special_overrides") or {}
+        ov = overrides.get(path)
+        if isinstance(ov, dict) and ov.get("eligibility") == "adopted_or_external_only":
+            return (
+                f"path '{path}' requires human adoption or external doc "
+                f"(Phase 4 AdoptComputedValue not yet implemented)"
+            )
+
+        whitelist = thresholds.get("computed_eligible_paths") or []
+        if path not in whitelist:
+            return f"path '{path}' not in computed_eligible_paths"
+
+        return None
 
     # ── helpers ───────────────────────────────────────────────
     def _resolve_rhs(self, rhs, deal):
