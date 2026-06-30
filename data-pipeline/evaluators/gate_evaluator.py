@@ -6,6 +6,20 @@ GATE EVALUATOR v2.0.0 — 객체 레이어(shared.ontology) 기반 재작성.
 policy_rule(gate.{deal_type}).rule_body.evaluation[] 을 priority 순서로 순회하며
 첫 매칭 조건의 then(GO/HOLD/KILL)을 반환한다. raw SQL 미사용.
 
+P0 confidence_min 게이트 (게이트 evaluation 전에 먼저 수행):
+  policy_rule(p0.{deal_type}).p0_inputs[] 의 각 입력이 요구하는 confidence_min 을
+  실제 데이터의 gate_eligibility 등급과 비교해, 요구치 미달이면 즉시 HOLD.
+  (p0 룰이 없으면 이 단계는 스킵)
+
+  두 어휘 체계와 매핑 근거:
+    confidence       : UNVERIFIED < LOW < MEDIUM < HIGH < VERIFIED   (데이터 신뢰도)
+    gate_eligibility : UNCERTAIN  < COMPUTED_ELIGIBLE < VERIFIED      (게이트 사용성)
+
+    UNVERIFIED / LOW → UNCERTAIN          신뢰도 부족 → 게이트 근거로 못 씀
+    MEDIUM / HIGH    → COMPUTED_ELIGIBLE  계산·모델값으로 게이트 가능(사람검증은 아님).
+                                          그래서 HIGH 라도 VERIFIED 가 아니라 COMPUTED_ELIGIBLE.
+    VERIFIED         → VERIFIED           사람/원문 검증 완료 — 최고 등급
+
 현재 지원 조건 (단순 비교):
   - deal.properties.{dscr|ltv|irr_downside} <op> <number>   (op: < > <= >= == !=)
   - collateral.<field> <op> <number>   (deal.collaterals[0] 의 직접 컬럼; JSONB 아님)
@@ -58,6 +72,31 @@ _OPS = {
     "!=": lambda a, b: a != b,
 }
 
+# confidence(데이터 신뢰도) → gate_eligibility(게이트 사용 등급) 매핑.
+# 매핑 근거는 모듈 docstring 참조 (HIGH 가 COMPUTED_ELIGIBLE 인 이유 등).
+CONFIDENCE_MIN_TO_GATE_ELIGIBILITY = {
+    "UNVERIFIED": "UNCERTAIN",
+    "LOW": "UNCERTAIN",
+    "MEDIUM": "COMPUTED_ELIGIBLE",
+    "HIGH": "COMPUTED_ELIGIBLE",
+    "VERIFIED": "VERIFIED",
+}
+
+# gate_eligibility 등급 순서 (높을수록 강함).
+GATE_ELIGIBILITY_ORDER = {
+    "UNCERTAIN": 0,
+    "COMPUTED_ELIGIBLE": 1,
+    "VERIFIED": 2,
+}
+
+# P0 경로용: valuation.<method>.primary_case (연산자 없는 경로 형태)
+_P0_VALUATION_RE = re.compile(
+    r"^valuation\.(?P<method>[a-zA-Z_][a-zA-Z0-9_]*)\.primary_case$"
+)
+
+# 미구현/비대상 P0 경로 스킵 표식 (None 과 구분하기 위한 sentinel)
+_SKIP = object()
+
 
 class GateEvaluator:
     name = "gate_evaluator"
@@ -78,6 +117,11 @@ class GateEvaluator:
 
         with deal:
             deal_type = deal.raw.deal_type
+
+            # 1.5 P0 입력 confidence_min 게이트 (게이트 evaluation 전에 먼저 수행)
+            p0_block = self._check_p0(deal, deal_type)
+            if p0_block is not None:
+                return p0_block
 
             # 2. deal_type 의 활성 게이트 룰
             rule = PolicyRule.get_active(f"gate.{deal_type}")
@@ -245,6 +289,73 @@ class GateEvaluator:
                 # 4. 매칭/else 없이 끝 → GO
                 tail = f" ({skipped} threshold condition(s) deferred)" if skipped else ""
                 return self._result("GO", f"all conditions passed → GO{tail}", None)
+
+    # ── P0 confidence_min 게이트 ───────────────────────────────
+    def _check_p0(self, deal, deal_type):
+        """
+        p0.{deal_type}.p0_inputs[] 의 confidence_min 을 실제 gate_eligibility 와 비교.
+        요구치 미달이면 HOLD 결과 dict 반환, 통과/대상없음이면 None.
+        """
+        p0_rule = PolicyRule.get_active(f"p0.{deal_type}")
+        if p0_rule is None:
+            return None  # p0 룰 없으면 이 단계 스킵하고 기존대로 진행
+
+        with p0_rule:
+            p0_inputs = (p0_rule.rule_body or {}).get("p0_inputs") or []
+            for item in p0_inputs:
+                path = item.get("path")
+                confidence_min = item.get("confidence_min")
+
+                # 요구 등급: confidence_min → gate_eligibility
+                required = CONFIDENCE_MIN_TO_GATE_ELIGIBILITY.get(confidence_min)
+                if required is None:
+                    return self._result(
+                        "HOLD",
+                        f"P0 path {path!r} has unknown confidence_min {confidence_min!r}",
+                        None,
+                    )
+                required_rank = GATE_ELIGIBILITY_ORDER[required]
+
+                actual = self._p0_actual_eligibility(path, deal)
+                if actual is _SKIP:
+                    continue  # 미구현/비대상 경로 → 스킵
+
+                # None/미인식 등급은 -1 → fail-closed
+                actual_rank = GATE_ELIGIBILITY_ORDER.get(actual, -1)
+                if actual_rank < required_rank:
+                    return self._result(
+                        "HOLD",
+                        f"P0 path '{path}' gate_eligibility below required "
+                        f"(need >= {required}, got {actual})",
+                        None,
+                    )
+        return None
+
+    def _p0_actual_eligibility(self, path, deal):
+        """P0 path 의 실제 gate_eligibility 등급. 미대상 경로는 _SKIP 반환."""
+        if not isinstance(path, str):
+            return _SKIP
+
+        # deal.properties.<field> → PropertyAccessor.gate_eligibility 그대로 사용
+        mp = _DEAL_PROP_RE.match(path)
+        if mp is not None:
+            return deal.props[mp.group("field")].gate_eligibility
+
+        # collateral.<field> → 스킵 (TODO: collateral 레벨 confidence 는 추후)
+        if path.startswith("collateral."):
+            return _SKIP
+
+        # valuation.<method>.primary_case → valuation.confidence 컬럼을 매핑 변환
+        mv = _P0_VALUATION_RE.match(path)
+        if mv is not None:
+            method = mv.group("method")
+            for v in deal.valuations:
+                if v.raw.valuation_method == method:
+                    return CONFIDENCE_MIN_TO_GATE_ELIGIBILITY.get(v.raw.confidence)
+            return None  # 해당 method valuation 없음 → None → fail-closed
+
+        # 기타 경로(borrower.* 등) → 스킵 (TODO)
+        return _SKIP
 
     # ── helpers ───────────────────────────────────────────────
     def _resolve_rhs(self, rhs, deal):
