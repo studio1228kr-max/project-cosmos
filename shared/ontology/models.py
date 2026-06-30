@@ -121,6 +121,9 @@ class Deal(Base):
     currency = Column(Text, nullable=False, server_default=text("'KRW'"))
     maturity_date = Column(Date)
 
+    # 010_deal_legacy_link.sql: 기존 deal_master.id 연결(신·구 딜 매핑)
+    legacy_deal_master_id = Column(Integer)
+
     properties = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     provenance = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
 

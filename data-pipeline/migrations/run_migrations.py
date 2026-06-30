@@ -7,7 +7,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ORDER = ["001_foundation.sql", "002_history_table.sql", "003_validate_checks.sql",
          "004_indexes_concurrently.sql", "005_drop_old_unique_constraint.sql",
          "006_ontology_core.sql", "007_policy_rule_seed.sql",
-         "008_seed_patch.sql", "009_collateral_values.sql"]
+         "008_seed_patch.sql", "009_collateral_values.sql",
+         "010_deal_legacy_link.sql"]
 
 
 def split_statements(sql: str):
