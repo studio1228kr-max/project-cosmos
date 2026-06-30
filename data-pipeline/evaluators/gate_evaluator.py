@@ -153,6 +153,12 @@ class GateEvaluator:
                     # else 캐치올 → GO (또는 룰이 지정한 then)
                     if entry.get("else") is True:
                         action = entry.get("then", "GO")
+                        if action not in ("GO", "HOLD", "KILL"):
+                            return self._result(
+                                "HOLD",
+                                f"invalid 'then' value {action!r} in rule → fail-closed HOLD",
+                                matched,
+                            )
                         return self._result(
                             action, f"all conditions passed → {action}", matched
                         )
@@ -182,6 +188,12 @@ class GateEvaluator:
                                 matched,
                             )
                         if _OPS[op](value, threshold):
+                            if action not in ("GO", "HOLD", "KILL"):
+                                return self._result(
+                                    "HOLD",
+                                    f"invalid 'then' value {action!r} in rule → fail-closed HOLD",
+                                    matched,
+                                )
                             return self._result(
                                 action,
                                 f"{field}={value} {op} {threshold} → {action}",
@@ -213,6 +225,12 @@ class GateEvaluator:
                                 matched,
                             )
                         if _OPS[op](value, threshold):
+                            if action not in ("GO", "HOLD", "KILL"):
+                                return self._result(
+                                    "HOLD",
+                                    f"invalid 'then' value {action!r} in rule → fail-closed HOLD",
+                                    matched,
+                                )
                             return self._result(
                                 action,
                                 f"collateral.{field}={value} {op} {threshold} → {action}",
@@ -289,6 +307,12 @@ class GateEvaluator:
                             )
 
                         if _OPS[op](left, right):
+                            if action not in ("GO", "HOLD", "KILL"):
+                                return self._result(
+                                    "HOLD",
+                                    f"invalid 'then' value {action!r} in rule → fail-closed HOLD",
+                                    matched,
+                                )
                             return self._result(
                                 action,
                                 f"valuation.{method}.primary_case={left} {op} {right} → {action}",
