@@ -11,6 +11,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY data-pipeline/ .
 
+# 모노레포 공용 패키지: 레포 루트 shared/ 를 /app/shared 로 복사.
+# /app 이 sys.path 이므로 `from shared.ontology import ...` 가 동작(빌드 컨텍스트=repo 루트).
+COPY shared/ ./shared/
+
 ENV PYTHONUNBUFFERED=1
 # Railway 사설망(IPv6)에서 COSMOS가 hermes-api.railway.internal로 접속하려면 :: 바인딩 필요.
 # RUN_WORKER=false 로 워커는 띄우지 않고 /facts 서빙만.

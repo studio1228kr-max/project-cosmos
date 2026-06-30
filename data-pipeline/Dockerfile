@@ -9,6 +9,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY data-pipeline/ .
 
+# 모노레포 공용 패키지: 레포 루트 shared/ 를 /app/shared 로 복사.
+# /app 이 sys.path 이므로 `from shared.ontology import ...` 가 동작(빌드 컨텍스트=repo 루트).
+COPY shared/ ./shared/
+
 # Sprint #9: HERMES API(uvicorn) 구동 + startup에서 워커(scan+consume) 백그라운드.
 # PORT는 Railway 주입(없으면 8000). COSMOS는 http://data-pipeline.railway.internal:8000 호출.
 ENV PYTHONUNBUFFERED=1
