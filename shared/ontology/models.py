@@ -166,6 +166,11 @@ class Collateral(Base):
     description = Column(Text)
     asset_address = Column(Text)
 
+    # 009_collateral_values.sql: 평가 수치 컬럼 (gate_evaluator collateral.<field> 비교용)
+    appraised_value = Column(Numeric)
+    first_lien_value = Column(Numeric)
+    net_collateral_value = Column(Numeric)
+
     es_sync_token = Column(BigInteger, nullable=False, server_default=text("1"))
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
